@@ -1,4 +1,3 @@
-
 use cosmwasm_std::Uint128;
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +29,7 @@ pub struct Pair {
     pub contract_addr: String,
     pub coins: [asset::Asset; 2],
     pub liquidity_token: String,
-    pub total_shares: Uint128,
+    pub total_share: Uint128,
 }
 
 pub async fn liquid_pairs(
@@ -62,7 +61,7 @@ pub async fn liquid_pairs(
                     contract_addr: pair.contract_addr.clone(),
                     coins: pool.assets,
                     liquidity_token: pair.liquidity_token.clone(),
-                    total_shares: pool.total_share,
+                    total_share: pool.total_share,
                 });
             },
             Err(err) => {
@@ -72,6 +71,18 @@ pub async fn liquid_pairs(
     }
 
     Ok(pairs)
+}
+
+pub async fn update_pairs(lcd: &Terra, pairs: &mut Vec<Pair>) -> anyhow::Result<()> {
+    // TODO(xla): Parallelise with batches modulo num cpus.
+    for pair in pairs {
+        let pool = pool_info(lcd, &pair.contract_addr).await?;
+
+        pair.coins = pool.assets;
+        pair.total_share = pool.total_share;
+    }
+
+    Ok(())
 }
 
 pub async fn pairs(lcd: &Terra) -> anyhow::Result<Vec<asset::PairInfo>> {

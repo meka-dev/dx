@@ -47,7 +47,7 @@ async fn main() -> Result<(), Error> {
     let uusd = terraswap::asset::AssetInfo::NativeToken {
         denom: "uusd".to_string(),
     };
-    let terraswap_pairs = dex::terraswap::liquid_pairs(&lcd, Some(uusd)).await?;
+    let mut terraswap_pairs = dex::terraswap::liquid_pairs(&lcd, Some(uusd)).await?;
 
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.
@@ -82,15 +82,14 @@ async fn main() -> Result<(), Error> {
     // strategies.
     let execution_handle = tokio::spawn(async move {
         while let Ok(_latest_block) = latest_block_receiver.changed().await {
-            // Update prices
+            dex::terraswap::update_pairs(&lcd, &mut terraswap_pairs).await?;
+
             // run strategies
             // broadcast txs
         }
 
         Ok::<(), Error>(())
     });
-
-    println!("Liquid pairs: {}", terraswap_pairs.len());
 
     // TODO(xla): Handle signals.
     // TODO(xla): Select on all long-running futures.
