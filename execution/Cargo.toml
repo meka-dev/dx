@@ -1,7 +1,11 @@
 [package]
-name = "execution"
+name    = "execution"
 version = "0.1.0"
 edition = "2021"
+
+[[bin]]
+name = "extract"
+path = "src/bin/extract.rs"
 
 [dependencies]
 anyhow          = { version = "1.0",  default-features = false }

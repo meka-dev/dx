@@ -37,19 +37,19 @@ pub mod terraswap {
         lcd: &Terra,
         filter: Option<asset::AssetInfo>,
     ) -> anyhow::Result<Vec<Pair>> {
-        let ps = pairs(&lcd).await?;
-
-        if let Some(coin) = filter {
-            let ps = ps.iter().filter(|pair| {
+        let ps = pairs(lcd).await?.into_iter().filter(|pair| {
+            if let Some(coin) = filter.clone() {
                 pair.asset_infos[0].equal(&coin) || pair.asset_infos[1].equal(&coin)
-            });
-        }
+            } else {
+                true
+            }
+        });
 
         let mut pairs: Vec<Pair> = vec![];
-        for pair in &ps {
+        for pair in ps {
             println!("{}", pair.contract_addr);
 
-            match pool_info(&lcd, &pair.contract_addr).await {
+            match pool_info(lcd, &pair.contract_addr).await {
                 Ok(pool) => {
                     if pool.total_share == Uint128::zero()
                         || pool.assets[0].amount == Uint128::zero()
@@ -104,6 +104,7 @@ pub mod terraswap {
         Ok(pairs)
     }
 
+    #[allow(dead_code)]
     pub async fn pair_info(lcd: &Terra, contract_addr: &str) -> anyhow::Result<asset::PairInfo> {
         let res = lcd
             .wasm()
