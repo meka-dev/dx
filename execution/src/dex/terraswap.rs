@@ -1,11 +1,40 @@
-use cosmwasm_std::Uint128;
 use serde::{Deserialize, Serialize};
 
+use cosmwasm_std::Uint128;
 use terraswap::{asset, factory, pair};
 
 use terrars::Lcd;
 
+use crate::dex::{Asset, AssetInfo, Pool};
+
 const TERRASWAP_ADDRESS: &str = "terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj";
+
+impl From<asset::AssetInfo> for AssetInfo {
+    fn from(input: asset::AssetInfo) -> Self {
+        match input {
+            asset::AssetInfo::NativeToken { denom } => Self::NativeToken { denom },
+            asset::AssetInfo::Token { contract_addr } => Self::Token { contract_addr },
+        }
+    }
+}
+
+impl From<AssetInfo> for asset::AssetInfo {
+    fn from(input: AssetInfo) -> Self {
+        match input {
+            AssetInfo::NativeToken { denom } => Self::NativeToken { denom },
+            AssetInfo::Token { contract_addr } => Self::Token { contract_addr },
+        }
+    }
+}
+
+impl From<asset::Asset> for Asset {
+    fn from(input: asset::Asset) -> Self {
+        Self {
+            amount: input.amount,
+            info: input.info.into(),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 struct PairsResult {
@@ -25,27 +54,46 @@ struct PoolResponseResult {
     result: pair::PoolResponse,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Pair {
     pub contract_addr: String,
-    pub coins: [asset::Asset; 2],
+    pub coins: [Asset; 2],
     pub liquidity_token: String,
     pub total_share: Uint128,
 }
 
+#[async_trait::async_trait]
+impl Pool for Pair {
+    fn coins(&self) -> [Asset; 2] {
+        self.coins.clone()
+    }
+
+    fn swap(&self) -> terrars::Message {
+        todo!()
+    }
+
+    async fn update(&mut self, lcd: &Lcd) -> anyhow::Result<()> {
+        let pool = pool_info(lcd, &self.contract_addr).await?;
+        self.coins = [pool.assets[0].clone().into(), pool.assets[1].clone().into()];
+
+        Ok(())
+    }
+}
+
 pub async fn liquid_pairs(
     lcd: &Lcd,
-    filter: Option<asset::AssetInfo>,
-) -> anyhow::Result<Vec<Pair>> {
+    filter: Option<AssetInfo>,
+) -> anyhow::Result<Vec<Box<dyn Pool>>> {
     let ps = pairs(lcd).await?.into_iter().filter(|pair| {
         if let Some(coin) = filter.clone() {
-            pair.asset_infos[0].equal(&coin) || pair.asset_infos[1].equal(&coin)
+            pair.asset_infos[0].equal(&coin.clone().into())
+                || pair.asset_infos[1].equal(&coin.clone().into())
         } else {
             true
         }
     });
 
-    let mut pairs: Vec<Pair> = vec![];
+    let mut pairs: Vec<Box<dyn Pool>> = vec![];
     for pair in ps {
         println!("{}", pair.contract_addr);
 
@@ -58,12 +106,12 @@ pub async fn liquid_pairs(
                     continue;
                 }
 
-                pairs.push(Pair {
+                pairs.push(Box::new(Pair {
                     contract_addr: pair.contract_addr.clone(),
-                    coins: pool.assets,
+                    coins: [pool.assets[0].clone().into(), pool.assets[1].clone().into()],
                     liquidity_token: pair.liquidity_token.clone(),
                     total_share: pool.total_share,
-                });
+                }));
             },
             Err(err) => {
                 eprintln!("{}", err);
@@ -74,19 +122,7 @@ pub async fn liquid_pairs(
     Ok(pairs)
 }
 
-pub async fn update_pairs(lcd: &Lcd, pairs: &mut Vec<Pair>) -> anyhow::Result<()> {
-    // TODO(xla): Parallelise with batches modulo num cpus.
-    for pair in pairs {
-        let pool = pool_info(lcd, &pair.contract_addr).await?;
-
-        pair.coins = pool.assets;
-        pair.total_share = pool.total_share;
-    }
-
-    Ok(())
-}
-
-pub async fn pairs(lcd: &Lcd) -> anyhow::Result<Vec<asset::PairInfo>> {
+async fn pairs(lcd: &Lcd) -> anyhow::Result<Vec<asset::PairInfo>> {
     let mut pairs: Vec<asset::PairInfo> = vec![];
     let mut start_after: Option<[asset::AssetInfo; 2]> = None;
     let limit = 30;
@@ -116,28 +152,12 @@ pub async fn pairs(lcd: &Lcd) -> anyhow::Result<Vec<asset::PairInfo>> {
     Ok(pairs)
 }
 
-#[allow(dead_code)]
-pub async fn pair_info(lcd: &Lcd, contract_addr: &str) -> anyhow::Result<asset::PairInfo> {
-    let res = lcd
-        .wasm()
-        .query::<PairInfoResult>(
-            contract_addr,
-            &serde_json::to_string(&pair::QueryMsg::Pair {})?,
-        )
-        .await?;
-
-    Ok(res.result)
-}
-
-pub async fn pool_info(
-    lcd: &Lcd,
-    contract_addr: &str,
-) -> anyhow::Result<terraswap::pair::PoolResponse> {
+async fn pool_info(lcd: &Lcd, contract_addr: &str) -> anyhow::Result<pair::PoolResponse> {
     let res = lcd
         .wasm()
         .query::<PoolResponseResult>(
             contract_addr,
-            &serde_json::to_string(&terraswap::pair::QueryMsg::Pool {})?,
+            &serde_json::to_string(&pair::QueryMsg::Pool {})?,
         )
         .await?;
 

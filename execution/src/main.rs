@@ -48,10 +48,11 @@ async fn main() -> Result<(), Error> {
     let lcd = Lcd::lcd_client_no_tx(config::LCD_URL, config::CHAIN_ID);
 
     // Fetch liquid UST pairs on Terraswap. This operation is expensive and will take some time.
-    let uusd = terraswap::asset::AssetInfo::NativeToken {
+    let filter = Some(dex::AssetInfo::NativeToken {
         denom: "uusd".to_string(),
-    };
-    let mut terraswap_pairs = dex::terraswap::liquid_pairs(&lcd, Some(uusd)).await?;
+    });
+    let mut pairs = dex::astroport::liquid_pairs(&lcd, filter.clone()).await?;
+    pairs.append(&mut dex::terraswap::liquid_pairs(&lcd, filter).await?);
 
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.
@@ -90,10 +91,13 @@ async fn main() -> Result<(), Error> {
 
         while let Ok(_latest_block) = latest_block_receiver.changed().await {
             // Ensure latest prices of pairs.
-            dex::terraswap::update_pairs(&lcd, &mut terraswap_pairs).await?;
+            // TODO(xla): Parallelise with batches modulo num cpus.
+            for pair in &mut pairs {
+                pair.update(&lcd).await?;
+            }
 
             for strategy in &strategies {
-                let _messages = strategy.execute(&terraswap_pairs);
+                let _messages = strategy.execute(&pairs);
 
                 // broadcast tx
                 // lcd.submit_transaction_sync(&secp, &private_key, &messages, None).await?;
