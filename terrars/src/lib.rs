@@ -1,7 +1,10 @@
 use cosmrs::tx::MsgProto;
 
 pub use cosmrs::tx::{Msg, Tx};
+pub use cosmrs::Any;
 pub use cosmrs::Error;
+
+pub use terra_rust_api::Terra as Lcd;
 
 mod proto;
 

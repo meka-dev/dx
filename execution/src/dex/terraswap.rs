@@ -1,8 +1,9 @@
 use cosmwasm_std::Uint128;
 use serde::{Deserialize, Serialize};
 
-use terra_rust_api::Terra;
 use terraswap::{asset, factory, pair};
+
+use terrars::Lcd;
 
 const TERRASWAP_ADDRESS: &str = "terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj";
 
@@ -33,7 +34,7 @@ pub struct Pair {
 }
 
 pub async fn liquid_pairs(
-    lcd: &Terra,
+    lcd: &Lcd,
     filter: Option<asset::AssetInfo>,
 ) -> anyhow::Result<Vec<Pair>> {
     let ps = pairs(lcd).await?.into_iter().filter(|pair| {
@@ -73,7 +74,7 @@ pub async fn liquid_pairs(
     Ok(pairs)
 }
 
-pub async fn update_pairs(lcd: &Terra, pairs: &mut Vec<Pair>) -> anyhow::Result<()> {
+pub async fn update_pairs(lcd: &Lcd, pairs: &mut Vec<Pair>) -> anyhow::Result<()> {
     // TODO(xla): Parallelise with batches modulo num cpus.
     for pair in pairs {
         let pool = pool_info(lcd, &pair.contract_addr).await?;
@@ -85,7 +86,7 @@ pub async fn update_pairs(lcd: &Terra, pairs: &mut Vec<Pair>) -> anyhow::Result<
     Ok(())
 }
 
-pub async fn pairs(lcd: &Terra) -> anyhow::Result<Vec<asset::PairInfo>> {
+pub async fn pairs(lcd: &Lcd) -> anyhow::Result<Vec<asset::PairInfo>> {
     let mut pairs: Vec<asset::PairInfo> = vec![];
     let mut start_after: Option<[asset::AssetInfo; 2]> = None;
     let limit = 30;
@@ -116,7 +117,7 @@ pub async fn pairs(lcd: &Terra) -> anyhow::Result<Vec<asset::PairInfo>> {
 }
 
 #[allow(dead_code)]
-pub async fn pair_info(lcd: &Terra, contract_addr: &str) -> anyhow::Result<asset::PairInfo> {
+pub async fn pair_info(lcd: &Lcd, contract_addr: &str) -> anyhow::Result<asset::PairInfo> {
     let res = lcd
         .wasm()
         .query::<PairInfoResult>(
@@ -129,7 +130,7 @@ pub async fn pair_info(lcd: &Terra, contract_addr: &str) -> anyhow::Result<asset
 }
 
 pub async fn pool_info(
-    lcd: &Terra,
+    lcd: &Lcd,
     contract_addr: &str,
 ) -> anyhow::Result<terraswap::pair::PoolResponse> {
     let res = lcd

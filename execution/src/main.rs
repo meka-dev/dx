@@ -6,10 +6,11 @@ use tendermint_rpc::{
     query::{EventType, Query},
     Client as _, SubscriptionClient, WebSocketClient,
 };
-use terra_rust_api::Terra;
+use terrars::Lcd;
 
 use execution::config;
 use execution::dex;
+use execution::strategy;
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -27,7 +28,10 @@ enum Error {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    // Set up logging.
     env_logger::init();
+
+    // TODO(xla): Safely load private key.
 
     // Set up RPC client.
     let (client, driver) = WebSocketClient::new(config::RPC_URL).await?;
@@ -41,7 +45,7 @@ async fn main() -> Result<(), Error> {
     }
 
     // Set up lcd client for state retrieval. This is a naïve and slow way.
-    let lcd = Terra::lcd_client_no_tx(config::LCD_URL, config::CHAIN_ID);
+    let lcd = Lcd::lcd_client_no_tx(config::LCD_URL, config::CHAIN_ID);
 
     // Fetch liquid UST pairs on Terraswap. This operation is expensive and will take some time.
     let uusd = terraswap::asset::AssetInfo::NativeToken {
@@ -81,11 +85,19 @@ async fn main() -> Result<(), Error> {
     // Subroutine to keep the dependent information for strategies up-to-date and execute
     // strategies.
     let execution_handle = tokio::spawn(async move {
+        // TODO(xla): Load configured strategies.
+        let strategies: Vec<Box<dyn strategy::Strategy>> = vec![];
+
         while let Ok(_latest_block) = latest_block_receiver.changed().await {
+            // Ensure latest prices of pairs.
             dex::terraswap::update_pairs(&lcd, &mut terraswap_pairs).await?;
 
-            // run strategies
-            // broadcast txs
+            for strategy in &strategies {
+                let _messages = strategy.execute(&terraswap_pairs);
+
+                // broadcast tx
+                // lcd.submit_transaction_sync(&secp, &private_key, &messages, None).await?;
+            }
         }
 
         Ok::<(), Error>(())
