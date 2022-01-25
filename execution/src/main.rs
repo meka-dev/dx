@@ -8,8 +8,8 @@ use tendermint_rpc::{
 };
 use terra_rust_api::Terra;
 
-pub mod config;
-mod contract;
+use execution::config;
+use execution::dex;
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -47,7 +47,7 @@ async fn main() -> Result<(), Error> {
     let uusd = terraswap::asset::AssetInfo::NativeToken {
         denom: "uusd".to_string(),
     };
-    let terraswap_pairs = contract::terraswap::liquid_pairs(&lcd, Some(uusd)).await?;
+    let terraswap_pairs = dex::terraswap::liquid_pairs(&lcd, Some(uusd)).await?;
 
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.
