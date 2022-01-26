@@ -88,7 +88,15 @@ pub async fn get_token_infos(lcd: &Lcd, pools: &Pools) -> anyhow::Result<Tokens>
 
     for pool in &pools.0 {
         let pair = pool.info_pair();
+
         if let AssetInfo::Token { ref contract_addr } = pair.0[0] {
+            if !tokens.contains_key(contract_addr) {
+                let info = token_info(lcd, contract_addr).await?;
+                tokens.insert(contract_addr.clone(), info);
+            }
+        }
+
+        if let AssetInfo::Token { ref contract_addr } = pair.0[1] {
             if !tokens.contains_key(contract_addr) {
                 let info = token_info(lcd, contract_addr).await?;
                 tokens.insert(contract_addr.clone(), info);
