@@ -89,7 +89,7 @@ async fn main() -> Result<(), Error> {
     // strategies.
     let execution_handle = tokio::spawn(async move {
         // TODO(xla): Load configured strategies.
-        let strategies: Vec<Box<dyn strategy::Strategy>> = vec![];
+        let strategies: Vec<Box<dyn strategy::Strategy>> = vec![Box::new(strategy::Simple::new())];
 
         while let Ok(_latest_block) = latest_block_receiver.changed().await {
             // Ensure latest prices of pairs.
