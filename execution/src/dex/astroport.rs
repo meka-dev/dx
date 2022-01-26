@@ -8,7 +8,7 @@ use cosmwasm_std::Uint128;
 
 use terrars::Lcd;
 
-use crate::dex::{Asset, AssetInfo, Pool};
+use crate::dex::{Asset, AssetInfo, AssetInfoPair, Pool};
 
 const ASTROPORT_ADDRESS: &str = "terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g";
 
@@ -65,8 +65,16 @@ pub struct Pair {
 
 #[async_trait::async_trait]
 impl Pool for Pair {
+    fn info_pair(&self) -> AssetInfoPair {
+        let mut coins = self.coins.clone();
+        coins.sort();
+        [coins[0].info.clone(), coins[1].info.clone()].into()
+    }
+
     fn coins(&self) -> [Asset; 2] {
-        self.coins.clone()
+        let mut coins = self.coins.clone();
+        coins.sort();
+        coins
     }
 
     fn swap(&self) -> terrars::Message {
@@ -158,10 +166,9 @@ async fn pool_info(lcd: &Lcd, contract_addr: &str) -> anyhow::Result<pair::PoolR
         .wasm()
         .query::<PoolResponseResult>(
             contract_addr,
-            &serde_json::to_string(&pair::QueryMsg::Pool {}).unwrap(),
+            &serde_json::to_string(&pair::QueryMsg::Pool {})?,
         )
-        .await
-        .unwrap();
+        .await?;
 
     Ok(res.result)
 }

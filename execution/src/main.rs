@@ -54,6 +54,8 @@ async fn main() -> Result<(), Error> {
     let mut pairs = dex::astroport::liquid_pairs(&lcd, filter.clone()).await?;
     pairs.append(&mut dex::terraswap::liquid_pairs(&lcd, filter).await?);
 
+    let mut pools = dex::Pools::from(pairs);
+
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.
     let (latest_block_sender, mut latest_block_receiver) = {
@@ -92,12 +94,12 @@ async fn main() -> Result<(), Error> {
         while let Ok(_latest_block) = latest_block_receiver.changed().await {
             // Ensure latest prices of pairs.
             // TODO(xla): Parallelise with batches modulo num cpus.
-            for pair in &mut pairs {
-                pair.update(&lcd).await?;
+            for pool in pools.0.iter_mut() {
+                pool.update(&lcd).await?;
             }
 
             for strategy in &strategies {
-                let _messages = strategy.execute(&pairs);
+                let _messages = strategy.execute(&pools);
 
                 // broadcast tx
                 // lcd.submit_transaction_sync(&secp, &private_key, &messages, None).await?;

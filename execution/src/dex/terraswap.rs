@@ -7,6 +7,8 @@ use terrars::Lcd;
 
 use crate::dex::{Asset, AssetInfo, Pool};
 
+use super::AssetInfoPair;
+
 const TERRASWAP_ADDRESS: &str = "terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj";
 
 impl From<asset::AssetInfo> for AssetInfo {
@@ -64,8 +66,16 @@ pub struct Pair {
 
 #[async_trait::async_trait]
 impl Pool for Pair {
+    fn info_pair(&self) -> AssetInfoPair {
+        let mut coins = self.coins.clone();
+        coins.sort();
+        [coins[0].info.clone(), coins[1].info.clone()].into()
+    }
+
     fn coins(&self) -> [Asset; 2] {
-        self.coins.clone()
+        let mut coins = self.coins.clone();
+        coins.sort();
+        coins
     }
 
     fn swap(&self) -> terrars::Message {
