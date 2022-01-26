@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Addr, Uint128};
 use terraswap::{asset, factory, pair};
 
 use terrars::Lcd;
@@ -15,7 +15,9 @@ impl From<asset::AssetInfo> for AssetInfo {
     fn from(input: asset::AssetInfo) -> Self {
         match input {
             asset::AssetInfo::NativeToken { denom } => Self::NativeToken { denom },
-            asset::AssetInfo::Token { contract_addr } => Self::Token { contract_addr },
+            asset::AssetInfo::Token { contract_addr } => Self::Token {
+                contract_addr: Addr::unchecked(contract_addr),
+            },
         }
     }
 }
@@ -24,7 +26,9 @@ impl From<AssetInfo> for asset::AssetInfo {
     fn from(input: AssetInfo) -> Self {
         match input {
             AssetInfo::NativeToken { denom } => Self::NativeToken { denom },
-            AssetInfo::Token { contract_addr } => Self::Token { contract_addr },
+            AssetInfo::Token { contract_addr } => Self::Token {
+                contract_addr: contract_addr.into(),
+            },
         }
     }
 }

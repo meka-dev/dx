@@ -16,9 +16,7 @@ impl From<asset::AssetInfo> for AssetInfo {
     fn from(input: asset::AssetInfo) -> Self {
         match input {
             asset::AssetInfo::NativeToken { denom } => Self::NativeToken { denom },
-            asset::AssetInfo::Token { contract_addr } => Self::Token {
-                contract_addr: contract_addr.to_string(),
-            },
+            asset::AssetInfo::Token { contract_addr } => Self::Token { contract_addr },
         }
     }
 }

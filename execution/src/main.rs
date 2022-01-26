@@ -55,6 +55,7 @@ async fn main() -> Result<(), Error> {
     pairs.append(&mut dex::terraswap::liquid_pairs(&lcd, filter).await?);
 
     let mut pools = dex::Pools::from(pairs);
+    let tokens = dex::get_token_infos(&lcd, &pools).await?;
 
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.
@@ -99,7 +100,7 @@ async fn main() -> Result<(), Error> {
             }
 
             for strategy in &strategies {
-                let _messages = strategy.execute(&pools);
+                let _messages = strategy.execute(&pools, &tokens);
 
                 // broadcast tx
                 // lcd.submit_transaction_sync(&secp, &private_key, &messages, None).await?;

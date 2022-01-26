@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::Uint128;
+use serde::{Deserialize, Serialize};
+
+use cosmwasm_std::{Addr, Uint128};
 
 use terrars::{Lcd, Message};
 
@@ -21,7 +23,7 @@ pub type PairIndex = HashMap<AssetInfoPair, Vec<usize>>;
 #[derive(Clone, Debug, Hash, Eq, PartialEq, PartialOrd, Ord)]
 pub enum AssetInfo {
     NativeToken { denom: String },
-    Token { contract_addr: String },
+    Token { contract_addr: Addr },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -63,11 +65,11 @@ impl From<Vec<Box<dyn Pool>>> for Pools {
 }
 
 impl Pools {
-    fn index_by_asset(&self) -> HashMap<AssetInfo, Vec<Box<dyn Pool>>> {
+    pub fn index_by_asset(&self) -> HashMap<AssetInfo, Vec<Box<dyn Pool>>> {
         todo!()
     }
 
-    fn index_by_pair(&self) -> PairIndex {
+    pub fn index_by_pair(&self) -> PairIndex {
         let mut map = PairIndex::new();
 
         for (index, pool) in self.0.iter().enumerate() {
@@ -77,4 +79,40 @@ impl Pools {
         }
         map
     }
+}
+
+pub type Tokens = HashMap<Addr, cw20::TokenInfoResponse>;
+
+pub async fn get_token_infos(lcd: &Lcd, pools: &Pools) -> anyhow::Result<Tokens> {
+    let mut tokens = HashMap::new();
+
+    for pool in &pools.0 {
+        let pair = pool.info_pair();
+        if let AssetInfo::Token { ref contract_addr } = pair.0[0] {
+            if !tokens.contains_key(contract_addr) {
+                let info = token_info(lcd, contract_addr).await?;
+                tokens.insert(contract_addr.clone(), info);
+            }
+        }
+    }
+
+    Ok(tokens)
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+struct TokenInfoResult {
+    height: String,
+    result: cw20::TokenInfoResponse,
+}
+
+async fn token_info(lcd: &Lcd, contract_addr: &Addr) -> anyhow::Result<cw20::TokenInfoResponse> {
+    let res = lcd
+        .wasm()
+        .query::<TokenInfoResult>(
+            &contract_addr.to_string(),
+            &serde_json::to_string(&cw20_base::msg::QueryMsg::TokenInfo {})?,
+        )
+        .await?;
+
+    Ok(res.result)
 }
