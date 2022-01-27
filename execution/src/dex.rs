@@ -9,6 +9,8 @@ use terrars::{Lcd, Message};
 pub mod astroport;
 pub mod terraswap;
 
+const DENOM_USD: &str = "uusd";
+
 #[derive(Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct AssetInfoPair(pub [AssetInfo; 2]);
 
@@ -34,17 +36,11 @@ pub struct Asset {
 
 impl Asset {
     pub fn is_native(&self) -> bool {
-        match self.info {
-            AssetInfo::NativeToken { .. } => true,
-            _ => false,
-        }
+        matches!(self.info, AssetInfo::NativeToken { .. })
     }
 
     pub fn is_ust(&self) -> bool {
-        match self.info {
-            AssetInfo::NativeToken { ref denom } if denom == &"uusd".to_string() => true,
-            _ => false,
-        }
+        matches!(self.info, AssetInfo::NativeToken { ref denom } if denom == &DENOM_USD.to_string())
     }
 }
 
@@ -69,6 +65,7 @@ impl Pools {
         todo!()
     }
 
+    #[allow(clippy::or_fun_call)]
     pub fn index_by_pair(&self) -> PairIndex {
         let mut map = PairIndex::new();
 

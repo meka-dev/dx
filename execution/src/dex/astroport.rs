@@ -94,7 +94,7 @@ pub async fn liquid_pairs(
     let ps = pairs(lcd).await?.into_iter().filter(|pair| {
         if let Some(coin) = filter.clone() {
             pair.asset_infos[0].equal(&coin.clone().into())
-                || pair.asset_infos[1].equal(&coin.clone().into())
+                || pair.asset_infos[1].equal(&coin.into())
         } else {
             true
         }
@@ -104,7 +104,7 @@ pub async fn liquid_pairs(
     for pair in ps {
         println!("{}", pair.contract_addr);
 
-        match pool_info(lcd, &pair.contract_addr.as_str()).await {
+        match pool_info(lcd, pair.contract_addr.as_str()).await {
             Ok(pool) => {
                 if pool.total_share == Uint128::zero()
                     || pool.assets[0].amount == Uint128::zero()

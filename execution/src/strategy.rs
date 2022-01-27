@@ -2,8 +2,7 @@ use terrars::Message;
 
 use crate::dex;
 
-mod simple;
-pub use simple::Simple;
+pub mod multi_dex;
 
 pub trait Strategy: Send {
     /// Given the current prices of dex pairs a strategy should produce an ordered list of messages

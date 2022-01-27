@@ -101,7 +101,7 @@ pub async fn liquid_pairs(
     let ps = pairs(lcd).await?.into_iter().filter(|pair| {
         if let Some(coin) = filter.clone() {
             pair.asset_infos[0].equal(&coin.clone().into())
-                || pair.asset_infos[1].equal(&coin.clone().into())
+                || pair.asset_infos[1].equal(&coin.into())
         } else {
             true
         }
