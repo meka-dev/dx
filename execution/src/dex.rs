@@ -61,8 +61,18 @@ impl From<Vec<Box<dyn Pool>>> for Pools {
 }
 
 impl Pools {
-    pub fn index_by_asset(&self) -> HashMap<AssetInfo, Vec<Box<dyn Pool>>> {
-        todo!()
+    pub fn index_by_asset(&self) -> HashMap<AssetInfo, Vec<&Box<dyn Pool>>> {
+        let mut map = HashMap::new();
+
+        for (index, pool) in self.0.iter().enumerate() {
+            let c = pool.coins();
+
+            let info = if c[0].is_native() { c[1].info.clone() } else { c[0].info.clone() };
+
+            let list = map.entry(info).or_insert(vec![]);
+            list.push(pool);
+        }
+        map
     }
 
     #[allow(clippy::or_fun_call)]
@@ -71,7 +81,7 @@ impl Pools {
 
         for (index, pool) in self.0.iter().enumerate() {
             let pair = pool.info_pair();
-            let list = map.entry(pair).or_insert(vec![index]);
+            let list = map.entry(pair).or_insert(vec![]);
             list.push(index);
         }
         map

@@ -1,3 +1,5 @@
+use std::env;
+
 use futures::StreamExt;
 use tokio::sync::watch;
 
@@ -34,7 +36,8 @@ async fn main() -> Result<(), Error> {
     // TODO(xla): Safely load private key.
 
     // Set up RPC client.
-    let (client, driver) = WebSocketClient::new(config::RPC_URL).await?;
+    let rpc_url: &str = &env::var("RPC_URL").unwrap_or(config::RPC_URL.to_string());
+    let (client, driver) = WebSocketClient::new(rpc_url).await?;
     // Advance the internal machinery of the RPC client.
     let driver_handle = tokio::spawn(driver.run());
 
@@ -45,7 +48,9 @@ async fn main() -> Result<(), Error> {
     }
 
     // Set up lcd client for state retrieval. This is a naïve and slow way.
-    let lcd = Lcd::lcd_client_no_tx(config::LCD_URL, config::CHAIN_ID);
+    let lcd_url: &str = &env::var("LCD_URL").unwrap_or(config::LCD_URL.to_string());
+    let chain_id: &str = &env::var("CHAIN_ID").unwrap_or(config::CHAIN_ID.to_string());
+    let lcd = Lcd::lcd_client_no_tx(lcd_url, chain_id);
 
     // Fetch liquid UST pairs on Terraswap. This operation is expensive and will take some time.
     let filter = Some(dex::AssetInfo::NativeToken {
