@@ -109,28 +109,22 @@ pub async fn liquid_pairs(
 
     let mut pairs: Vec<Box<dyn Pool>> = vec![];
     for pair in ps {
-        println!("{}", pair.contract_addr);
+        log::debug!("Fetching Terraswap pool info for {}", pair.contract_addr);
 
-        match pool_info(lcd, &pair.contract_addr).await {
-            Ok(pool) => {
-                if pool.total_share == Uint128::zero()
-                    || pool.assets[0].amount == Uint128::zero()
-                    || pool.assets[1].amount == Uint128::zero()
-                {
-                    continue;
-                }
-
-                pairs.push(Box::new(Pair {
-                    contract_addr: pair.contract_addr.clone(),
-                    coins: [pool.assets[0].clone().into(), pool.assets[1].clone().into()],
-                    liquidity_token: pair.liquidity_token.clone(),
-                    total_share: pool.total_share,
-                }));
-            },
-            Err(err) => {
-                eprintln!("{}", err);
-            },
+        let pool = pool_info(lcd, &pair.contract_addr).await?;
+        if pool.total_share == Uint128::zero()
+            || pool.assets[0].amount == Uint128::zero()
+            || pool.assets[1].amount == Uint128::zero()
+        {
+            continue;
         }
+
+        pairs.push(Box::new(Pair {
+            contract_addr: pair.contract_addr.clone(),
+            coins: [pool.assets[0].clone().into(), pool.assets[1].clone().into()],
+            liquidity_token: pair.liquidity_token.clone(),
+            total_share: pool.total_share,
+        }));
     }
 
     Ok(pairs)

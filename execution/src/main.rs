@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, ops::Sub, time::Instant};
 
 use futures::StreamExt;
 use tokio::sync::watch;
@@ -52,15 +52,42 @@ async fn main() -> Result<(), Error> {
     let chain_id: &str = &env::var("CHAIN_ID").unwrap_or(config::CHAIN_ID.to_string());
     let lcd = Lcd::lcd_client_no_tx(lcd_url, chain_id);
 
-    // Fetch liquid UST pairs on Terraswap. This operation is expensive and will take some time.
-    let filter = Some(dex::AssetInfo::NativeToken {
-        denom: "uusd".to_string(),
-    });
-    let mut pairs = dex::astroport::liquid_pairs(&lcd, filter.clone()).await?;
-    pairs.append(&mut dex::terraswap::liquid_pairs(&lcd, filter).await?);
+    let mut pools = {
+        log::debug!("Fetching DEX pairs with pool info...");
 
-    let mut pools = dex::Pools::from(pairs);
-    let tokens = dex::get_token_infos(&lcd, &pools).await?;
+        // Fetch liquid UST pairs on Astroprot and Terraswap. This operation is expensive and will
+        // take some time.
+        let filter = Some(dex::AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        });
+
+        let start = Instant::now();
+        let mut pairs = dex::astroport::liquid_pairs(&lcd, filter.clone()).await?;
+        // pairs.append(&mut dex::terraswap::liquid_pairs(&lcd, filter).await?);
+
+        log::debug!(
+            "Fetched {} pools in {:?}",
+            pairs.len(),
+            Instant::now().sub(start)
+        );
+
+        dex::Pools::from(pairs)
+    };
+
+    let tokens = {
+        log::debug!("Fetching token infos...");
+
+        let start = Instant::now();
+        let tokens = dex::get_token_infos(&lcd, &pools).await?;
+
+        log::debug!(
+            "Fetched {} tokens in {:?}",
+            tokens.len(),
+            Instant::now().sub(start)
+        );
+
+        tokens
+    };
 
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.
@@ -98,12 +125,26 @@ async fn main() -> Result<(), Error> {
         let strategies: Vec<Box<dyn strategy::Strategy>> =
             vec![Box::new(strategy::multi_dex::SinglePair::default())];
 
-        while let Ok(_latest_block) = latest_block_receiver.changed().await {
+        while let Ok(()) = latest_block_receiver.changed().await {
+            let latest_block = latest_block_receiver.borrow().clone();
+            log::debug!(
+                "Fetching latest pair prices at height {}...",
+                latest_block.header.height,
+            );
+
             // Ensure latest prices of pairs.
+            let start = Instant::now();
             // TODO(xla): Parallelise with batches modulo num cpus.
+            // TODO(xla): Query at consistent block height.
             for pool in pools.0.iter_mut() {
                 pool.update(&lcd).await?;
             }
+
+            log::debug!(
+                "Updated {} in {:?}",
+                pools.0.len(),
+                Instant::now().sub(start)
+            );
 
             for strategy in &strategies {
                 let _messages = strategy.execute(&pools, &tokens);
@@ -117,12 +158,13 @@ async fn main() -> Result<(), Error> {
     });
 
     // TODO(xla): Handle signals.
-    // TODO(xla): Select on all long-running futures.
+    let res: Result<(), Error> = tokio::select! {
+        join = driver_handle => join?.map_err(Error::from),
+        join = latest_block_handle => join?,
+        join = execution_handle => join?,
+    };
 
     client.close()?;
-    driver_handle.await??;
-    latest_block_handle.await??;
-    execution_handle.await??;
 
-    Ok(())
+    res
 }

@@ -67,7 +67,11 @@ impl Pools {
         for (index, pool) in self.0.iter().enumerate() {
             let c = pool.coins();
 
-            let info = if c[0].is_native() { c[1].info.clone() } else { c[0].info.clone() };
+            let info = if c[0].is_native() {
+                c[1].info.clone()
+            } else {
+                c[0].info.clone()
+            };
 
             let list = map.entry(info).or_insert(vec![]);
             list.push(pool);
