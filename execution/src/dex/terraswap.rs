@@ -111,20 +111,28 @@ pub async fn liquid_pairs(
     for pair in ps {
         log::debug!("Fetching Terraswap pool info for {}", pair.contract_addr);
 
-        let pool = pool_info(lcd, &pair.contract_addr).await?;
-        if pool.total_share == Uint128::zero()
-            || pool.assets[0].amount == Uint128::zero()
-            || pool.assets[1].amount == Uint128::zero()
-        {
-            continue;
-        }
+        match pool_info(lcd, &pair.contract_addr).await {
+            Ok(pool) => {
+                if pool.total_share == Uint128::zero()
+                    || pool.assets[0].amount == Uint128::zero()
+                    || pool.assets[1].amount == Uint128::zero()
+                {
+                    continue;
+                }
 
-        pairs.push(Box::new(Pair {
-            contract_addr: pair.contract_addr.clone(),
-            coins: [pool.assets[0].clone().into(), pool.assets[1].clone().into()],
-            liquidity_token: pair.liquidity_token.clone(),
-            total_share: pool.total_share,
-        }));
+                pairs.push(Box::new(Pair {
+                    contract_addr: pair.contract_addr.clone(),
+                    coins: [pool.assets[0].clone().into(), pool.assets[1].clone().into()],
+                    liquidity_token: pair.liquidity_token.clone(),
+                    total_share: pool.total_share,
+                }));
+            },
+            Err(err) => log::error!(
+                "Error fetching pool info for {}: {}",
+                pair.contract_addr,
+                err
+            ),
+        }
     }
 
     Ok(pairs)
