@@ -109,7 +109,7 @@ pub async fn liquid_pairs(
 
     let mut pairs: Vec<Box<dyn Pool>> = vec![];
     for pair in ps {
-        log::debug!("Fetching Terraswap pool info for {}", pair.contract_addr);
+        log::debug!("Loading Terraswap pool info for {}", pair.contract_addr);
 
         match pool_info(lcd, &pair.contract_addr).await {
             Ok(pool) => {

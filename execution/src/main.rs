@@ -37,18 +37,6 @@ async fn main() -> Result<(), Error> {
 
     // TODO(xla): Safely load private key.
 
-    // Set up RPC client.
-    let rpc_url: &str = &env::var("RPC_URL").unwrap_or(config::RPC_URL.to_string());
-    let (client, driver) = WebSocketClient::new(rpc_url).await?;
-    // Advance the internal machinery of the RPC client.
-    let driver_handle = tokio::spawn(driver.run());
-
-    // Ensure the data source has caught up to the latest state.
-    let status = client.status().await?;
-    if status.sync_info.catching_up {
-        return Err(Error::NodeCatchingUp);
-    }
-
     // Set up lcd client for state retrieval. This is a naïve and slow way.
     let lcd_url: &str = &env::var("LCD_URL").unwrap_or(config::LCD_URL.to_string());
     let chain_id: &str = &env::var("CHAIN_ID").unwrap_or(config::CHAIN_ID.to_string());
@@ -91,6 +79,20 @@ async fn main() -> Result<(), Error> {
         tokens
     };
 
+    log::debug!("Found {} liquid pools", pools.0.len());
+
+    // Set up RPC client.
+    let rpc_url: &str = &env::var("RPC_URL").unwrap_or(config::RPC_URL.to_string());
+    let (client, driver) = WebSocketClient::new(rpc_url).await?;
+    // Advance the internal machinery of the RPC client.
+    let driver_handle = tokio::spawn(driver.run());
+
+    // Ensure the data source has caught up to the latest state.
+    let status = client.status().await?;
+    if status.sync_info.catching_up {
+        return Err(Error::NodeCatchingUp);
+    }
+
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.
     let (latest_block_sender, mut latest_block_receiver) = {
@@ -130,7 +132,8 @@ async fn main() -> Result<(), Error> {
         while let Ok(()) = latest_block_receiver.changed().await {
             let latest_block = latest_block_receiver.borrow().clone();
             log::debug!(
-                "Fetching latest pair prices at height {}...",
+                "Fetching latest pair prices for {} pools at height {}...",
+                pools.0.len(),
                 latest_block.header.height,
             );
 

@@ -102,7 +102,7 @@ pub async fn liquid_pairs(
 
     let mut pairs: Vec<Box<dyn Pool>> = vec![];
     for pair in ps {
-        log::debug!("Fetching Astroport pool info for {}", pair.contract_addr);
+        log::debug!("Loading Astroport pool info for {}", pair.contract_addr);
 
         match pool_info(lcd, pair.contract_addr.as_str()).await {
             Ok(pool) => {
