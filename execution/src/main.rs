@@ -1,3 +1,5 @@
+#![allow(clippy::or_fun_call)]
+
 use std::{env, ops::Sub, time::Instant};
 
 use futures::StreamExt;

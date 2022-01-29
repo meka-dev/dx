@@ -20,6 +20,7 @@ impl From<[AssetInfo; 2]> for AssetInfoPair {
     }
 }
 
+pub type AssetIndex = HashMap<AssetInfo, Vec<usize>>;
 pub type PairIndex = HashMap<AssetInfoPair, Vec<usize>>;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, PartialOrd, Ord)]
@@ -60,26 +61,20 @@ impl From<Vec<Box<dyn Pool>>> for Pools {
     }
 }
 
+#[allow(clippy::or_fun_call)]
 impl Pools {
-    pub fn index_by_asset(&self) -> HashMap<AssetInfo, Vec<&Box<dyn Pool>>> {
+    pub fn index_by_asset(&self) -> AssetIndex {
         let mut map = HashMap::new();
 
         for (index, pool) in self.0.iter().enumerate() {
-            let c = pool.coins();
-
-            let info = if c[0].is_native() {
-                c[1].info.clone()
-            } else {
-                c[0].info.clone()
-            };
-
-            let list = map.entry(info).or_insert(vec![]);
-            list.push(pool);
+            for coin in pool.coins() {
+                let list = map.entry(coin.info).or_insert(vec![]);
+                list.push(index);
+            }
         }
         map
     }
 
-    #[allow(clippy::or_fun_call)]
     pub fn index_by_pair(&self) -> PairIndex {
         let mut map = PairIndex::new();
 
