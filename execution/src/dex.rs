@@ -11,7 +11,7 @@ pub mod terraswap;
 
 const DENOM_USD: &str = "uusd";
 
-#[derive(Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct AssetInfoPair(pub [AssetInfo; 2]);
 
 impl From<[AssetInfo; 2]> for AssetInfoPair {

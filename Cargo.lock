@@ -90,6 +90,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dabbe35f96fb9507f7330793dc490461b2962659ac5d427181e451a623751d1"
 
 [[package]]
+name = "bigint"
+version = "4.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0e8c8a600052b52482eff2cf4d810e462fdff1f656ac1ecb6232132a1ed7def"
+dependencies = [
+ "byteorder",
+ "crunchy 0.1.6",
+]
+
+[[package]]
 name = "bitcoin"
 version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -209,6 +219,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmwasm-bignumber"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce94de6dd2b3d74cd8d9bc2bf5d6208ffed832ad946774ea9ed2a9ef7d95161f"
+dependencies = [
+ "bigint",
+ "cosmwasm-std 0.16.3",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "cosmwasm-crypto"
 version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -302,6 +324,12 @@ checksum = "95059428f66df56b63431fdb4e1947ed2190586af5c5a8a8b71122bdf5a7f469"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "crunchy"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2f4a431c5c9f662e1200b7c7f02c34e91361150e382089a8f2dec3ba680cbda"
 
 [[package]]
 name = "crunchy"
@@ -633,12 +661,14 @@ dependencies = [
  "anyhow",
  "astroport",
  "async-trait",
+ "cosmwasm-bignumber",
  "cosmwasm-std 0.16.3",
  "cw20 0.11.1",
  "cw20-base",
  "env_logger",
  "eyre",
  "futures",
+ "itertools",
  "log",
  "num_cpus",
  "serde",
@@ -2451,7 +2481,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6470ab50f482bde894a037a57064480a246dbfdd5960bd65a44824693f08da5f"
 dependencies = [
  "byteorder",
- "crunchy",
+ "crunchy 0.2.2",
  "hex",
  "static_assertions",
 ]

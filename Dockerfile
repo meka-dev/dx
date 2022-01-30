@@ -1,7 +1,7 @@
 ####################################################################################################
 ## Builder
 ####################################################################################################
-FROM rust:latest AS builder
+FROM rust:latest AS base
 
 RUN rustup target add x86_64-unknown-linux-musl
 RUN apt update && apt install -y musl-tools musl-dev
@@ -20,10 +20,19 @@ RUN adduser \
     --uid "${UID}" \
     "${USER}"
 
-
+RUN cargo install cargo-chef
 WORKDIR /exec
 
-COPY ./ .
+FROM base AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM base AS builder
+COPY --from=planner /exec/recipe.json recipe.json
+# Build dependencies - this is the caching Docker layer!
+RUN cargo chef cook --release --recipe-path recipe.json
+
+COPY . .
 
 RUN cargo build --target x86_64-unknown-linux-musl --release --bin execution
 
