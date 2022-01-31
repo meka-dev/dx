@@ -1,5 +1,6 @@
 use std::collections::{hash_map::Entry, HashMap};
 
+use cosmwasm_bignumber::Decimal256;
 use cw20::TokenInfoResponse;
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +11,7 @@ use terrars::{Lcd, Message};
 pub mod astroport;
 pub mod terraswap;
 
-const DENOM_UST: &str = "uusd";
+pub const DENOM_UST: &str = "uusd";
 
 #[derive(Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct TokenPair(pub [Token; 2]);
@@ -40,10 +41,46 @@ impl Token {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug)]
 pub struct Asset {
-    pub amount: Uint128,
     pub token: Token,
+    pub amount: Uint128,
+    pub amount_decimal: Decimal256,
+    pub decimals: u8,
+}
+
+impl Eq for Asset {}
+
+impl PartialEq for Asset {
+    fn eq(&self, other: &Self) -> bool {
+        self.token == other.token
+    }
+}
+
+impl Ord for Asset {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.token.cmp(&other.token)
+    }
+}
+
+impl PartialOrd for Asset {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl From<(Token, Uint128, u8)> for Asset {
+    fn from((token, amount, decimals): (Token, Uint128, u8)) -> Self {
+        let amount_decimal = Decimal256::from_uint256(amount.u128())
+            / Decimal256::from_uint256(10u128.pow(decimals as u32));
+
+        Self {
+            token,
+            amount,
+            amount_decimal,
+            decimals,
+        }
+    }
 }
 
 #[async_trait::async_trait]
@@ -51,7 +88,7 @@ pub trait Pool: Send + Sync {
     fn coins(&self) -> [Asset; 2];
     fn swap(&self) -> Message;
     fn token_pair(&self) -> TokenPair;
-    async fn update(&mut self, lcd: &Lcd) -> anyhow::Result<()>;
+    async fn update(&mut self, lcd: &Lcd, token_cache: &mut TokenCache) -> anyhow::Result<()>;
 }
 
 pub struct Pools(pub Vec<Box<dyn Pool>>);

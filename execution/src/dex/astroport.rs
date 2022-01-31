@@ -8,7 +8,7 @@ use cosmwasm_std::Uint128;
 
 use terrars::Lcd;
 
-use crate::dex::{Asset, Pool, Token, TokenPair};
+use crate::dex::{Asset, Pool, Token, TokenCache, TokenPair};
 
 const ASTROPORT_ADDRESS: &str = "terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g";
 
@@ -28,15 +28,6 @@ impl From<Token> for asset::AssetInfo {
             Token::Cw20 { contract_addr } => Self::Token {
                 contract_addr: Addr::unchecked(contract_addr),
             },
-        }
-    }
-}
-
-impl From<asset::Asset> for Asset {
-    fn from(input: asset::Asset) -> Self {
-        Self {
-            amount: input.amount,
-            token: input.info.into(),
         }
     }
 }
@@ -79,15 +70,37 @@ impl Pool for Pair {
         [coins[0].token.clone(), coins[1].token.clone()].into()
     }
 
-    async fn update(&mut self, lcd: &Lcd) -> anyhow::Result<()> {
+    async fn update(&mut self, lcd: &Lcd, token_cache: &mut TokenCache) -> anyhow::Result<()> {
         let pool = pool_info(lcd, &self.contract_addr).await?;
-        self.coins = [pool.assets[0].clone().into(), pool.assets[1].clone().into()];
+        let left = into_asset(lcd, token_cache, pool.assets[0].clone()).await?;
+        let right = into_asset(lcd, token_cache, pool.assets[1].clone()).await?;
+        self.coins = [left, right];
 
         Ok(())
     }
 }
 
-pub async fn liquid_pairs(lcd: &Lcd, filter: Option<Token>) -> anyhow::Result<Vec<Box<dyn Pool>>> {
+async fn into_asset(
+    lcd: &Lcd,
+    token_cache: &mut TokenCache,
+    input: asset::Asset,
+) -> anyhow::Result<Asset> {
+    let token = Token::from(input.info);
+
+    match token {
+        Token::Cw20 { ref contract_addr } => {
+            let info = token_cache.get(lcd, contract_addr).await?;
+            Ok(Asset::from((token, input.amount, info.decimals)))
+        },
+        Token::Native { .. } => Ok(Asset::from((token, input.amount, 6))),
+    }
+}
+
+pub async fn liquid_pairs(
+    lcd: &Lcd,
+    token_cache: &mut TokenCache,
+    filter: Option<Token>,
+) -> anyhow::Result<Vec<Box<dyn Pool>>> {
     let ps = pairs(lcd).await?.into_iter().filter(|pair| {
         if let Some(coin) = filter.clone() {
             pair.asset_infos[0].equal(&coin.clone().into())
@@ -110,9 +123,12 @@ pub async fn liquid_pairs(lcd: &Lcd, filter: Option<Token>) -> anyhow::Result<Ve
                     continue;
                 }
 
+                let left = into_asset(lcd, token_cache, pool.assets[0].clone()).await?;
+                let right = into_asset(lcd, token_cache, pool.assets[1].clone()).await?;
+
                 pairs.push(Box::new(Pair {
                     contract_addr: pair.contract_addr.to_string(),
-                    coins: [pool.assets[0].clone().into(), pool.assets[1].clone().into()],
+                    coins: [left, right],
                     liquidity_token: pair.liquidity_token.to_string(),
                     total_share: pool.total_share,
                 }));
