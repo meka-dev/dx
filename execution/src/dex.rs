@@ -9,7 +9,7 @@ use terrars::{Lcd, Message};
 pub mod astroport;
 pub mod terraswap;
 
-const DENOM_USD: &str = "uusd";
+const DENOM_UST: &str = "uusd";
 
 #[derive(Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct AssetInfoPair(pub [AssetInfo; 2]);
@@ -29,20 +29,20 @@ pub enum AssetInfo {
     Token { contract_addr: Addr },
 }
 
+impl AssetInfo {
+    pub fn is_native(&self) -> bool {
+        matches!(self, AssetInfo::NativeToken { .. })
+    }
+
+    pub fn is_ust(&self) -> bool {
+        matches!(self, AssetInfo::NativeToken { ref denom } if denom == &DENOM_UST.to_string())
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Asset {
     pub amount: Uint128,
     pub info: AssetInfo,
-}
-
-impl Asset {
-    pub fn is_native(&self) -> bool {
-        matches!(self.info, AssetInfo::NativeToken { .. })
-    }
-
-    pub fn is_ust(&self) -> bool {
-        matches!(self.info, AssetInfo::NativeToken { ref denom } if denom == &DENOM_USD.to_string())
-    }
 }
 
 #[async_trait::async_trait]
