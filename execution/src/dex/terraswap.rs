@@ -5,28 +5,26 @@ use terraswap::{asset, factory, pair};
 
 use terrars::Lcd;
 
-use crate::dex::{Asset, AssetInfo, Pool};
-
-use super::AssetInfoPair;
+use crate::dex::{Asset, Pool, Token, TokenPair};
 
 const TERRASWAP_ADDRESS: &str = "terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj";
 
-impl From<asset::AssetInfo> for AssetInfo {
+impl From<asset::AssetInfo> for Token {
     fn from(input: asset::AssetInfo) -> Self {
         match input {
-            asset::AssetInfo::NativeToken { denom } => Self::NativeToken { denom },
-            asset::AssetInfo::Token { contract_addr } => Self::Token {
+            asset::AssetInfo::NativeToken { denom } => Self::Native { denom },
+            asset::AssetInfo::Token { contract_addr } => Self::Cw20 {
                 contract_addr: Addr::unchecked(contract_addr),
             },
         }
     }
 }
 
-impl From<AssetInfo> for asset::AssetInfo {
-    fn from(input: AssetInfo) -> Self {
+impl From<Token> for asset::AssetInfo {
+    fn from(input: Token) -> Self {
         match input {
-            AssetInfo::NativeToken { denom } => Self::NativeToken { denom },
-            AssetInfo::Token { contract_addr } => Self::Token {
+            Token::Native { denom } => Self::NativeToken { denom },
+            Token::Cw20 { contract_addr } => Self::Token {
                 contract_addr: contract_addr.into(),
             },
         }
@@ -37,7 +35,7 @@ impl From<asset::Asset> for Asset {
     fn from(input: asset::Asset) -> Self {
         Self {
             amount: input.amount,
-            info: input.info.into(),
+            token: input.info.into(),
         }
     }
 }
@@ -70,12 +68,6 @@ pub struct Pair {
 
 #[async_trait::async_trait]
 impl Pool for Pair {
-    fn info_pair(&self) -> AssetInfoPair {
-        let mut coins = self.coins.clone();
-        coins.sort();
-        [coins[0].info.clone(), coins[1].info.clone()].into()
-    }
-
     fn coins(&self) -> [Asset; 2] {
         let mut coins = self.coins.clone();
         coins.sort();
@@ -86,6 +78,12 @@ impl Pool for Pair {
         todo!()
     }
 
+    fn token_pair(&self) -> TokenPair {
+        let mut coins = self.coins.clone();
+        coins.sort();
+        [coins[0].token.clone(), coins[1].token.clone()].into()
+    }
+
     async fn update(&mut self, lcd: &Lcd) -> anyhow::Result<()> {
         let pool = pool_info(lcd, &self.contract_addr).await?;
         self.coins = [pool.assets[0].clone().into(), pool.assets[1].clone().into()];
@@ -94,10 +92,7 @@ impl Pool for Pair {
     }
 }
 
-pub async fn liquid_pairs(
-    lcd: &Lcd,
-    filter: Option<AssetInfo>,
-) -> anyhow::Result<Vec<Box<dyn Pool>>> {
+pub async fn liquid_pairs(lcd: &Lcd, filter: Option<Token>) -> anyhow::Result<Vec<Box<dyn Pool>>> {
     let ps = pairs(lcd).await?.into_iter().filter(|pair| {
         if let Some(coin) = filter.clone() {
             pair.asset_infos[0].equal(&coin.clone().into())

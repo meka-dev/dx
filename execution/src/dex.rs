@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
+use cw20::TokenInfoResponse;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Addr, Uint128};
@@ -12,44 +13,44 @@ pub mod terraswap;
 const DENOM_UST: &str = "uusd";
 
 #[derive(Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct AssetInfoPair(pub [AssetInfo; 2]);
+pub struct TokenPair(pub [Token; 2]);
 
-impl From<[AssetInfo; 2]> for AssetInfoPair {
-    fn from(input: [AssetInfo; 2]) -> Self {
+impl From<[Token; 2]> for TokenPair {
+    fn from(input: [Token; 2]) -> Self {
         Self(input)
     }
 }
 
-pub type AssetIndex = HashMap<AssetInfo, Vec<usize>>;
-pub type PairIndex = HashMap<AssetInfoPair, Vec<usize>>;
+pub type TokenIndex = HashMap<Token, Vec<usize>>;
+pub type PairIndex = HashMap<TokenPair, Vec<usize>>;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, PartialOrd, Ord)]
-pub enum AssetInfo {
-    NativeToken { denom: String },
-    Token { contract_addr: Addr },
+pub enum Token {
+    Cw20 { contract_addr: Addr },
+    Native { denom: String },
 }
 
-impl AssetInfo {
+impl Token {
     pub fn is_native(&self) -> bool {
-        matches!(self, AssetInfo::NativeToken { .. })
+        matches!(self, Token::Native { .. })
     }
 
     pub fn is_ust(&self) -> bool {
-        matches!(self, AssetInfo::NativeToken { ref denom } if denom == &DENOM_UST.to_string())
+        matches!(self, Token::Native { ref denom, .. } if denom == &DENOM_UST.to_string())
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Asset {
     pub amount: Uint128,
-    pub info: AssetInfo,
+    pub token: Token,
 }
 
 #[async_trait::async_trait]
 pub trait Pool: Send + Sync {
-    fn info_pair(&self) -> AssetInfoPair;
     fn coins(&self) -> [Asset; 2];
     fn swap(&self) -> Message;
+    fn token_pair(&self) -> TokenPair;
     async fn update(&mut self, lcd: &Lcd) -> anyhow::Result<()>;
 }
 
@@ -63,12 +64,12 @@ impl From<Vec<Box<dyn Pool>>> for Pools {
 
 #[allow(clippy::or_fun_call)]
 impl Pools {
-    pub fn index_by_asset(&self) -> AssetIndex {
+    pub fn index_by_token(&self) -> TokenIndex {
         let mut map = HashMap::new();
 
         for (index, pool) in self.0.iter().enumerate() {
             for coin in pool.coins() {
-                let list = map.entry(coin.info).or_insert(vec![]);
+                let list = map.entry(coin.token).or_insert(vec![]);
                 list.push(index);
             }
         }
@@ -79,7 +80,7 @@ impl Pools {
         let mut map = PairIndex::new();
 
         for (index, pool) in self.0.iter().enumerate() {
-            let pair = pool.info_pair();
+            let pair = pool.token_pair();
             let list = map.entry(pair).or_insert(vec![]);
             list.push(index);
         }
@@ -87,30 +88,24 @@ impl Pools {
     }
 }
 
-pub type Tokens = HashMap<Addr, cw20::TokenInfoResponse>;
+#[derive(Default)]
+pub struct TokenCache(pub HashMap<Addr, cw20::TokenInfoResponse>);
 
-pub async fn get_token_infos(lcd: &Lcd, pools: &Pools) -> anyhow::Result<Tokens> {
-    let mut tokens = HashMap::new();
-
-    for pool in &pools.0 {
-        let pair = pool.info_pair();
-
-        if let AssetInfo::Token { ref contract_addr } = pair.0[0] {
-            if !tokens.contains_key(contract_addr) {
+impl TokenCache {
+    pub async fn get(
+        &mut self,
+        lcd: &Lcd,
+        contract_addr: &Addr,
+    ) -> anyhow::Result<TokenInfoResponse> {
+        match self.0.entry(contract_addr.clone()) {
+            Entry::Occupied(entry) => Ok(entry.get().clone()),
+            Entry::Vacant(entry) => {
                 let info = token_info(lcd, contract_addr).await?;
-                tokens.insert(contract_addr.clone(), info);
-            }
-        }
-
-        if let AssetInfo::Token { ref contract_addr } = pair.0[1] {
-            if !tokens.contains_key(contract_addr) {
-                let info = token_info(lcd, contract_addr).await?;
-                tokens.insert(contract_addr.clone(), info);
-            }
+                entry.insert(info.clone());
+                Ok(info)
+            },
         }
     }
-
-    Ok(tokens)
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

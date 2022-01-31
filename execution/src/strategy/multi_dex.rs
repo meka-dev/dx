@@ -10,14 +10,17 @@ use crate::strategy::Strategy;
 #[derive(Default)]
 pub struct SinglePair {}
 
-fn compute_cycle_liq(pools: &Vec<&Box<dyn dex::Pool>>, tokens: &dex::Tokens) -> Option<Uint128> {
+fn compute_cycle_liq(
+    pools: &Vec<&Box<dyn dex::Pool>>,
+    tokens: &dex::TokenCache,
+) -> Option<Uint128> {
     if pools.len() != 2 {
         return None;
     }
 
     let r2 = Decimal256::from_str("0.997").unwrap();
 
-    let [p0_ask, p0_offer] = if pools[0].coins()[0].info.is_ust() {
+    let [p0_ask, p0_offer] = if pools[0].coins()[0].token.is_ust() {
         let mut ass = pools[0].coins();
         ass.reverse();
         ass
@@ -28,16 +31,16 @@ fn compute_cycle_liq(pools: &Vec<&Box<dyn dex::Pool>>, tokens: &dex::Tokens) -> 
     // XXX: assume to start with ust offer
     // XXX: this also matches stable<>stable pairs
     // XXX: filter out stableswap pairs
-    let tok_decimals = match p0_ask.info {
-        dex::AssetInfo::Token { contract_addr: a } => tokens[&a].decimals,
-        dex::AssetInfo::NativeToken { denom: d } if d == "uusd" => 6,
+    let tok_decimals = match p0_ask.token {
+        dex::Token::Cw20 { contract_addr: a } => tokens.0[&a].decimals,
+        dex::Token::Native { denom: d } if d == "uusd" => 6,
         _ => {
-            log::error!("no decimals {:?} {:?}", p0_ask.info, p0_offer.info);
+            log::error!("no decimals {:?} {:?}", p0_ask.token, p0_offer.token);
             return None;
         },
     };
 
-    let [p1_ask, p1_offer] = if pools[1].coins()[0].info.is_ust() {
+    let [p1_ask, p1_offer] = if pools[1].coins()[0].token.is_ust() {
         pools[1].coins()
     } else {
         let mut ass = pools[1].coins().clone();
@@ -90,9 +93,9 @@ fn compute_cycle_liq(pools: &Vec<&Box<dyn dex::Pool>>, tokens: &dex::Tokens) -> 
 }
 
 impl Strategy for SinglePair {
-    fn execute(&self, pools: &dex::Pools, tokens: &dex::Tokens) -> Vec<terrars::Message> {
+    fn execute(&self, pools: &dex::Pools, tokens: &dex::TokenCache) -> Vec<terrars::Message> {
         // crazy arbs go here
-        for (asset, pairs) in pools.index_by_asset() {
+        for (asset, pairs) in pools.index_by_token() {
             // We're only looking at cross dex two hop arbs, i.e. take all two pair
             // permutations for any token, eg ust -> luna on astroport and luna -> ust
             // on terraswap
@@ -105,8 +108,8 @@ impl Strategy for SinglePair {
                     log::info!(
                         "got a good trade {} {:?} to {:?}",
                         liq,
-                        ps[0].info_pair(),
-                        ps[1].info_pair()
+                        ps[0].token_pair(),
+                        ps[1].token_pair()
                     )
                 }
             }
