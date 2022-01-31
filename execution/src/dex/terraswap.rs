@@ -65,6 +65,10 @@ impl Pool for Pair {
         coins
     }
 
+    fn addr(&self) -> &str {
+        &self.contract_addr
+    }
+
     fn swap(&self) -> terrars::Message {
         todo!()
     }

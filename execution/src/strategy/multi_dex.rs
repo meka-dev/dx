@@ -28,7 +28,6 @@ fn compute_cycle_liq(pools: &Vec<&Box<dyn dex::Pool>>) -> Option<Uint128> {
     // XXX: assume to start with ust offer
     // XXX: this also matches stable<>stable pairs
     // XXX: filter out stableswap pairs
-
     let [p1_ask, p1_offer] = if pools[1].coins()[0].token.is_ust() {
         pools[1].coins()
     } else {
@@ -89,9 +88,11 @@ impl Strategy for SinglePair {
             for ps in pairs.iter().map(|i| &pools.0[*i]).permutations(2) {
                 if let Some(liq) = compute_cycle_liq(&ps) {
                     log::info!(
-                        "got a good trade {} {:?} to {:?}",
+                        "got a good trade {} { }{:?} to {} {:?}",
                         liq,
+                        ps[0].addr(),
                         ps[0].token_pair(),
+                        ps[1].addr(),
                         ps[1].token_pair()
                     )
                 }

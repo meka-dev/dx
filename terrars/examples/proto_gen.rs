@@ -85,7 +85,8 @@ fn get_protos(dir: &str) -> Vec<String> {
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.path().extension().unwrap_or_default() == "proto")
-        //Ignore staking authz proto file because protoc issue (Conflict StakeAuthorization.Validators with StakeAuthorization.validators)
+        //Ignore staking authz proto file because protoc issue (Conflict
+        // StakeAuthorization.Validators with StakeAuthorization.validators)
         .filter(|e| {
             !e.path()
                 .canonicalize()

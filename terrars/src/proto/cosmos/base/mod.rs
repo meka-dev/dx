@@ -1,8 +1,8 @@
 pub mod abci;
+pub mod kv;
+pub mod query;
 pub mod reflection;
-pub mod v1beta1;
+pub mod snapshots;
 pub mod store;
 pub mod tendermint;
-pub mod snapshots;
-pub mod query;
-pub mod kv;
+pub mod v1beta1;

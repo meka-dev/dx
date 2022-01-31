@@ -1,8 +1,8 @@
 pub mod cosmos;
-pub mod terra;
-pub mod tendermint;
-pub mod google;
-pub mod ics23;
-pub mod ibc;
-pub mod gogoproto;
 pub mod cosmos_proto;
+pub mod gogoproto;
+pub mod google;
+pub mod ibc;
+pub mod ics23;
+pub mod tendermint;
+pub mod terra;

@@ -86,6 +86,7 @@ impl From<(Token, Uint128, u8)> for Asset {
 #[async_trait::async_trait]
 pub trait Pool: Send + Sync {
     fn coins(&self) -> [Asset; 2];
+    fn addr(&self) -> &str;
     fn swap(&self) -> Message;
     fn token_pair(&self) -> TokenPair;
     async fn update(&mut self, lcd: &Lcd, token_cache: &mut TokenCache) -> anyhow::Result<()>;

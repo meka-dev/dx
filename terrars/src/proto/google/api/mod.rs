@@ -6,7 +6,7 @@ pub struct Http {
     /// A list of HTTP configuration rules that apply to individual API methods.
     ///
     /// **NOTE:** All service configuration rules follow "last one wins" order.
-    #[prost(message, repeated, tag="1")]
+    #[prost(message, repeated, tag = "1")]
     pub rules: ::prost::alloc::vec::Vec<HttpRule>,
     /// When set to true, URL path parmeters will be fully URI-decoded except in
     /// cases of single segment matches in reserved expansion, where "%2F" will be
@@ -14,7 +14,7 @@ pub struct Http {
     ///
     /// The default behavior is to not decode RFC 6570 reserved characters in multi
     /// segment matches.
-    #[prost(bool, tag="2")]
+    #[prost(bool, tag = "2")]
     pub fully_decode_reserved_expansion: bool,
 }
 /// `HttpRule` defines the mapping of an RPC method to one or more HTTP
@@ -51,15 +51,16 @@ pub struct Http {
 ///
 ///     http:
 ///       rules:
-///         - selector: <proto_package_name>.Messaging.GetMessage
-///           get: /v1/messages/{message_id}/{sub.subfield}
+///         - selector: <proto_package_name>.Messaging.GetMessage get:
+///           /v1/messages/{message_id}/{sub.subfield}
 ///
 /// This definition enables an automatic, bidrectional mapping of HTTP
 /// JSON to RPC. Example:
 ///
 /// HTTP | RPC
 /// -----|-----
-/// `GET /v1/messages/123456/foo`  | `GetMessage(message_id: "123456" sub: SubMessage(subfield: "foo"))`
+/// `GET /v1/messages/123456/foo`  | `GetMessage(message_id: "123456" sub: SubMessage(subfield:
+/// "foo"))`
 ///
 /// In general, not only fields but also field paths can be referenced
 /// from a path pattern. Fields mapped to the path pattern cannot be
@@ -89,7 +90,8 @@ pub struct Http {
 ///
 /// HTTP | RPC
 /// -----|-----
-/// `GET /v1/messages/123456?revision=2&sub.subfield=foo` | `GetMessage(message_id: "123456" revision: 2 sub: SubMessage(subfield: "foo"))`
+/// `GET /v1/messages/123456?revision=2&sub.subfield=foo` | `GetMessage(message_id: "123456"
+/// revision: 2 sub: SubMessage(subfield: "foo"))`
 ///
 /// Note that fields which are mapped to HTTP parameters must have a
 /// primitive type or a repeated primitive type. Message types are not
@@ -121,7 +123,8 @@ pub struct Http {
 ///
 /// HTTP | RPC
 /// -----|-----
-/// `PUT /v1/messages/123456 { "text": "Hi!" }` | `UpdateMessage(message_id: "123456" message { text: "Hi!" })`
+/// `PUT /v1/messages/123456 { "text": "Hi!" }` | `UpdateMessage(message_id: "123456" message {
+/// text: "Hi!" })`
 ///
 /// The special name `*` can be used in the body mapping to define that
 /// every field not bound by the path template should be mapped to the
@@ -239,28 +242,28 @@ pub struct HttpRule {
     /// Selects methods to which this rule applies.
     ///
     /// Refer to \[selector][google.api.DocumentationRule.selector\] for syntax details.
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub selector: ::prost::alloc::string::String,
     /// The name of the request field whose value is mapped to the HTTP body, or
     /// `*` for mapping all fields not captured by the path pattern to the HTTP
     /// body. NOTE: the referred field must not be a repeated field and must be
     /// present at the top-level of request message type.
-    #[prost(string, tag="7")]
+    #[prost(string, tag = "7")]
     pub body: ::prost::alloc::string::String,
     /// Optional. The name of the response field whose value is mapped to the HTTP
     /// body of response. Other response fields are ignored. When
     /// not set, the response message will be used as HTTP body of response.
-    #[prost(string, tag="12")]
+    #[prost(string, tag = "12")]
     pub response_body: ::prost::alloc::string::String,
     /// Additional HTTP bindings for the selector. Nested bindings must
     /// not contain an `additional_bindings` field themselves (that is,
     /// the nesting may only be one level deep).
-    #[prost(message, repeated, tag="11")]
+    #[prost(message, repeated, tag = "11")]
     pub additional_bindings: ::prost::alloc::vec::Vec<HttpRule>,
     /// Determines the URL pattern is matched by this rules. This pattern can be
     /// used with any of the {get|put|post|delete|patch} methods. A custom method
     /// can be defined using the 'custom' field.
-    #[prost(oneof="http_rule::Pattern", tags="2, 3, 4, 5, 6, 8")]
+    #[prost(oneof = "http_rule::Pattern", tags = "2, 3, 4, 5, 6, 8")]
     pub pattern: ::core::option::Option<http_rule::Pattern>,
 }
 /// Nested message and enum types in `HttpRule`.
@@ -271,25 +274,25 @@ pub mod http_rule {
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Pattern {
         /// Used for listing and getting information about resources.
-        #[prost(string, tag="2")]
+        #[prost(string, tag = "2")]
         Get(::prost::alloc::string::String),
         /// Used for updating a resource.
-        #[prost(string, tag="3")]
+        #[prost(string, tag = "3")]
         Put(::prost::alloc::string::String),
         /// Used for creating a resource.
-        #[prost(string, tag="4")]
+        #[prost(string, tag = "4")]
         Post(::prost::alloc::string::String),
         /// Used for deleting a resource.
-        #[prost(string, tag="5")]
+        #[prost(string, tag = "5")]
         Delete(::prost::alloc::string::String),
         /// Used for updating a resource.
-        #[prost(string, tag="6")]
+        #[prost(string, tag = "6")]
         Patch(::prost::alloc::string::String),
         /// The custom pattern is used for specifying an HTTP method that is not
         /// included in the `pattern` field, such as HEAD, or "*" to leave the
         /// HTTP method unspecified for this rule. The wild-card rule is useful
         /// for services that provide content to Web (HTML) clients.
-        #[prost(message, tag="8")]
+        #[prost(message, tag = "8")]
         Custom(super::CustomHttpPattern),
     }
 }
@@ -297,10 +300,10 @@ pub mod http_rule {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CustomHttpPattern {
     /// The name of this custom HTTP verb.
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub kind: ::prost::alloc::string::String,
     /// The path matched by this custom verb.
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub path: ::prost::alloc::string::String,
 }
 /// Message that represents an arbitrary HTTP body. It should only be used for
@@ -345,13 +348,13 @@ pub struct CustomHttpPattern {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HttpBody {
     /// The HTTP Content-Type header value specifying the content type of the body.
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub content_type: ::prost::alloc::string::String,
     /// The HTTP request/response body as raw binary.
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub data: ::prost::alloc::vec::Vec<u8>,
     /// Application specific response metadata. Must be set in the first response
     /// for streaming APIs.
-    #[prost(message, repeated, tag="3")]
+    #[prost(message, repeated, tag = "3")]
     pub extensions: ::prost::alloc::vec::Vec<::prost_types::Any>,
 }

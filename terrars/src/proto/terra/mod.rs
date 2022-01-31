@@ -1,6 +1,6 @@
-pub mod vesting;
+pub mod market;
+pub mod oracle;
 pub mod treasury;
 pub mod tx;
-pub mod market;
+pub mod vesting;
 pub mod wasm;
-pub mod oracle;
