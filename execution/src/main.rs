@@ -2,6 +2,7 @@
 
 use std::{env, ops::Sub, time::Instant};
 
+use futures::FutureExt as _;
 use futures::StreamExt;
 use tokio::sync::watch;
 
@@ -43,7 +44,7 @@ async fn main() -> Result<(), Error> {
     let lcd = Lcd::lcd_client_no_tx(lcd_url, chain_id);
 
     let mut pools = {
-        log::debug!("Fetching DEX pairs with pool info...");
+        log::debug!("Fetching DEX pairs with pool info");
 
         // Fetch liquid UST pairs on Astroprot and Terraswap. This operation is expensive and will
         // take some time.
@@ -65,7 +66,7 @@ async fn main() -> Result<(), Error> {
     };
 
     let tokens = {
-        log::debug!("Fetching token infos...");
+        log::debug!("Fetching token infos");
 
         let start = Instant::now();
         let tokens = dex::get_token_infos(&lcd, &pools).await?;
@@ -79,19 +80,19 @@ async fn main() -> Result<(), Error> {
         tokens
     };
 
-    log::debug!("Found {} liquid pools", pools.0.len());
-
     // Set up RPC client.
     let rpc_url: &str = &env::var("RPC_URL").unwrap_or(config::RPC_URL.to_string());
     let (client, driver) = WebSocketClient::new(rpc_url).await?;
     // Advance the internal machinery of the RPC client.
-    let driver_handle = tokio::spawn(driver.run());
+    let mut driver_handle = tokio::spawn(driver.run()).fuse();
 
     // Ensure the data source has caught up to the latest state.
     let status = client.status().await?;
     if status.sync_info.catching_up {
         return Err(Error::NodeCatchingUp);
     }
+
+    log::info!("Node status: {:?}", status);
 
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.
@@ -101,9 +102,11 @@ async fn main() -> Result<(), Error> {
     };
 
     // Subroutine to keep lastest block up-to-date.
-    let latest_block_handle = {
+    let mut latest_block_handle = {
         let client = client.clone();
         tokio::spawn(async move {
+            log::debug!("Init block subscription");
+
             let query = Query::from(EventType::NewBlock);
             let mut events = client.subscribe(query).await?;
 
@@ -120,11 +123,14 @@ async fn main() -> Result<(), Error> {
 
             Ok::<(), Error>(())
         })
+        .fuse()
     };
 
     // Subroutine to keep the dependent information for strategies up-to-date and execute
     // strategies.
-    let execution_handle = tokio::spawn(async move {
+    let mut execution_handle = tokio::spawn(async move {
+        log::debug!("Init strategy executor");
+
         // TODO(xla): Load configured strategies.
         let strategies: Vec<Box<dyn strategy::Strategy>> =
             vec![Box::new(strategy::multi_dex::SinglePair::default())];
@@ -132,7 +138,7 @@ async fn main() -> Result<(), Error> {
         while let Ok(()) = latest_block_receiver.changed().await {
             let latest_block = latest_block_receiver.borrow().clone();
             log::debug!(
-                "Fetching latest pair prices for {} pools at height {}...",
+                "Fetching latest pair prices for {} pools at height {}",
                 pools.0.len(),
                 latest_block.header.height,
             );
@@ -160,16 +166,18 @@ async fn main() -> Result<(), Error> {
         }
 
         Ok::<(), Error>(())
-    });
+    })
+    .fuse();
 
     // TODO(xla): Handle signals.
-    let res: Result<(), Error> = tokio::select! {
-        join = driver_handle => join?.map_err(Error::from),
-        join = latest_block_handle => join?,
-        join = execution_handle => join?,
-    };
+    loop {
+        futures::select! {
+            join = driver_handle => join??,
+            join = latest_block_handle => join??,
+            join = execution_handle => join??,
+            complete => break
+        }
+    }
 
-    client.close()?;
-
-    res
+    client.close().map_err(Error::from)
 }
