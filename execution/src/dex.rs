@@ -1,6 +1,4 @@
-use std::{
-    collections::{hash_map::Entry, HashMap},
-};
+use std::collections::{hash_map::Entry, HashMap};
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cw20::TokenInfoResponse;
@@ -107,25 +105,58 @@ pub trait Pool: Send + Sync {
         ask_token: &Token,
         amount: Uint128,
     ) -> Option<(Uint128, Uint128)> {
-        let (ask_reserve, bid_reserve, amt) = match self.coins() {
+        if amount == Uint128::zero() {
+            return None;
+        }
+
+        let (bid_reserve, ask_reserve, amt) = match self.coins() {
             [bid, ask] if bid.token == *bid_token && ask.token == *ask_token => {
-                let a = to_scaled_decimal256(amount.u128(), bid.decimals as u32);
-                (ask.amount_decimal, bid.amount_decimal, a)
+                let amt = to_scaled_decimal256(amount, bid.decimals as u32);
+                (bid.amount_decimal, ask.amount_decimal, amt)
             },
             [ask, bid] if bid.token == *bid_token && ask.token == *ask_token => {
-                let a = to_scaled_decimal256(amount.u128(), bid.decimals as u32);
-                (bid.amount_decimal, ask.amount_decimal, a)
+                let amt = to_scaled_decimal256(amount, bid.decimals as u32);
+                (bid.amount_decimal, ask.amount_decimal, amt)
             },
             _ => return None,
         };
+        log::debug!(
+            "amt {} ask_reserve {} bid_reserve {}",
+            amt,
+            ask_reserve,
+            bid_reserve
+        );
+
+        if bid_reserve == Decimal256::zero()
+            || ask_reserve == Decimal256::zero()
+            || amt == Decimal256::zero()
+        {
+            return None;
+        }
 
         let cp = ask_reserve * bid_reserve;
+        log::debug!("cp {}", cp);
         let ret = ask_reserve - cp / (bid_reserve + amt);
-        let spread: Uint256 = (amt * ask_reserve / bid_reserve - ret).0.into();
+        log::debug!("ret {}", ret);
+        let spread = amt * ask_reserve / bid_reserve - ret;
+        log::debug!("spread {}", spread);
         let fee = ret * Decimal256::permille(3); // XXX: get from chain
-        let out: Uint256 = (ret - fee).0.into();
+        log::debug!("fee {}", fee);
+        let out = ret - fee;
+        log::debug!("out {}", out);
 
-        return Some((out.into(), spread.into()));
+        let spread_scaled: Uint256 = if spread == Decimal256::zero() {
+            (spread / Decimal256::from_uint256(10u128.pow(12))).0.into()
+        } else {
+            Uint256::zero()
+        };
+        let out_scaled: Uint256 = if out != Decimal256::zero() {
+            (out / Decimal256::from_uint256(10u128.pow(12))).0.into()
+        } else {
+            Uint256::zero()
+        };
+
+        return Some((out_scaled.into(), spread_scaled.into()));
     }
 
     fn ask_token(&self, bid_token: &Token) -> Token {
@@ -178,34 +209,6 @@ impl Pools {
             list.push(index);
         }
         map
-    }
-
-    // Iterate through a bunch of pools and properly arrang them s.t.
-    // asset0 is always bid and asset1 is the ask.
-    // XXX: do we actually want to implement this here?
-    pub fn trade_path(&self, start: &Token, amount: Uint128) -> Option<Uint128> {
-        let mut cb = amount;
-        let mut spread = Uint128::zero();
-        let mut bid_token = start.clone();
-
-        for p in self.0.iter() {
-            let ask_token = p.ask_token(&bid_token);
-            if let Some((r, s)) = p.compute_swap(&bid_token, &ask_token, cb) {
-                spread = s;
-                log::info!(
-                    "swap {} {:?} for {} {:?} with a spread of {}",
-                    cb,
-                    bid_token,
-                    r,
-                    ask_token,
-                    spread
-                );
-                cb = r;
-                bid_token = ask_token;
-            }
-        }
-
-        return None;
     }
 }
 

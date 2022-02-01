@@ -10,6 +10,42 @@ use crate::strategy::Strategy;
 #[derive(Default)]
 pub struct SinglePair {}
 
+// Iterate through a bunch of pools and properly arrang them s.t.
+// asset0 is always bid and asset1 is the ask.
+// XXX: do we actually want to implement this here?
+pub fn trade_path(
+    pools: &[&Box<dyn dex::Pool>],
+    start: &dex::Token,
+    amount: Uint128,
+) -> Option<Uint128> {
+    let mut cb = amount;
+    let mut spread = Uint128::zero();
+    let mut bid_token = start.clone();
+
+    for p in pools.iter() {
+        let ask_token = p.ask_token(&bid_token);
+        if let Some((r, s)) = p.compute_swap(&bid_token, &ask_token, cb) {
+            spread = s;
+            log::info!(
+                "swap {} {:?} for {} {:?} with a spread of {} on {}",
+                cb,
+                bid_token,
+                r,
+                ask_token,
+                spread,
+                p.addr(),
+            );
+            cb = r;
+            bid_token = ask_token;
+        } else {
+            log::info!("could not swap on {}", p.addr());
+            break;
+        }
+    }
+
+    return None;
+}
+
 fn compute_cycle_liq(start: &dex::Token, pools: &[&Box<dyn dex::Pool>]) -> Option<Uint128> {
     if pools.len() != 2 {
         // XXX: generalize
@@ -26,7 +62,6 @@ fn compute_cycle_liq(start: &dex::Token, pools: &[&Box<dyn dex::Pool>]) -> Optio
         ass
     };
 
-    // XXX: assume to start with ust bid
     // XXX: this also matches stable<>stable pairs
     // XXX: filter out stableswap pairs
     let [p1_bid, p1_ask] = if pools[1].coins()[0].token == p0_ask.token {
@@ -94,14 +129,14 @@ impl Strategy for SinglePair {
             for ps in pairs.iter().map(|i| &pools.0[*i]).permutations(2) {
                 if let Some(liq) = compute_cycle_liq(&start, &ps) {
                     log::info!(
-                        "got a good trade {} { }{:?} to {} {:?}",
+                        "got a good trade {} {} {:?} to {} {:?}",
                         liq,
                         ps[0].addr(),
                         ps[0].token_pair(),
                         ps[1].addr(),
                         ps[1].token_pair()
                     );
-                    // dex::Pools::from(ps).trade_path(&start, liq); // XXX
+                    trade_path(&ps, &start, liq); // XXX
                 }
             }
         }
