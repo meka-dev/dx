@@ -10,11 +10,11 @@ pub struct Args {
     #[argh(option, default = "CHAIN_ID.to_string()")]
     pub chain_id: String,
 
-    /// HTTP endpoint for Terra's LCD
+    /// HTTP endpoint for Terra's LCD (http://127.0.0.1:1317)
     #[argh(option, default = "LCD_URL.to_string()")]
     pub lcd_url: String,
 
-    /// WS endpoint for Terra's tendermint RPC
+    /// WS endpoint for Terra's tendermint RPC (ws://127.0.0.1:26657/websocket)
     #[argh(option, default = "RPC_URL.to_string()")]
     pub rpc_url: String,
 }
