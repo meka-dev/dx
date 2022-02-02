@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - xla/gh-build
 
 jobs:
   cleanup-runs:
@@ -28,6 +27,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - id: version
+        shell: bash
+        run: 'echo ::set-output "name=VERSION::$(git rev-parse --short HEAD)"'
+
       - name: Cache toolchain
         uses: actions/cache@v2
         with:
@@ -42,10 +45,25 @@ jobs:
         with:
           profile: minimal
           toolchain: ${{ matrix.toolchain }}
-          components: cargo, rust-src
+          components: cargo
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
 
       - name: Compile ${{ matrix.task }}
-        run: cargo build -p execution --release
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release -p execution --bin execution
+
+      - shell: bash
+        run: "mv ./target/release/execution ./target/release/execution-${{ steps.version.outputs.VERSION }}"
+
+      - name: Upload ${{ matrix.task }} binary
+        uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.SPACE_ACCESS_KEY }}
+          secret_key: ${{ secrets.SPACE_SECRET_KEY }}
+          space_name: ${{ secrets.SPACE_NAME }}
+          space_region: ${{ secrets.SPACE_REGION }}
+          source: "./target/release/execution-${{ steps.version.outputs.VERSION }}"
