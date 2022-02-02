@@ -56,7 +56,8 @@ async fn main() -> Result<(), Error> {
         let start = Instant::now();
         let mut pairs =
             dex::astroport::liquid_pairs(&lcd, &mut token_cache, filter.clone()).await?;
-        pairs.append(&mut dex::terraswap::liquid_pairs(&lcd, &mut token_cache, filter).await?);
+        pairs.append(&mut dex::terraswap::liquid_pairs(&lcd, &mut token_cache, filter.clone()).await?);
+        pairs.append(&mut dex::loopmarkets::liquid_pairs(&lcd, &mut token_cache, filter).await?);
 
         log::debug!(
             "Fetched {} pools in {:?}",

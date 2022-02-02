@@ -10,6 +10,7 @@ use terrars::{Lcd, Message};
 
 pub mod astroport;
 pub mod terraswap;
+pub mod loopmarkets;
 
 pub const DENOM_UST: &str = "uusd";
 pub const DENOM_LUNA: &str = "uluna";
