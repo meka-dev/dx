@@ -1,6 +1,6 @@
 #![allow(clippy::or_fun_call)]
 
-use std::{env, ops::Sub, time::Instant};
+use std::{ops::Sub, time::Instant};
 
 use futures::FutureExt as _;
 use futures::StreamExt;
@@ -36,12 +36,12 @@ async fn main() -> Result<(), Error> {
     // Set up logging.
     env_logger::init();
 
+    let args: config::Args = argh::from_env();
+
     // TODO(xla): Safely load private key.
 
     // Set up lcd client for state retrieval. This is a naïve and slow way.
-    let lcd_url: &str = &env::var("LCD_URL").unwrap_or(config::LCD_URL.to_string());
-    let chain_id: &str = &env::var("CHAIN_ID").unwrap_or(config::CHAIN_ID.to_string());
-    let lcd = Lcd::lcd_client_no_tx(lcd_url, chain_id);
+    let lcd = Lcd::lcd_client_no_tx(args.lcd_url, args.chain_id);
 
     let mut token_cache = dex::TokenCache::default();
     let mut pools = {
@@ -56,7 +56,9 @@ async fn main() -> Result<(), Error> {
         let start = Instant::now();
         let mut pairs =
             dex::astroport::liquid_pairs(&lcd, &mut token_cache, filter.clone()).await?;
-        pairs.append(&mut dex::terraswap::liquid_pairs(&lcd, &mut token_cache, filter.clone()).await?);
+        pairs.append(
+            &mut dex::terraswap::liquid_pairs(&lcd, &mut token_cache, filter.clone()).await?,
+        );
         pairs.append(&mut dex::loopmarkets::liquid_pairs(&lcd, &mut token_cache, filter).await?);
 
         log::debug!(
@@ -69,8 +71,7 @@ async fn main() -> Result<(), Error> {
     };
 
     // Set up RPC client.
-    let rpc_url: &str = &env::var("RPC_URL").unwrap_or(config::RPC_URL.to_string());
-    let (client, driver) = WebSocketClient::new(rpc_url).await?;
+    let (client, driver) = WebSocketClient::new(args.rpc_url.as_str()).await?;
     // Advance the internal machinery of the RPC client.
     let mut driver_handle = tokio::spawn(driver.run()).fuse();
 

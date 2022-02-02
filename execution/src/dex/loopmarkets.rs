@@ -172,4 +172,3 @@ async fn pool_info(lcd: &Lcd, contract_addr: &str) -> anyhow::Result<pair::PoolR
 
     Ok(res.result)
 }
-
