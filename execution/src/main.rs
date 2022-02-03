@@ -1,3 +1,10 @@
+// TODO(xla): Set up logging/tracing.
+// TODO(xla): Set up telemetry (Prometheus): process, futures, strategies
+// TODO(xla): Move from lcd to direct RPC calls to support height queries.
+// TODO(xla): Implement swaps for DEXes to produce proper messages.
+// TODO(xla): Load secret key from configured file.
+// TODO(xla): Bundle messages into txs and broadcast.
+
 #![allow(clippy::or_fun_call)]
 
 use std::{ops::Sub, time::Instant};
