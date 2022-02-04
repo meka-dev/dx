@@ -4,8 +4,7 @@ use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Decimal256 as StdDecimal256, Uint128};
 use itertools::Itertools;
 
-use crate::dex;
-use crate::strategy::Strategy;
+use crate::{dex, strategy::Strategy};
 
 #[derive(Default)]
 pub struct SinglePair {}

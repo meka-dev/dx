@@ -1,10 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use astroport::asset;
-use astroport::factory;
-use astroport::pair;
-use cosmwasm_std::Addr;
-use cosmwasm_std::Uint128;
+use astroport::{asset, factory, pair};
+use cosmwasm_std::{Addr, Uint128};
 
 use terrars::Lcd;
 

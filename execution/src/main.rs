@@ -4,13 +4,13 @@
 // TODO(xla): Implement swaps for DEXes to produce proper messages.
 // TODO(xla): Load secret key from configured file.
 // TODO(xla): Bundle messages into txs and broadcast.
+// TODO(xla): Review depdencies and remove duplications.
 
 #![allow(clippy::or_fun_call)]
 
 use std::{ops::Sub, time::Instant};
 
-use futures::FutureExt as _;
-use futures::StreamExt;
+use futures::{FutureExt as _, StreamExt};
 use tokio::sync::watch;
 
 use tendermint_rpc::{
@@ -20,9 +20,7 @@ use tendermint_rpc::{
 };
 use terrars::Lcd;
 
-use execution::config;
-use execution::dex;
-use execution::strategy;
+use execution::{config, dex, metrics, strategy};
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -30,6 +28,8 @@ enum Error {
     Any(#[from] anyhow::Error),
     #[error("Node is still catching up")]
     NodeCatchingUp,
+    #[error(transparent)]
+    Hyper(#[from] hyper::Error),
     #[error(transparent)]
     Join(#[from] tokio::task::JoinError),
     #[error(transparent)]
@@ -44,6 +44,9 @@ async fn main() -> Result<(), Error> {
     env_logger::init();
 
     let args: config::Args = argh::from_env();
+
+    // Set up metrics endpoint.
+    let mut metrics_handle = tokio::spawn(metrics::server(args.metrics_addr)).fuse();
 
     // TODO(xla): Safely load private key.
 
@@ -168,6 +171,7 @@ async fn main() -> Result<(), Error> {
     // TODO(xla): Handle signals.
     loop {
         futures::select! {
+            join = metrics_handle => join??,
             join = driver_handle => join??,
             join = latest_block_handle => join??,
             join = execution_handle => join??,
