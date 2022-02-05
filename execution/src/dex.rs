@@ -146,7 +146,7 @@ pub trait Pool: Send + Sync {
         let out = ret - fee;
         log::debug!("out {}", out);
 
-        let spread_scaled: Uint256 = if spread == Decimal256::zero() {
+        let spread_scaled: Uint256 = if spread != Decimal256::zero() {
             (spread / Decimal256::from_uint256(10u128.pow(12))).0.into()
         } else {
             Uint256::zero()

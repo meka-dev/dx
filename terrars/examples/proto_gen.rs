@@ -1,12 +1,13 @@
-use std::path::PathBuf;
-use std::{env, fs, io};
+use std::{env, fs, io, path::PathBuf};
 
 use walkdir::WalkDir;
 
 mod package {
-    use std::io::{BufRead, Write};
-    use std::path::Path;
-    use std::{fs, io};
+    use std::{
+        fs, io,
+        io::{BufRead, Write},
+        path::Path,
+    };
 
     pub fn create(path: &str) -> io::Result<()> {
         let path_o = Path::new(path);
