@@ -1,12 +1,16 @@
 use std::str::FromStr;
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{coins, to_binary, CosmosMsg, WasmMsg, Decimal, Decimal256 as StdDecimal256, Uint128};
+use cosmwasm_std::{
+    coins, to_binary, CosmosMsg, Decimal, Decimal256 as StdDecimal256, Uint128, WasmMsg,
+};
 use cw20::Cw20ExecuteMsg;
 use itertools::Itertools;
-use terraswap::pair::{ Cw20HookMsg, ExecuteMsg };
-use terraswap::asset::{ Asset, AssetInfo };
-use terra_cosmwasm::{TerraMsg};
+use terra_cosmwasm::TerraMsg;
+use terraswap::{
+    asset::{Asset, AssetInfo},
+    pair::{Cw20HookMsg, ExecuteMsg},
+};
 
 use crate::{dex, strategy::Strategy};
 
@@ -41,7 +45,6 @@ fn trade_path(
 
             cb = r;
             bid_token = ask_token;
-
         } else {
             log::info!("could not swap on {}", p.addr());
             return None;
@@ -65,30 +68,45 @@ fn belief_price(amount_in: Uint128, amount_out: Uint128) -> Decimal {
 // token - bid/offer token
 // native -> token goes as swap via pair contract
 // token -> native goes as send via token contract
-fn make_trade_msg(token: &dex::Token, pool: &Box<dyn dex::Pool>, amount: Uint128, belief_price: Decimal) -> Option<CosmosMsg> {
+fn make_trade_msg(
+    token: &dex::Token,
+    pool: &Box<dyn dex::Pool>,
+    amount: Uint128,
+    belief_price: Decimal,
+) -> Option<CosmosMsg> {
     match token {
-        dex::Token::Cw20{ contract_addr: addr } => { // token -> native
-            let s = to_binary(&Cw20HookMsg::Swap{
+        dex::Token::Cw20 {
+            contract_addr: addr,
+        } => {
+            // token -> native
+            let s = to_binary(&Cw20HookMsg::Swap {
                 to: None, // to is set to sender of initial msg
                 belief_price: Some(belief_price),
                 max_spread: None, // XXX
-            }).ok()?;
-            let m = Cw20ExecuteMsg::Send{
+            })
+            .ok()?;
+            let m = Cw20ExecuteMsg::Send {
                 contract: addr.to_string(),
                 msg: s,
                 amount: amount.u128().into(),
             };
             let b = to_binary(&m).ok()?;
-            Some(WasmMsg::Execute{
-                contract_addr: addr.to_string(),
-                msg: b,
-                funds: vec![],
-            }.into())
+            Some(
+                WasmMsg::Execute {
+                    contract_addr: addr.to_string(),
+                    msg: b,
+                    funds: vec![],
+                }
+                .into(),
+            )
         },
-        dex::Token::Native{ denom } => { // native -> token
-            let m = ExecuteMsg::Swap{
-                offer_asset: Asset{
-                    info: AssetInfo::NativeToken{ denom: denom.to_string() },
+        dex::Token::Native { denom } => {
+            // native -> token
+            let m = ExecuteMsg::Swap {
+                offer_asset: Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: denom.to_string(),
+                    },
                     amount: amount.u128().into(),
                 },
                 belief_price: Some(belief_price),
@@ -96,11 +114,14 @@ fn make_trade_msg(token: &dex::Token, pool: &Box<dyn dex::Pool>, amount: Uint128
                 to: None,
             };
             let b = to_binary(&m).ok()?;
-            Some(WasmMsg::Execute{
-                contract_addr: pool.addr().to_string(),
-                msg: b,
-                funds: coins(amount.u128(), denom),
-            }.into())
+            Some(
+                WasmMsg::Execute {
+                    contract_addr: pool.addr().to_string(),
+                    msg: b,
+                    funds: coins(amount.u128(), denom),
+                }
+                .into(),
+            )
         },
     }
 }
@@ -196,7 +217,7 @@ impl Strategy for SinglePair {
                         ps[0].addr(),
                         ps[1].addr(),
                     );
-                    if let Some(( out, msgs )) = trade_path(&ps, &start, liq) {
+                    if let Some((out, msgs)) = trade_path(&ps, &start, liq) {
                         log::info!("{:?}", msgs);
                     }
                 }

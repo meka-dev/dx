@@ -1,8 +1,9 @@
 use cosmrs::tx::MsgProto;
 
-pub use cosmrs::tx::{Msg, Tx};
-pub use cosmrs::Any as Message;
-pub use cosmrs::Error;
+pub use cosmrs::{
+    tx::{Msg, Tx},
+    Any as Message, Error,
+};
 
 pub use terra_rust_api::Terra as Lcd;
 

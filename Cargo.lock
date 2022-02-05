@@ -704,7 +704,6 @@ dependencies = [
  "serde_json",
  "tendermint",
  "tendermint-rpc",
- "terra-cosmwasm",
  "terrars",
  "terraswap",
  "thiserror",
