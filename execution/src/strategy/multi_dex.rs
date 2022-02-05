@@ -6,7 +6,6 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 use itertools::Itertools;
-use terra_cosmwasm::TerraMsg;
 use terraswap::{
     asset::{Asset, AssetInfo},
     pair::{Cw20HookMsg, ExecuteMsg},
