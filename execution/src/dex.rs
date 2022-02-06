@@ -157,7 +157,7 @@ pub trait Pool: Send + Sync {
             Uint256::zero()
         };
 
-        return Some((out_scaled.into(), spread_scaled.into()));
+        Some((out_scaled.into(), spread_scaled.into()))
     }
 
     fn ask_token(&self, bid_token: &Token) -> Token {
@@ -174,16 +174,6 @@ pub struct Pools(pub Vec<Box<dyn Pool>>);
 impl From<Vec<Box<dyn Pool>>> for Pools {
     fn from(input: Vec<Box<dyn Pool>>) -> Self {
         Self(input)
-    }
-}
-
-impl Clone for Box<dyn Pool> {
-    fn clone(&self) -> Self {
-        todo!()
-    }
-
-    fn clone_from(&mut self, source: &Self) {
-        *self = source.clone()
     }
 }
 

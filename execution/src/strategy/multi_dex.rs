@@ -1,3 +1,5 @@
+#![allow(clippy::borrowed_box)]
+
 use std::str::FromStr;
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
@@ -20,7 +22,7 @@ pub struct SinglePair {}
 // asset0 is always bid and asset1 is the ask.
 // XXX: do we actually want to implement this here?
 fn trade_path(
-    pools: &[&Box<dyn dex::Pool>],
+    pools: &[&Box<dyn dex::Pool>; 2],
     start: &dex::Token,
     amount: Uint128,
 ) -> Option<(Uint128, Vec<CosmosMsg>)> {
@@ -28,7 +30,7 @@ fn trade_path(
     let mut cb = amount;
     let mut bid_token = start.clone();
 
-    for p in pools.iter() {
+    for p in pools {
         let ask_token = p.ask_token(&bid_token);
         if let Some((r, s)) = p.compute_swap(&bid_token, &ask_token, cb) {
             log::info!(
@@ -40,7 +42,7 @@ fn trade_path(
                 s,
                 p.addr(),
             );
-            msgs.push(make_trade_msg(&bid_token, &p, r, belief_price(cb, r))?);
+            msgs.push(make_trade_msg(&bid_token, *p, r, belief_price(cb, r))?);
 
             cb = r;
             bid_token = ask_token;
@@ -56,7 +58,7 @@ fn trade_path(
     }
     log::info!("positive delta {}", cb - amount);
 
-    return Some((cb - amount, msgs));
+    Some((cb - amount, msgs))
 }
 
 // only need this for the actual msg
@@ -127,28 +129,27 @@ fn make_trade_msg(
 
 // XXX: this might eventually go into a contract
 // XXX: we also need to be aware of our own balances
-fn compute_cycle_liq(start: &dex::Token, pools: &[&Box<dyn dex::Pool>]) -> Option<Uint128> {
-    if pools.len() != 2 {
-        // XXX: generalize
-        return None;
-    }
-
+fn compute_cycle_liq(
+    start: &dex::Token,
+    left: &Box<dyn dex::Pool>,
+    right: &Box<dyn dex::Pool>,
+) -> Option<Uint128> {
     let r2 = Decimal256::from_str("0.997").unwrap();
 
-    let [p0_bid, p0_ask] = if pools[0].coins()[0].token == *start {
-        pools[0].coins()
+    let [p0_bid, p0_ask] = if left.coins()[0].token == *start {
+        left.coins()
     } else {
-        let mut ass = pools[0].coins();
+        let mut ass = left.coins();
         ass.reverse();
         ass
     };
 
     // XXX: this also matches stable<>stable pairs
     // XXX: filter out stableswap pairs
-    let [p1_bid, p1_ask] = if pools[1].coins()[0].token == p0_ask.token {
-        pools[1].coins()
+    let [p1_bid, p1_ask] = if right.coins()[0].token == p0_ask.token {
+        right.coins()
     } else {
-        let mut ass = pools[1].coins().clone();
+        let mut ass = right.coins();
         ass.reverse();
         ass
     };
@@ -208,15 +209,21 @@ impl Strategy for SinglePair {
 
             // XXX: Clone is not implemented for Box<dyn Pool>, so we need to store refs,
             //      but then we end up with Vec<&Box<dyn Pool>> which is not Pools
-            for ps in pairs.iter().map(|i| &pools.0[*i]).permutations(2) {
-                if let Some(liq) = compute_cycle_liq(&start, &ps) {
+            for indices in pairs.iter().permutations(2) {
+                if indices.len() != 2 {
+                    break;
+                }
+
+                let (left, right) = (&pools.0[*(indices[0])], &pools.0[*(indices[1])]);
+
+                if let Some(liq) = compute_cycle_liq(&start, left, right) {
                     log::info!(
                         "got a good trade {} {} to {}",
                         liq,
-                        ps[0].addr(),
-                        ps[1].addr(),
+                        left.addr(),
+                        right.addr(),
                     );
-                    if let Some((out, msgs)) = trade_path(&ps, &start, liq) {
+                    if let Some((_out, msgs)) = trade_path(&[left, right], &start, liq) {
                         log::info!("{:?}", msgs);
                     }
                 }
