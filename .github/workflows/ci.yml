@@ -1,0 +1,129 @@
+name: Build
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUST_BACKTRACE: short
+  RUSTFLAGS: "-Dwarnings -Dnonstandard-style -Drust-2018-idioms -Dunused"
+  RUSTUP_MAX_RETRIES: 10
+
+jobs:
+  cleanup-runs:
+    if: "!startsWith(github.ref, 'refs/tags/') && github.ref != 'refs/heads/master'"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rokroskar/workflow-run-cleanup-action@master
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+  lint:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        toolchain: [nightly]
+
+    name: Lint
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - id: version
+        shell: bash
+        run: 'echo ::set-output "name=VERSION::$(git rev-parse --short HEAD)"'
+
+      - name: Cache toolchain
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.rustup/settings.toml
+            ~/.rustup/toolchains/${{ matrix.toolchain }}-*
+            ~/.rustup/update-hashes/${{ matrix.toolchain }}-*
+          key: rust-toolchain_${{ matrix.os }}-${{ matrix.toolchain }}
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          components: cargo, clippy, rustfmt
+          override: true
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Run fmt check
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          name: clippy
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # TODO(xla): Introduce other crates here once stabilised and cleaned
+          # up.
+          # FIXME(xla): We can't move the compatibility flag into RUSTFLAGS due
+          # to a regression in 1.58, in progress here:
+          # https://github.com/rust-lang/rust/pull/93449
+          args: -p execution --no-deps --all-features --all-targets -- -Wrust-2021-compatibility
+
+  release-execution:
+    if: "github.ref == 'refs/heads/main'"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        task: [execution]
+        toolchain: [stable]
+
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - id: version
+        shell: bash
+        run: 'echo ::set-output "name=VERSION::$(git rev-parse --short HEAD)"'
+
+      - name: Cache toolchain
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.rustup/settings.toml
+            ~/.rustup/toolchains/${{ matrix.toolchain }}-*
+            ~/.rustup/update-hashes/${{ matrix.toolchain }}-*
+          key: rust-toolchain_${{ matrix.os }}-${{ matrix.toolchain }}
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          components: cargo
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Compile ${{ matrix.task }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release -p execution --bin execution
+
+      - shell: bash
+        run: "mv ./target/release/execution ./target/release/execution-${{ steps.version.outputs.VERSION }}"
+
+      - name: Upload ${{ matrix.task }} binary
+        uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.SPACE_ACCESS_KEY }}
+          secret_key: ${{ secrets.SPACE_SECRET_KEY }}
+          space_name: ${{ secrets.SPACE_NAME }}
+          space_region: ${{ secrets.SPACE_REGION }}
+          source: "./target/release/execution-${{ steps.version.outputs.VERSION }}"
