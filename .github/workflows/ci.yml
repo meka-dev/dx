@@ -1,4 +1,4 @@
-name: Build
+name: CI
 on:
   pull_request:
   push:
@@ -15,11 +15,50 @@ env:
 jobs:
   cleanup-runs:
     if: "!startsWith(github.ref, 'refs/tags/') && github.ref != 'refs/heads/master'"
+    name: Cleanup old runs
     runs-on: ubuntu-latest
     steps:
       - uses: rokroskar/workflow-run-cleanup-action@master
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        toolchain: [nightly]
+
+    name: Build
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Cache toolchain
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.rustup/settings.toml
+            ~/.rustup/toolchains/${{ matrix.toolchain }}-*
+            ~/.rustup/update-hashes/${{ matrix.toolchain }}-*
+          key: rust-toolchain_${{ matrix.os }}-${{ matrix.toolchain }}
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          components: cargo, clippy, rustfmt
+          override: true
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Build execution
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -p execution --all-features --all-targets
 
   lint:
     strategy:
@@ -63,8 +102,8 @@ jobs:
       - name: Run clippy
         uses: actions-rs/clippy-check@v1
         with:
-          name: clippy
           token: ${{ secrets.GITHUB_TOKEN }}
+          name: clippy
           # TODO(xla): Introduce other crates here once stabilised and cleaned
           # up.
           # FIXME(xla): We can't move the compatibility flag into RUSTFLAGS due
