@@ -1,7 +1,7 @@
 use tendermint::block;
 use terrars::Message;
 
-use crate::dex;
+use crate::{accounts, dex};
 
 pub mod metrics;
 pub mod multi_dex;
@@ -10,5 +10,11 @@ pub mod multi_dex;
 pub trait Strategy: Send {
     /// Given the current prices of dex pairs a strategy should produce an ordered list of messages
     /// (most likely swaps) to be bundled into one atomic transaction.
-    async fn execute(&self, height: block::Height, pools: &dex::Pools) -> Vec<Vec<Message>>;
+    async fn execute(
+        &self,
+        height: block::Height,
+        account_id: &terrars::AccountId,
+        funds: &accounts::Balances,
+        pools: &dex::Pools,
+    ) -> Vec<Vec<Message>>;
 }

@@ -4,7 +4,7 @@ use prometheus_client::encoding::text::Encode;
 use tendermint::block;
 use tokio::{sync::Mutex, time::Instant};
 
-use crate::{config, metrics, strategy::Strategy};
+use crate::{accounts, config, metrics, strategy::Strategy};
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
 pub enum Module {
@@ -75,10 +75,12 @@ where
     async fn execute(
         &self,
         height: block::Height,
+        account_id: &terrars::AccountId,
+        funds: &accounts::Balances,
         pools: &crate::dex::Pools,
     ) -> Vec<Vec<terrars::Message>> {
         let start = Instant::now();
-        let txs = self.next.execute(height, pools).await;
+        let txs = self.next.execute(height, account_id, funds, pools).await;
 
         let metrics = self.metrics.lock().await;
         metrics

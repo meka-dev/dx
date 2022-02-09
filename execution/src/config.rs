@@ -25,4 +25,8 @@ pub struct Args {
     /// WS endpoint for Terra's tendermint RPC (ws://127.0.0.1:26657/websocket)
     #[argh(option, default = "RPC_URL.to_string()")]
     pub rpc_url: String,
+
+    /// location of the file on disk holding the secret key (./secret.key)
+    #[argh(option, default = "String::from(\"./secret.key\")")]
+    pub secret_key_file: String,
 }

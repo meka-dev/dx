@@ -695,6 +695,7 @@ dependencies = [
  "cw20-base",
  "env_logger",
  "futures",
+ "hex",
  "hyper",
  "itertools",
  "lazy_static",

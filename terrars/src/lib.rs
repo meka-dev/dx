@@ -1,8 +1,9 @@
 use cosmrs::tx::MsgProto;
 
 pub use cosmrs::{
+    crypto::secp256k1::SigningKey,
     tx::{Msg, Tx},
-    Any as Message, Error,
+    AccountId, Any as Message, Error,
 };
 
 pub use terra_rust_api::Terra as Lcd;

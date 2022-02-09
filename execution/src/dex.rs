@@ -37,12 +37,24 @@ impl Token {
         matches!(self, Token::Native { .. })
     }
 
-    pub fn is_ust(&self) -> bool {
-        matches!(self, Token::Native { ref denom, .. } if denom == &DENOM_UST.to_string())
+    pub fn luna() -> Self {
+        Self::Native {
+            denom: DENOM_LUNA.to_string(),
+        }
     }
 
     pub fn is_luna(&self) -> bool {
-        matches!(self, Token::Native { ref denom, .. } if denom == &DENOM_LUNA.to_string())
+        *self == Self::luna()
+    }
+
+    pub fn ust() -> Self {
+        Self::Native {
+            denom: DENOM_UST.to_string(),
+        }
+    }
+
+    pub fn is_ust(&self) -> bool {
+        *self == Self::ust()
     }
 }
 

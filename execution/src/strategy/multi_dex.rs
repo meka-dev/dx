@@ -15,7 +15,7 @@ use terraswap::{
 };
 
 use crate::{
-    dex,
+    accounts, dex,
     strategy::{metrics, Strategy},
 };
 
@@ -207,12 +207,13 @@ impl Strategy for SinglePair {
     async fn execute(
         &self,
         _height: block::Height,
+        _account_id: &terrars::AccountId,
+        _funds: &accounts::Balances,
         pools: &dex::Pools,
     ) -> Vec<Vec<terrars::Message>> {
         // crazy arbs go here
-        let start = dex::Token::Native {
-            denom: "uusd".to_string(),
-        };
+        let start = dex::Token::ust();
+
         for (token, pairs) in pools.index_by_token() {
             // We're only looking at cross dex two hop arbs, i.e. take all two pair
             // permutations for any token, eg ust -> luna on astroport and luna -> ust
