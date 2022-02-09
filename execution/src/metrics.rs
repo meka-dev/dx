@@ -38,10 +38,10 @@ struct HttpLabels {
 }
 
 pub struct Metrics {
-    http_request_duration_seconds: Family<HttpLabels, Histogram>,
-    pub strategy_duration_seconds: Family<strategy::metrics::DurationLabels, Histogram>,
-    pub strategy_tx_emit_total: Family<strategy::metrics::EmitLabels, Counter>,
-    pub strategy_msgs_emit_total: Family<strategy::metrics::EmitLabels, Counter>,
+    http_request_duration: Family<HttpLabels, Histogram>,
+    pub strategy_duration: Family<strategy::metrics::DurationLabels, Histogram>,
+    pub strategy_tx_emit: Family<strategy::metrics::EmitLabels, Counter>,
+    pub strategy_msgs_emit: Family<strategy::metrics::EmitLabels, Counter>,
 }
 
 impl Metrics {
@@ -52,44 +52,43 @@ impl Metrics {
         impl Future<Output = Result<(), hyper::Error>>,
     ) {
         let mut registry = <Registry>::default();
-        let http_request_duration_seconds =
-            Family::<HttpLabels, Histogram>::new_with_constructor(|| {
-                Histogram::new(BUCKETS.clone().into_iter())
-            });
-        let strategy_duration_seconds =
+        let http_request_duration = Family::<HttpLabels, Histogram>::new_with_constructor(|| {
+            Histogram::new(BUCKETS.clone().into_iter())
+        });
+        let strategy_duration =
             Family::<strategy::metrics::DurationLabels, Histogram>::new_with_constructor(|| {
                 Histogram::new(BUCKETS.clone().into_iter())
             });
-        let strategy_tx_emit_total = Family::<strategy::metrics::EmitLabels, Counter>::default();
-        let strategy_msgs_emit_total = Family::<strategy::metrics::EmitLabels, Counter>::default();
+        let strategy_tx_emit = Family::<strategy::metrics::EmitLabels, Counter>::default();
+        let strategy_msgs_emit = Family::<strategy::metrics::EmitLabels, Counter>::default();
 
         registry.register(
             prefix("http_request_duration_seconds"),
             "HTTP request durations",
-            Box::new(http_request_duration_seconds.clone()),
+            Box::new(http_request_duration.clone()),
         );
         registry.register(
             prefix("strategy_duration_seconds"),
             "Strategy durations",
-            Box::new(strategy_duration_seconds.clone()),
+            Box::new(strategy_duration.clone()),
         );
         registry.register(
-            prefix("strategy_tx_emit_total"),
+            prefix("strategy_tx_emit"),
             "Number of transactions emitted by strategies",
-            Box::new(strategy_tx_emit_total.clone()),
+            Box::new(strategy_tx_emit.clone()),
         );
         registry.register(
-            prefix("strategy_msgs_emit_total"),
-            "Number of messages per transaction emitted by strategies",
-            Box::new(strategy_msgs_emit_total.clone()),
+            prefix("strategy_msgs_emit"),
+            "Number of messages emitted by strategies",
+            Box::new(strategy_msgs_emit.clone()),
         );
 
         let registry = Arc::new(Mutex::new(registry));
         let metrics = Self {
-            http_request_duration_seconds,
-            strategy_duration_seconds,
-            strategy_tx_emit_total,
-            strategy_msgs_emit_total,
+            http_request_duration,
+            strategy_duration,
+            strategy_tx_emit,
+            strategy_msgs_emit,
         };
         let metrics = Arc::new(Mutex::new(metrics));
 
@@ -133,7 +132,7 @@ async fn track<B>(
     metrics
         .lock()
         .await
-        .http_request_duration_seconds
+        .http_request_duration
         .get_or_create(&HttpLabels {
             version: config::VERSION.to_string(),
             path,
