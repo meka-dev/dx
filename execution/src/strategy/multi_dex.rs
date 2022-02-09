@@ -8,12 +8,16 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 use itertools::Itertools;
+use tendermint::block;
 use terraswap::{
     asset::{Asset, AssetInfo},
     pair::{Cw20HookMsg, ExecuteMsg},
 };
 
-use crate::{dex, strategy::Strategy};
+use crate::{
+    dex,
+    strategy::{metrics, Strategy},
+};
 
 #[derive(Default)]
 pub struct SinglePair {}
@@ -192,9 +196,19 @@ fn compute_cycle_liq(
     Some(scaled.into())
 }
 
+impl metrics::Labeled for SinglePair {
+    const MODULE: metrics::Module = metrics::Module::MultiDex;
+    const NAME: metrics::Name = metrics::Name::SinglePair;
+}
+
 // XXX: make sure to properly calculate tax
+#[async_trait::async_trait]
 impl Strategy for SinglePair {
-    fn execute(&self, pools: &dex::Pools) -> Vec<Vec<terrars::Message>> {
+    async fn execute(
+        &self,
+        _height: block::Height,
+        pools: &dex::Pools,
+    ) -> Vec<Vec<terrars::Message>> {
         // crazy arbs go here
         let start = dex::Token::Native {
             denom: "uusd".to_string(),

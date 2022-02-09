@@ -8,7 +8,7 @@
 
 #![allow(clippy::or_fun_call)]
 
-use std::{ops::Sub, time::Instant};
+use std::{ops::Sub, sync::Arc, time::Instant};
 
 use futures::{FutureExt as _, StreamExt};
 use tokio::sync::watch;
@@ -46,7 +46,8 @@ async fn main() -> Result<(), Error> {
     let args: config::Args = argh::from_env();
 
     // Set up metrics endpoint.
-    let mut metrics_handle = tokio::spawn(metrics::server(args.metrics_addr)).fuse();
+    let (metrics, metrics_server) = metrics::Metrics::new(args.metrics_addr);
+    let mut metrics_server_handle = tokio::spawn(metrics_server).fuse();
 
     // TODO(xla): Safely load private key.
 
@@ -70,7 +71,6 @@ async fn main() -> Result<(), Error> {
             &mut dex::terraswap::liquid_pairs(&lcd, &mut token_cache, filter.clone()).await?,
         );
         pairs.append(&mut dex::loopmarkets::liquid_pairs(&lcd, &mut token_cache, filter).await?);
-
         log::debug!(
             "Fetched {} pools in {:?}",
             pairs.len(),
@@ -132,7 +132,10 @@ async fn main() -> Result<(), Error> {
 
         // TODO(xla): Load configured strategies.
         let strategies: Vec<Box<dyn strategy::Strategy>> =
-            vec![Box::new(strategy::multi_dex::SinglePair::default())];
+            vec![Box::new(strategy::metrics::Instrumented::new(
+                Arc::clone(&metrics),
+                strategy::multi_dex::SinglePair::default(),
+            ))];
 
         while let Ok(()) = latest_block_receiver.changed().await {
             let latest_block = latest_block_receiver.borrow().clone();
@@ -157,7 +160,7 @@ async fn main() -> Result<(), Error> {
             );
 
             for strategy in &strategies {
-                let _messages = strategy.execute(&pools);
+                let _messages = strategy.execute(latest_block.header.height, &pools);
 
                 // broadcast tx
                 // lcd.submit_transaction_sync(&secp, &private_key, &messages, None).await?;
@@ -171,7 +174,7 @@ async fn main() -> Result<(), Error> {
     // TODO(xla): Handle signals.
     loop {
         futures::select! {
-            join = metrics_handle => join??,
+            join = metrics_server_handle => join??,
             join = driver_handle => join??,
             join = latest_block_handle => join??,
             join = execution_handle => join??,

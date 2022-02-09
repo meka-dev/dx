@@ -697,6 +697,7 @@ dependencies = [
  "futures",
  "hyper",
  "itertools",
+ "lazy_static",
  "log",
  "num_cpus",
  "prometheus-client",
