@@ -131,7 +131,7 @@ async fn main() -> Result<(), Error> {
         log::debug!("Init strategy executor");
 
         // TODO(xla): Load configured strategies.
-        let strategies: Vec<Box<dyn strategy::Strategy>> =
+        let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
             vec![Box::new(strategy::metrics::Instrumented::new(
                 Arc::clone(&metrics),
                 strategy::multi_dex::SinglePair::default(),
@@ -160,7 +160,7 @@ async fn main() -> Result<(), Error> {
             );
 
             for strategy in &strategies {
-                let _messages = strategy.execute(latest_block.header.height, &pools);
+                let _messages = strategy.execute(latest_block.header.height, &pools).await;
 
                 // broadcast tx
                 // lcd.submit_transaction_sync(&secp, &private_key, &messages, None).await?;
