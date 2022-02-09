@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{fmt, future::Future, net::SocketAddr, sync::Arc};
 
 use axum::{
     extract::{Extension, MatchedPath},
@@ -8,52 +8,104 @@ use axum::{
     AddExtensionLayer, Router, Server,
 };
 use axum_extra::{middleware, middleware::Next};
+use lazy_static::lazy_static;
 use prometheus_client::{
     encoding::text::{encode, Encode},
-    metrics::{family::Family, histogram::Histogram},
+    metrics::{counter::Counter, family::Family, histogram::Histogram},
     registry::Registry,
 };
 use tokio::{sync::Mutex, time::Instant};
 
+use crate::{config, strategy};
+
 const HEADER_OPENMETRICS: &str = "application/openmetrics-text; version=1.0.0; charset=utf-8";
+const ORG_NAMESPACE: &str = "mekatek";
+const BINARY_NAMESPACE: &str = "execution";
+
+lazy_static! {
+    static ref BUCKETS: Vec<f64> = vec![
+        0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0,
+        3.0,
+    ];
+}
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
-struct Labels {
+struct HttpLabels {
+    version: String,
     method: String,
     path: String,
     status: String,
 }
 
-pub async fn server(addr: impl Into<SocketAddr>) -> Result<(), hyper::Error> {
-    let mut registry = <Registry>::default();
+pub struct Metrics {
+    http_request_duration_seconds: Family<HttpLabels, Histogram>,
+    pub strategy_duration_seconds: Family<strategy::metrics::DurationLabels, Histogram>,
+    pub strategy_tx_emit_total: Family<strategy::metrics::EmitLabels, Counter>,
+    pub strategy_msgs_emit_total: Family<strategy::metrics::EmitLabels, Counter>,
+}
 
-    let http_request_duration_seconds = Family::<Labels, Histogram>::new_with_constructor(|| {
-        let buckets: Vec<f64> = vec![
-            0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0,
-            2.0, 3.0,
-        ];
-        Histogram::new(buckets.into_iter())
-    });
+impl Metrics {
+    pub fn new(
+        addr: impl Into<SocketAddr>,
+    ) -> (
+        Arc<Mutex<Self>>,
+        impl Future<Output = Result<(), hyper::Error>>,
+    ) {
+        let mut registry = <Registry>::default();
+        let http_request_duration_seconds =
+            Family::<HttpLabels, Histogram>::new_with_constructor(|| {
+                Histogram::new(BUCKETS.clone().into_iter())
+            });
+        let strategy_duration_seconds =
+            Family::<strategy::metrics::DurationLabels, Histogram>::new_with_constructor(|| {
+                Histogram::new(BUCKETS.clone().into_iter())
+            });
+        let strategy_tx_emit_total = Family::<strategy::metrics::EmitLabels, Counter>::default();
+        let strategy_msgs_emit_total = Family::<strategy::metrics::EmitLabels, Counter>::default();
 
-    registry.register(
-        "http_request_duration_seconds",
-        "HTTP request durations",
-        Box::new(http_request_duration_seconds.clone()),
-    );
+        registry.register(
+            prefix("http_request_duration_seconds"),
+            "HTTP request durations",
+            Box::new(http_request_duration_seconds.clone()),
+        );
+        registry.register(
+            prefix("strategy_duration_seconds"),
+            "Strategy durations",
+            Box::new(strategy_duration_seconds.clone()),
+        );
+        registry.register(
+            prefix("strategy_tx_emit_total"),
+            "Number of transactions emitted by strategies",
+            Box::new(strategy_tx_emit_total.clone()),
+        );
+        registry.register(
+            prefix("strategy_msgs_emit_total"),
+            "Number of messages per transaction emitted by strategies",
+            Box::new(strategy_msgs_emit_total.clone()),
+        );
 
-    let registry = Arc::new(Mutex::new(registry));
-    let http_request_duration_seconds = Arc::new(http_request_duration_seconds);
+        let registry = Arc::new(Mutex::new(registry));
+        let metrics = Self {
+            http_request_duration_seconds,
+            strategy_duration_seconds,
+            strategy_tx_emit_total,
+            strategy_msgs_emit_total,
+        };
+        let metrics = Arc::new(Mutex::new(metrics));
 
-    let metrics = Router::new()
-        .route("/metrics", get(handler))
-        .layer(AddExtensionLayer::new(registry))
-        .layer(middleware::from_fn({
-            move |req, next| track(req, next, Arc::clone(&http_request_duration_seconds))
-        }));
+        let router = Router::new()
+            .route("/metrics", get(handler))
+            .layer(AddExtensionLayer::new(registry))
+            .layer(middleware::from_fn({
+                let metrics = Arc::clone(&metrics);
+                move |req, next| track(req, next, Arc::clone(&metrics))
+            }));
 
-    Server::bind(&addr.into())
-        .serve(metrics.into_make_service())
-        .await
+        (
+            metrics,
+            Server::bind(&addr.into()).serve(router.into_make_service()),
+        )
+    }
 }
 
 async fn handler(Extension(registry): Extension<Arc<Mutex<Registry>>>) -> impl IntoResponse {
@@ -66,7 +118,7 @@ async fn handler(Extension(registry): Extension<Arc<Mutex<Registry>>>) -> impl I
 async fn track<B>(
     req: Request<B>,
     next: Next<B>,
-    http_request_duration_seconds: Arc<Family<Labels, Histogram>>,
+    metrics: Arc<Mutex<Metrics>>,
 ) -> impl IntoResponse {
     let start = Instant::now();
     let path = if let Some(matched_path) = req.extensions().get::<MatchedPath>() {
@@ -78,8 +130,12 @@ async fn track<B>(
 
     let response = next.run(req).await;
 
-    http_request_duration_seconds
-        .get_or_create(&Labels {
+    metrics
+        .lock()
+        .await
+        .http_request_duration_seconds
+        .get_or_create(&HttpLabels {
+            version: config::VERSION.to_string(),
             path,
             method,
             status: response.status().as_str().to_string(),
@@ -87,4 +143,8 @@ async fn track<B>(
         .observe(start.elapsed().as_secs_f64());
 
     response
+}
+
+fn prefix<S: Into<String> + fmt::Display>(suffix: S) -> String {
+    format!("{}_{}_{}", ORG_NAMESPACE, BINARY_NAMESPACE, suffix)
 }

@@ -1,10 +1,9 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
+use cosmwasm_std::{Addr, Uint128};
 use cw20::TokenInfoResponse;
 use serde::{Deserialize, Serialize};
-
-use cosmwasm_std::{Addr, Uint128};
 
 use terrars::{Lcd, Message};
 
