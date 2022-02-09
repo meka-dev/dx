@@ -82,7 +82,7 @@ where
 
         let metrics = self.metrics.lock().await;
         metrics
-            .strategy_duration_seconds
+            .strategy_duration
             .get_or_create(&DurationLabels {
                 version: config::VERSION.to_string(),
                 module: self.next.module(),
@@ -94,7 +94,7 @@ where
             })
             .observe(start.elapsed().as_secs_f64());
         metrics
-            .strategy_tx_emit_total
+            .strategy_tx_emit
             .get_or_create(&EmitLabels {
                 version: config::VERSION.to_string(),
                 module: self.next.module(),
@@ -103,7 +103,7 @@ where
             .inc_by(txs.len().try_into().unwrap());
         txs.iter().for_each(|msgs| {
             metrics
-                .strategy_msgs_emit_total
+                .strategy_msgs_emit
                 .get_or_create(&EmitLabels {
                     version: config::VERSION.to_string(),
                     module: self.next.module(),
