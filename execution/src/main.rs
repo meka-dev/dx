@@ -2,13 +2,16 @@
 // TODO(xla): Set up telemetry (Prometheus): process, futures, strategies
 // TODO(xla): Move from lcd to direct RPC calls to support height queries.
 // TODO(xla): Implement swaps for DEXes to produce proper messages.
-// TODO(xla): Load secret key from configured file.
 // TODO(xla): Bundle messages into txs and broadcast.
 // TODO(xla): Review depdencies and remove duplications.
+// TODO(xla): Extend telemetry with
+//              * fetch durations (pools, accounts)
+//              * current account balances
+// TODO(xla): Wire up multi-dex msgs to actual output.
 
 #![allow(clippy::or_fun_call)]
 
-use std::{ops::Sub, sync::Arc, time::Instant};
+use std::{fs, ops::Sub, sync::Arc, time::Instant};
 
 use futures::{FutureExt as _, StreamExt};
 use tokio::sync::watch;
@@ -20,7 +23,7 @@ use tendermint_rpc::{
 };
 use terrars::Lcd;
 
-use execution::{config, dex, metrics, strategy};
+use execution::{accounts, config, dex, metrics, strategy};
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -29,7 +32,11 @@ enum Error {
     #[error("Node is still catching up")]
     NodeCatchingUp,
     #[error(transparent)]
+    Hex(#[from] hex::FromHexError),
+    #[error(transparent)]
     Hyper(#[from] hyper::Error),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
     #[error(transparent)]
     Join(#[from] tokio::task::JoinError),
     #[error(transparent)]
@@ -49,7 +56,17 @@ async fn main() -> Result<(), Error> {
     let (metrics, metrics_server) = metrics::Metrics::new(args.metrics_addr);
     let mut metrics_server_handle = tokio::spawn(metrics_server).fuse();
 
-    // TODO(xla): Safely load private key.
+    let secret_key = {
+        let raw = fs::read(args.secret_key_file)?;
+        let bytes = hex::decode(&raw)?;
+        // FIXME(xla): Proper error handling.
+        terrars::SigningKey::from_bytes(&bytes).unwrap()
+    };
+    // FIXME(xla): Proper error handling.
+    let account_id = secret_key
+        .public_key()
+        .account_id(accounts::PREFIX)
+        .unwrap();
 
     // Set up lcd client for state retrieval. This is a naïve and slow way.
     let lcd = Lcd::lcd_client_no_tx(args.lcd_url, args.chain_id);
@@ -60,9 +77,7 @@ async fn main() -> Result<(), Error> {
 
         // Fetch liquid UST pairs on Astroprot and Terraswap. This operation is expensive and will
         // take some time.
-        let filter = Some(dex::Token::Native {
-            denom: dex::DENOM_UST.to_string(),
-        });
+        let filter = Some(dex::Token::ust());
 
         let start = Instant::now();
         let mut pairs =
@@ -159,8 +174,12 @@ async fn main() -> Result<(), Error> {
                 Instant::now().sub(start)
             );
 
+            let funds = accounts::fetch(&lcd, &account_id).await?;
+
             for strategy in &strategies {
-                let _messages = strategy.execute(latest_block.header.height, &pools).await;
+                let _messages = strategy
+                    .execute(latest_block.header.height, &account_id, &funds, &pools)
+                    .await;
 
                 // broadcast tx
                 // lcd.submit_transaction_sync(&secp, &private_key, &messages, None).await?;
