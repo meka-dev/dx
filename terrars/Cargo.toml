@@ -4,17 +4,18 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cosmrs          = { version = "0.4",  default-features = false,   features = [ "cosmwasm" ] }
-eyre            = { version = "0.6",  default-features = false }
-log             = { version = "0.4",  default-features = false }
-prost           = { version = "0.9",  default-features = false }
-prost-types     = { version = "0.9",  default-features = false }
-serde_json      = { version = "1.0",  default-features = false }
-terra-cosmwasm  = { version = "2.2",  default-features = false }
-terra-rust-api  = { version = "1.1",  default-features = false }
-terraswap       = { version = "2.4",  default-features = false }
-thiserror       = { version = "1.0",  default-features = false }
+cosmrs              = { version = "0.4",  default-features = false,   features = [ "cosmwasm" ] }
+cosmwasm-bignumber  = { version = "2.2",  default-features = false }
+eyre                = { version = "0.6",  default-features = false }
+log                 = { version = "0.4",  default-features = false }
+prost               = { version = "0.9",  default-features = false }
+prost-types         = { version = "0.9",  default-features = false }
+serde_json          = { version = "1.0",  default-features = false }
+terra-cosmwasm      = { version = "2.2",  default-features = false }
+terra-rust-api      = { version = "1.1",  default-features = false }
+terraswap           = { version = "2.4",  default-features = false }
+thiserror           = { version = "1.0",  default-features = false }
 
 [dev-dependencies]
-prost-build     = { version = "0.9",  default-features = false }
-walkdir         = { version = "2.3",  default-features = false }
+prost-build         = { version = "0.9",  default-features = false }
+walkdir             = { version = "2.3",  default-features = false }

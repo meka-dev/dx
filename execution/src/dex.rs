@@ -1,11 +1,11 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw20::TokenInfoResponse;
 use serde::{Deserialize, Serialize};
 
-use terrars::{Lcd, Message};
+use terrars::{AccountId, Lcd, MsgExecuteContract};
 
 pub mod astroport;
 pub mod loopmarkets;
@@ -107,7 +107,13 @@ fn to_scaled_decimal256<T: Into<Uint256>>(n: T, decimals: u32) -> Decimal256 {
 pub trait Pool: Send + Sync {
     fn coins(&self) -> [Asset; 2];
     fn addr(&self) -> &str;
-    fn swap(&self) -> Message;
+    fn swap(
+        &self,
+        sender: &AccountId,
+        token: &Token,
+        amount: Uint128,
+        belief_price: Decimal,
+    ) -> MsgExecuteContract;
     fn token_pair(&self) -> TokenPair;
     async fn update(&mut self, lcd: &Lcd, token_cache: &mut TokenCache) -> anyhow::Result<()>;
 

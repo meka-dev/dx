@@ -1,5 +1,5 @@
 use tendermint::block;
-use terrars::Message;
+use terrars::MsgExecuteContract;
 
 use crate::{accounts, dex};
 
@@ -13,8 +13,8 @@ pub trait Strategy: Send {
     async fn execute(
         &self,
         height: block::Height,
-        account_id: &terrars::AccountId,
+        sender: &terrars::AccountId,
         funds: &accounts::Balances,
         pools: &dex::Pools,
-    ) -> Vec<Vec<Message>>;
+    ) -> Vec<Vec<MsgExecuteContract>>;
 }

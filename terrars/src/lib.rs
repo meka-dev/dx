@@ -1,24 +1,33 @@
 use cosmrs::tx::MsgProto;
-
 pub use cosmrs::{
     crypto::secp256k1::SigningKey,
     tx::{Msg, Tx},
-    AccountId, Any as Message, Error,
+    AccountId, Any as Message, Denom, Error,
 };
+use cosmwasm_bignumber::Decimal256;
 
 pub use terra_rust_api::Terra as Lcd;
 
 mod proto;
 
-impl TryFrom<proto::cosmos::base::v1beta1::Coin> for cosmrs::Coin {
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+pub struct Coin {
+    /// Denomination
+    pub denom: Denom,
+
+    /// Amount
+    pub amount: Decimal256,
+}
+
+impl TryFrom<proto::cosmos::base::v1beta1::Coin> for Coin {
     type Error = cosmrs::ErrorReport;
 
     fn try_from(input: proto::cosmos::base::v1beta1::Coin) -> cosmrs::Result<Self> {
-        cosmrs::Coin::try_from(&input)
+        Coin::try_from(&input)
     }
 }
 
-impl TryFrom<&proto::cosmos::base::v1beta1::Coin> for cosmrs::Coin {
+impl TryFrom<&proto::cosmos::base::v1beta1::Coin> for Coin {
     type Error = cosmrs::ErrorReport;
 
     fn try_from(input: &proto::cosmos::base::v1beta1::Coin) -> cosmrs::Result<Self> {
@@ -29,14 +38,14 @@ impl TryFrom<&proto::cosmos::base::v1beta1::Coin> for cosmrs::Coin {
     }
 }
 
-impl From<cosmrs::Coin> for proto::cosmos::base::v1beta1::Coin {
-    fn from(coin: cosmrs::Coin) -> proto::cosmos::base::v1beta1::Coin {
+impl From<Coin> for proto::cosmos::base::v1beta1::Coin {
+    fn from(coin: Coin) -> proto::cosmos::base::v1beta1::Coin {
         proto::cosmos::base::v1beta1::Coin::from(&coin)
     }
 }
 
-impl From<&cosmrs::Coin> for proto::cosmos::base::v1beta1::Coin {
-    fn from(coin: &cosmrs::Coin) -> proto::cosmos::base::v1beta1::Coin {
+impl From<&Coin> for proto::cosmos::base::v1beta1::Coin {
+    fn from(coin: &Coin) -> proto::cosmos::base::v1beta1::Coin {
         proto::cosmos::base::v1beta1::Coin {
             denom: coin.denom.to_string(),
             amount: coin.amount.to_string(),
@@ -46,7 +55,7 @@ impl From<&cosmrs::Coin> for proto::cosmos::base::v1beta1::Coin {
 
 #[derive(Clone, Debug, Default)]
 pub struct MsgExecuteContract {
-    pub coins: Vec<cosmrs::Coin>,
+    pub coins: Vec<Coin>,
     pub contract: String,
     pub execute_msg: Vec<u8>,
     pub sender: String,
