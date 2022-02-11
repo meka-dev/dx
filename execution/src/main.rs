@@ -147,7 +147,8 @@ async fn main() -> Result<(), Error> {
 
         // TODO(xla): Load configured strategies.
         let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
-            vec![Box::new(strategy::metrics::Instrumented::new(
+            vec![Box::new(strategy::metrics::Observed::new(
+                config::VERSION.to_string(),
                 Arc::clone(&metrics),
                 strategy::multi_dex::SinglePair::default(),
             ))];
