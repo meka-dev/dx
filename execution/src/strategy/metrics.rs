@@ -75,12 +75,12 @@ where
     async fn execute(
         &self,
         height: block::Height,
-        account_id: &terrars::AccountId,
+        sender: &terrars::AccountId,
         funds: &accounts::Balances,
         pools: &crate::dex::Pools,
-    ) -> Vec<Vec<terrars::Message>> {
+    ) -> Vec<Vec<terrars::MsgExecuteContract>> {
         let start = Instant::now();
-        let txs = self.next.execute(height, account_id, funds, pools).await;
+        let txs = self.next.execute(height, sender, funds, pools).await;
 
         let metrics = self.metrics.lock().await;
         metrics

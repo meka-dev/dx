@@ -1,18 +1,12 @@
 #![allow(clippy::borrowed_box)]
 
-use std::str::FromStr;
+use std::str::FromStr as _;
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{
-    coins, to_binary, CosmosMsg, Decimal, Decimal256 as StdDecimal256, Uint128, WasmMsg,
-};
-use cw20::Cw20ExecuteMsg;
+use cosmwasm_std::{Decimal, Decimal256 as StdDecimal256, Uint128};
 use itertools::Itertools;
 use tendermint::block;
-use terraswap::{
-    asset::{Asset, AssetInfo},
-    pair::{Cw20HookMsg, ExecuteMsg},
-};
+use terrars::{AccountId, MsgExecuteContract};
 
 use crate::{
     accounts, dex,
@@ -26,11 +20,12 @@ pub struct SinglePair {}
 // asset0 is always bid and asset1 is the ask.
 // XXX: do we actually want to implement this here?
 fn trade_path(
+    sender: &AccountId,
     pools: &[&Box<dyn dex::Pool>; 2],
     start: &dex::Token,
     amount: Uint128,
-) -> Option<(Uint128, Vec<CosmosMsg>)> {
-    let mut msgs: Vec<CosmosMsg> = vec![];
+) -> Option<(Uint128, Vec<MsgExecuteContract>)> {
+    let mut msgs = vec![];
     let mut cb = amount;
     let mut bid_token = start.clone();
 
@@ -46,7 +41,7 @@ fn trade_path(
                 s,
                 p.addr(),
             );
-            msgs.push(make_trade_msg(&bid_token, *p, r, belief_price(cb, r))?);
+            msgs.push(p.swap(sender, &bid_token, r, belief_price(cb, r)));
 
             cb = r;
             bid_token = ask_token;
@@ -68,67 +63,6 @@ fn trade_path(
 // only need this for the actual msg
 fn belief_price(amount_in: Uint128, amount_out: Uint128) -> Decimal {
     Decimal::from_ratio(amount_in, amount_out)
-}
-
-// token - bid/offer token
-// native -> token goes as swap via pair contract
-// token -> native goes as send via token contract
-fn make_trade_msg(
-    token: &dex::Token,
-    pool: &Box<dyn dex::Pool>,
-    amount: Uint128,
-    belief_price: Decimal,
-) -> Option<CosmosMsg> {
-    match token {
-        dex::Token::Cw20 {
-            contract_addr: addr,
-        } => {
-            // token -> native
-            let s = to_binary(&Cw20HookMsg::Swap {
-                to: None, // to is set to sender of initial msg
-                belief_price: Some(belief_price),
-                max_spread: None, // XXX
-            })
-            .ok()?;
-            let m = Cw20ExecuteMsg::Send {
-                contract: addr.to_string(),
-                msg: s,
-                amount: amount.u128().into(),
-            };
-            let b = to_binary(&m).ok()?;
-            Some(
-                WasmMsg::Execute {
-                    contract_addr: addr.to_string(),
-                    msg: b,
-                    funds: vec![],
-                }
-                .into(),
-            )
-        },
-        dex::Token::Native { denom } => {
-            // native -> token
-            let m = ExecuteMsg::Swap {
-                offer_asset: Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: denom.to_string(),
-                    },
-                    amount: amount.u128().into(),
-                },
-                belief_price: Some(belief_price),
-                max_spread: None, // XXX
-                to: None,
-            };
-            let b = to_binary(&m).ok()?;
-            Some(
-                WasmMsg::Execute {
-                    contract_addr: pool.addr().to_string(),
-                    msg: b,
-                    funds: coins(amount.u128(), denom),
-                }
-                .into(),
-            )
-        },
-    }
 }
 
 // XXX: this might eventually go into a contract
@@ -207,10 +141,12 @@ impl Strategy for SinglePair {
     async fn execute(
         &self,
         _height: block::Height,
-        _account_id: &terrars::AccountId,
+        sender: &terrars::AccountId,
         _funds: &accounts::Balances,
         pools: &dex::Pools,
-    ) -> Vec<Vec<terrars::Message>> {
+    ) -> Vec<Vec<MsgExecuteContract>> {
+        let mut bundles = vec![];
+
         // crazy arbs go here
         let start = dex::Token::ust();
 
@@ -238,14 +174,14 @@ impl Strategy for SinglePair {
                         left.addr(),
                         right.addr(),
                     );
-                    if let Some((_out, msgs)) = trade_path(&[left, right], &start, liq) {
+                    if let Some((_out, msgs)) = trade_path(sender, &[left, right], &start, liq) {
                         log::info!("{:?}", msgs);
+                        bundles.push(msgs);
                     }
                 }
             }
         }
 
-        // Empty list for now.
-        vec![]
+        bundles
     }
 }
