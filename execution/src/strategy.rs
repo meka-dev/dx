@@ -1,3 +1,4 @@
+use cosmwasm_std::Uint128;
 use tendermint::block;
 use terrars::MsgExecuteContract;
 
@@ -5,6 +6,8 @@ use crate::{accounts, dex};
 
 pub mod metrics;
 pub mod multi_dex;
+
+pub type Trade = (Uint128, Vec<MsgExecuteContract>);
 
 #[async_trait::async_trait]
 pub trait Strategy: Send {
@@ -16,5 +19,5 @@ pub trait Strategy: Send {
         sender: &terrars::AccountId,
         funds: &accounts::Balances,
         pools: &dex::Pools,
-    ) -> Vec<Vec<MsgExecuteContract>>;
+    ) -> Vec<Trade>;
 }

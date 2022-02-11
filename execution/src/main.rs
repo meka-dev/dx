@@ -7,7 +7,6 @@
 // TODO(xla): Extend telemetry with
 //              * fetch durations (pools, accounts)
 //              * current account balances
-// TODO(xla): Wire up multi-dex msgs to actual output.
 
 #![allow(clippy::or_fun_call)]
 
@@ -178,12 +177,14 @@ async fn main() -> Result<(), Error> {
             let funds = accounts::fetch(&lcd, &account_id).await?;
 
             for strategy in &strategies {
-                let _messages = strategy
+                let trades = strategy
                     .execute(latest_block.header.height, &account_id, &funds, &pools)
                     .await;
 
-                // broadcast tx
-                // lcd.submit_transaction_sync(&secp, &private_key, &messages, None).await?;
+                for (_, _msgs) in &trades {
+                    // broadcast tx
+                    // lcd.submit_transaction_sync(&secp, &private_key, &messages, None).await?;
+                }
             }
         }
 

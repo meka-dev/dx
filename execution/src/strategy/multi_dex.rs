@@ -10,7 +10,7 @@ use terrars::{AccountId, MsgExecuteContract};
 
 use crate::{
     accounts, dex,
-    strategy::{metrics, Strategy},
+    strategy::{metrics, Strategy, Trade},
 };
 
 #[derive(Default)]
@@ -144,7 +144,7 @@ impl Strategy for SinglePair {
         sender: &terrars::AccountId,
         _funds: &accounts::Balances,
         pools: &dex::Pools,
-    ) -> Vec<Vec<MsgExecuteContract>> {
+    ) -> Vec<Trade> {
         let mut bundles = vec![];
 
         // crazy arbs go here
@@ -174,9 +174,10 @@ impl Strategy for SinglePair {
                         left.addr(),
                         right.addr(),
                     );
-                    if let Some((_out, msgs)) = trade_path(sender, &[left, right], &start, liq) {
+                    if let Some((expected, msgs)) = trade_path(sender, &[left, right], &start, liq)
+                    {
                         log::info!("{:?}", msgs);
-                        bundles.push(msgs);
+                        bundles.push((expected, msgs));
                     }
                 }
             }
