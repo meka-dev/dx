@@ -1,10 +1,13 @@
 use std::{fmt::Display, sync::Arc};
 
+use cosmwasm_std::Uint128;
 use prometheus_client::encoding::text::Encode;
 use tendermint::block;
 use tokio::{sync::Mutex, time::Instant};
 
 use crate::{accounts, config, metrics, strategy::Strategy};
+
+use super::Trade;
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 pub enum Module {
@@ -56,7 +59,7 @@ pub struct DurationLabels {
 }
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
-pub struct EmitLabels {
+pub struct TradesLabel {
     version: String,
     module: Module,
     name: Name,
@@ -108,27 +111,34 @@ where
         sender: &terrars::AccountId,
         funds: &accounts::Balances,
         pools: &crate::dex::Pools,
-    ) -> Vec<Vec<terrars::MsgExecuteContract>> {
+    ) -> Vec<Trade> {
         let start = Instant::now();
-        let txs = self.next.execute(height, sender, funds, pools).await;
+        let trades = self.next.execute(height, sender, funds, pools).await;
 
         let elapsed = start.elapsed().as_secs_f64();
-        let output = match txs.len() {
+        let expected_profit = trades.iter().map(|(profit, _)| profit).sum::<Uint128>();
+        let output = match trades.len() {
             0 => Output::NoTrade,
             _ => Output::FoundTrades,
         };
 
         log::debug!(
-            "version={} module={} name={} height={} output={} txs={} duration={}",
+            "version={} module={} name={} height={} output={} trades={} expected_profit={} duration={}",
             self.version,
             self.next.module(),
             self.next.name(),
             height,
             output.clone(),
-            txs.len(),
+            trades.len(),
+            expected_profit,
             elapsed,
         );
 
+        let trade_labels = TradesLabel {
+            version: config::VERSION.to_string(),
+            module: self.next.module(),
+            name: self.next.name(),
+        };
         let metrics = self.metrics.lock().await;
         metrics
             .strategy_duration
@@ -140,24 +150,20 @@ where
             })
             .observe(elapsed);
         metrics
-            .strategy_tx_emit
-            .get_or_create(&EmitLabels {
-                version: config::VERSION.to_string(),
-                module: self.next.module(),
-                name: self.next.name(),
-            })
-            .inc_by(txs.len().try_into().unwrap());
-        txs.iter().for_each(|msgs| {
+            .strategy_expected_profit
+            .get_or_create(&trade_labels)
+            .inc_by(expected_profit.u128().try_into().unwrap());
+        metrics
+            .strategy_trades_found
+            .get_or_create(&trade_labels)
+            .inc_by(trades.len().try_into().unwrap());
+        trades.iter().for_each(|(_, msgs)| {
             metrics
                 .strategy_msgs_emit
-                .get_or_create(&EmitLabels {
-                    version: config::VERSION.to_string(),
-                    module: self.next.module(),
-                    name: self.next.name(),
-                })
+                .get_or_create(&trade_labels)
                 .inc_by(msgs.len().try_into().unwrap());
         });
 
-        txs
+        trades
     }
 }

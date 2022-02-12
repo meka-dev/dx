@@ -40,8 +40,9 @@ struct HttpLabels {
 pub struct Metrics {
     http_request_duration: Family<HttpLabels, Histogram>,
     pub strategy_duration: Family<strategy::metrics::DurationLabels, Histogram>,
-    pub strategy_tx_emit: Family<strategy::metrics::EmitLabels, Counter>,
-    pub strategy_msgs_emit: Family<strategy::metrics::EmitLabels, Counter>,
+    pub strategy_expected_profit: Family<strategy::metrics::TradesLabel, Counter>,
+    pub strategy_trades_found: Family<strategy::metrics::TradesLabel, Counter>,
+    pub strategy_msgs_emit: Family<strategy::metrics::TradesLabel, Counter>,
 }
 
 impl Metrics {
@@ -59,8 +60,9 @@ impl Metrics {
             Family::<strategy::metrics::DurationLabels, Histogram>::new_with_constructor(|| {
                 Histogram::new(BUCKETS.clone().into_iter())
             });
-        let strategy_tx_emit = Family::<strategy::metrics::EmitLabels, Counter>::default();
-        let strategy_msgs_emit = Family::<strategy::metrics::EmitLabels, Counter>::default();
+        let strategy_expected_profit = Family::<strategy::metrics::TradesLabel, Counter>::default();
+        let strategy_trades_found = Family::<strategy::metrics::TradesLabel, Counter>::default();
+        let strategy_msgs_emit = Family::<strategy::metrics::TradesLabel, Counter>::default();
 
         registry.register(
             prefix("http_request_duration_seconds"),
@@ -73,9 +75,14 @@ impl Metrics {
             Box::new(strategy_duration.clone()),
         );
         registry.register(
-            prefix("strategy_tx_emit"),
+            prefix("strategy_expected_profit"),
             "Number of transactions emitted by strategies",
-            Box::new(strategy_tx_emit.clone()),
+            Box::new(strategy_expected_profit.clone()),
+        );
+        registry.register(
+            prefix("strategy_trades_found"),
+            "Number of transactions emitted by strategies",
+            Box::new(strategy_trades_found.clone()),
         );
         registry.register(
             prefix("strategy_msgs_emit"),
@@ -87,7 +94,8 @@ impl Metrics {
         let metrics = Self {
             http_request_duration,
             strategy_duration,
-            strategy_tx_emit,
+            strategy_expected_profit,
+            strategy_trades_found,
             strategy_msgs_emit,
         };
         let metrics = Arc::new(Mutex::new(metrics));
