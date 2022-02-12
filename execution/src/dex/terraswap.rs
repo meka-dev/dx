@@ -1,7 +1,7 @@
 use std::str::FromStr as _;
 
 use cosmwasm_bignumber::Decimal256;
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Decimal, Fraction, Uint128};
 use serde::{Deserialize, Serialize};
 use terraswap::{asset, factory, pair};
 
@@ -75,8 +75,9 @@ impl Pool for Pair {
         &self,
         sender: &AccountId,
         token: &Token,
-        amount: Uint128,
-        belief_price: Decimal,
+        amount: Decimal256,
+        belief_price: Decimal256,
+        max_spread: Decimal256,
     ) -> MsgExecuteContract {
         let (coins, msg) = match token {
             Token::Cw20 { contract_addr } => (
@@ -86,18 +87,17 @@ impl Pool for Pair {
                         info: asset::AssetInfo::Token {
                             contract_addr: contract_addr.clone().to_string(),
                         },
-                        amount,
+                        amount: Into::<Decimal>::into(amount).numerator().into(), // ????
                     },
-                    belief_price: Some(belief_price),
-                    max_spread: None,
+                    belief_price: Some(belief_price.into()),
+                    max_spread: Some(max_spread.into()),
                     to: None,
                 },
             ),
             Token::Native { denom } => (
                 // FIXME(xla): Bignumber handling is all over the place, it needs consolidation.
                 vec![terrars::Coin {
-                    amount: Decimal256::from_uint256(amount)
-                        / Decimal256::from_uint256(10u128.pow(6)),
+                    amount: amount / Decimal256::from_uint256(10u128.pow(6)),
                     denom: terrars::Denom::from_str(denom).unwrap(),
                 }],
                 pair::ExecuteMsg::Swap {
@@ -105,10 +105,10 @@ impl Pool for Pair {
                         info: asset::AssetInfo::NativeToken {
                             denom: denom.clone(),
                         },
-                        amount,
+                        amount: Into::<Decimal>::into(amount).numerator().into(), // ????
                     },
-                    belief_price: Some(belief_price),
-                    max_spread: None,
+                    belief_price: Some(belief_price.into()),
+                    max_spread: Some(max_spread.into()),
                     to: None,
                 },
             ),

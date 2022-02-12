@@ -1,6 +1,6 @@
 use std::{fmt::Display, sync::Arc};
 
-use cosmwasm_std::Uint128;
+use cosmwasm_bignumber::{Decimal256, Uint256};
 use prometheus_client::encoding::text::Encode;
 use tendermint::block;
 use tokio::{sync::Mutex, time::Instant};
@@ -128,11 +128,14 @@ where
         let trades = self.next.execute(height, sender, funds, pools).await;
 
         let elapsed = start.elapsed().as_secs_f64();
-        let required_liquidity = trades.iter().map(|(liq, _, _)| liq).sum::<Uint128>();
-        let expected_profit = trades
-            .iter()
-            .map(|(_, expected_profit, _)| expected_profit)
-            .sum::<Uint128>();
+        let required_liquidity = trades.iter().fold(
+            Decimal256::from_uint256(Uint256::zero()),
+            |acc, (liq, _, _)| acc + *liq,
+        );
+        let expected_profit = trades.iter().fold(
+            Decimal256::from_uint256(Uint256::zero()),
+            |acc, (_, profit, _)| acc + *profit,
+        );
         let output = match trades.len() {
             0 => Output::NoTrade,
             _ => Output::FoundTrades,
@@ -175,11 +178,11 @@ where
         metrics
             .strategy_required_liquidity
             .get_or_create(&coin_labels)
-            .inc_by(required_liquidity.u128().try_into().unwrap());
+            .inc_by(required_liquidity.0.as_u64());
         metrics
             .strategy_expected_profit
             .get_or_create(&coin_labels)
-            .inc_by(expected_profit.u128().try_into().unwrap());
+            .inc_by(expected_profit.0.as_u64());
         metrics
             .strategy_trades_found
             .get_or_create(&trade_labels)
