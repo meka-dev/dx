@@ -6,7 +6,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut split = arg.split(':');
         let kind = split.next().unwrap();
         let data = split.next().unwrap();
-        let data = hex::decode(data).unwrap();
+        let data = hex::decode(data)?;
         let output = match kind {
             "terraswap" => cosmwasm_std::from_slice::<terraswap::pair::PoolResponse>(&data)
                 .and_then(|resp| cosmwasm_std::to_vec(&resp)),
@@ -15,8 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .and_then(|resp| cosmwasm_std::to_vec(&resp)),
 
             _ => panic!("{}: unknown", arg),
-        }
-        .unwrap();
+        }?;
 
         println!("{}", std::string::String::from_utf8_lossy(&output));
     }
