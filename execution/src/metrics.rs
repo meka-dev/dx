@@ -40,7 +40,8 @@ struct HttpLabels {
 pub struct Metrics {
     http_request_duration: Family<HttpLabels, Histogram>,
     pub strategy_duration: Family<strategy::metrics::DurationLabels, Histogram>,
-    pub strategy_expected_profit: Family<strategy::metrics::TradesLabel, Counter>,
+    pub strategy_required_liquidity: Family<strategy::metrics::CoinLabels, Counter>,
+    pub strategy_expected_profit: Family<strategy::metrics::CoinLabels, Counter>,
     pub strategy_trades_found: Family<strategy::metrics::TradesLabel, Counter>,
     pub strategy_msgs_emit: Family<strategy::metrics::TradesLabel, Counter>,
 }
@@ -60,7 +61,9 @@ impl Metrics {
             Family::<strategy::metrics::DurationLabels, Histogram>::new_with_constructor(|| {
                 Histogram::new(BUCKETS.clone().into_iter())
             });
-        let strategy_expected_profit = Family::<strategy::metrics::TradesLabel, Counter>::default();
+        let strategy_required_liquidity =
+            Family::<strategy::metrics::CoinLabels, Counter>::default();
+        let strategy_expected_profit = Family::<strategy::metrics::CoinLabels, Counter>::default();
         let strategy_trades_found = Family::<strategy::metrics::TradesLabel, Counter>::default();
         let strategy_msgs_emit = Family::<strategy::metrics::TradesLabel, Counter>::default();
 
@@ -75,8 +78,13 @@ impl Metrics {
             Box::new(strategy_duration.clone()),
         );
         registry.register(
+            prefix("strategy_required_liquidity"),
+            "Liquidity required to execute optimal strategy trades",
+            Box::new(strategy_required_liquidity.clone()),
+        );
+        registry.register(
             prefix("strategy_expected_profit"),
-            "Number of transactions emitted by strategies",
+            "Profit expected from trades made by strategies",
             Box::new(strategy_expected_profit.clone()),
         );
         registry.register(
@@ -94,6 +102,7 @@ impl Metrics {
         let metrics = Self {
             http_request_duration,
             strategy_duration,
+            strategy_required_liquidity,
             strategy_expected_profit,
             strategy_trades_found,
             strategy_msgs_emit,

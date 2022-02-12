@@ -174,10 +174,11 @@ impl Strategy for SinglePair {
                         left.addr(),
                         right.addr(),
                     );
-                    if let Some((expected, msgs)) = trade_path(sender, &[left, right], &start, liq)
+                    if let Some((expected_profit, msgs)) =
+                        trade_path(sender, &[left, right], &start, liq)
                     {
                         log::info!("{:?}", msgs);
-                        bundles.push((expected, msgs));
+                        bundles.push((liq, expected_profit, msgs));
                     }
                 }
             }

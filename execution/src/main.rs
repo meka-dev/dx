@@ -181,7 +181,7 @@ async fn main() -> Result<(), Error> {
                     .execute(latest_block.header.height, &account_id, &funds, &pools)
                     .await;
 
-                for (_, _msgs) in &trades {
+                for (_, _, _msgs) in &trades {
                     // broadcast tx
                     // lcd.submit_transaction_sync(&secp, &private_key, &messages, None).await?;
                 }
