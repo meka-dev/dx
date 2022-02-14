@@ -1,4 +1,4 @@
-use cosmwasm_std::Uint128;
+use cosmwasm_bignumber::Decimal256;
 use tendermint::block;
 use terrars::MsgExecuteContract;
 
@@ -7,7 +7,7 @@ use crate::{accounts, dex};
 pub mod metrics;
 pub mod multi_dex;
 
-pub type Trade = (Uint128, Uint128, Vec<MsgExecuteContract>);
+pub type Trade = (Decimal256, Decimal256, Vec<MsgExecuteContract>);
 
 #[async_trait::async_trait]
 pub trait Strategy: Send {

@@ -2,8 +2,8 @@
 
 use std::str::FromStr as _;
 
-use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{Decimal, Decimal256 as StdDecimal256, Uint128};
+use cosmwasm_bignumber::Decimal256;
+use cosmwasm_std::Decimal256 as StdDecimal256;
 use itertools::Itertools;
 use tendermint::block;
 use terrars::{AccountId, MsgExecuteContract};
@@ -23,8 +23,8 @@ fn trade_path(
     sender: &AccountId,
     pools: &[&Box<dyn dex::Pool>; 2],
     start: &dex::Token,
-    amount: Uint128,
-) -> Option<(Uint128, Vec<MsgExecuteContract>)> {
+    amount: Decimal256,
+) -> Option<(Decimal256, Vec<MsgExecuteContract>)> {
     let mut msgs = vec![];
     let mut cb = amount;
     let mut bid_token = start.clone();
@@ -41,7 +41,7 @@ fn trade_path(
                 s,
                 p.addr(),
             );
-            msgs.push(p.swap(sender, &bid_token, r, belief_price(cb, r)));
+            msgs.push(p.swap(sender, &bid_token, r, belief_price(cb, r), s));
 
             cb = r;
             bid_token = ask_token;
@@ -61,8 +61,8 @@ fn trade_path(
 }
 
 // only need this for the actual msg
-fn belief_price(amount_in: Uint128, amount_out: Uint128) -> Decimal {
-    Decimal::from_ratio(amount_in, amount_out)
+fn belief_price(amount_in: Decimal256, amount_out: Decimal256) -> Decimal256 {
+    amount_in / amount_out
 }
 
 // XXX: this might eventually go into a contract
@@ -71,7 +71,7 @@ fn compute_cycle_liq(
     start: &dex::Token,
     left: &Box<dyn dex::Pool>,
     right: &Box<dyn dex::Pool>,
-) -> Option<Uint128> {
+) -> Option<Decimal256> {
     let r2 = Decimal256::from_str("0.997").unwrap();
 
     let [p0_bid, p0_ask] = if left.coins()[0].token == *start {
@@ -82,8 +82,6 @@ fn compute_cycle_liq(
         ass
     };
 
-    // XXX: this also matches stable<>stable pairs
-    // XXX: filter out stableswap pairs
     let [p1_bid, p1_ask] = if right.coins()[0].token == p0_ask.token {
         right.coins()
     } else {
@@ -124,10 +122,8 @@ fn compute_cycle_liq(
     }
 
     // scale back to 6 decimals
-    let scaled: Uint256 = ((op - a) / Decimal256::from_uint256(10u128.pow(12)))
-        .0
-        .into();
-    Some(scaled.into())
+    let scaled = (op - a) / Decimal256::from_uint256(10u128.pow(12));
+    Some(scaled)
 }
 
 impl metrics::Labeled for SinglePair {
@@ -158,8 +154,6 @@ impl Strategy for SinglePair {
                 continue;
             }
 
-            // XXX: Clone is not implemented for Box<dyn Pool>, so we need to store refs,
-            //      but then we end up with Vec<&Box<dyn Pool>> which is not Pools
             for indices in pairs.iter().permutations(2) {
                 if indices.len() != 2 {
                     break;

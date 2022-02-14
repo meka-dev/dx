@@ -1,7 +1,7 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw20::TokenInfoResponse;
 use serde::{Deserialize, Serialize};
 
@@ -103,6 +103,10 @@ fn to_scaled_decimal256<T: Into<Uint256>>(n: T, decimals: u32) -> Decimal256 {
     Decimal256::from_uint256(n) / Decimal256::from_uint256(10u128.pow(decimals))
 }
 
+fn to_scaled(n: Decimal256, decimals: u32) -> Decimal256 {
+    n / Decimal256::from_uint256(10u128.pow(decimals))
+}
+
 #[async_trait::async_trait]
 pub trait Pool: Send + Sync {
     fn coins(&self) -> [Asset; 2];
@@ -111,8 +115,9 @@ pub trait Pool: Send + Sync {
         &self,
         sender: &AccountId,
         token: &Token,
-        amount: Uint128,
-        belief_price: Decimal,
+        amount: Decimal256,
+        belief_price: Decimal256,
+        max_spread: Decimal256,
     ) -> MsgExecuteContract;
     fn token_pair(&self) -> TokenPair;
     async fn update(&mut self, lcd: &Lcd, token_cache: &mut TokenCache) -> anyhow::Result<()>;
@@ -121,19 +126,19 @@ pub trait Pool: Send + Sync {
         &self,
         bid_token: &Token,
         ask_token: &Token,
-        amount: Uint128,
-    ) -> Option<(Uint128, Uint128)> {
-        if amount == Uint128::zero() {
+        amount: Decimal256,
+    ) -> Option<(Decimal256, Decimal256)> {
+        if amount == Decimal256::zero() {
             return None;
         }
 
         let (bid_reserve, ask_reserve, amt) = match self.coins() {
             [bid, ask] if bid.token == *bid_token && ask.token == *ask_token => {
-                let amt = to_scaled_decimal256(amount, bid.decimals as u32);
+                let amt = to_scaled(amount, bid.decimals as u32);
                 (bid.amount_decimal, ask.amount_decimal, amt)
             },
             [ask, bid] if bid.token == *bid_token && ask.token == *ask_token => {
-                let amt = to_scaled_decimal256(amount, bid.decimals as u32);
+                let amt = to_scaled(amount, bid.decimals as u32);
                 (bid.amount_decimal, ask.amount_decimal, amt)
             },
             _ => return None,
@@ -163,18 +168,10 @@ pub trait Pool: Send + Sync {
         let out = ret - fee;
         log::debug!("out {}", out);
 
-        let spread_scaled: Uint256 = if spread != Decimal256::zero() {
-            (spread / Decimal256::from_uint256(10u128.pow(12))).0.into()
-        } else {
-            Uint256::zero()
-        };
-        let out_scaled: Uint256 = if out != Decimal256::zero() {
-            (out / Decimal256::from_uint256(10u128.pow(12))).0.into()
-        } else {
-            Uint256::zero()
-        };
+        let spread_scaled = spread / Decimal256::from_uint256(10u128.pow(12));
+        let out_scaled = out / Decimal256::from_uint256(10u128.pow(12));
 
-        Some((out_scaled.into(), spread_scaled.into()))
+        Some((out_scaled, spread_scaled))
     }
 
     fn ask_token(&self, bid_token: &Token) -> Token {
