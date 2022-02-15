@@ -1,5 +1,7 @@
 use std::net::SocketAddr;
 
+use tendermint::chain;
+
 pub const CHAIN_ID: &str = "columbus-5";
 pub const LCD_URL: &str = "http://127.0.0.1:1317";
 pub const RPC_URL: &str = "ws://127.0.0.1:26657/websocket";
@@ -11,8 +13,8 @@ pub const VERSION: &str = env!("HASH");
 pub struct Args {
     /// terra chain identifier, should be static except on hard fork (Mainnet: columbus-5, Testnet:
     /// bombay-12)
-    #[argh(option, default = "CHAIN_ID.to_string()")]
-    pub chain_id: String,
+    #[argh(option, default = "CHAIN_ID.parse().unwrap()")]
+    pub chain_id: chain::Id,
 
     /// HTTP endpoint for Terra's LCD (http://127.0.0.1:1317)
     #[argh(option, default = "LCD_URL.to_string()")]

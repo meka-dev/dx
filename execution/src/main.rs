@@ -1,7 +1,6 @@
 // TODO(xla): Set up logging/tracing.
 // TODO(xla): Set up telemetry (Prometheus): process, futures, strategies
 // TODO(xla): Move from lcd to direct RPC calls to support height queries.
-// TODO(xla): Implement swaps for DEXes to produce proper messages.
 // TODO(xla): Bundle messages into txs and broadcast.
 // TODO(xla): Review depdencies and remove duplications.
 // TODO(xla): Extend telemetry with
@@ -12,7 +11,9 @@
 
 use std::{fs, ops::Sub, sync::Arc, time::Instant};
 
+use cosmwasm_bignumber::Decimal256;
 use futures::{FutureExt as _, StreamExt};
+use tendermint::{abci::Transaction, block::Height};
 use tokio::sync::watch;
 
 use tendermint_rpc::{
@@ -21,9 +22,12 @@ use tendermint_rpc::{
     Client as _, SubscriptionClient, WebSocketClient,
 };
 
-use terrars::lcd::{self, Lcd};
+use terrars::{
+    lcd::{self, Lcd as _},
+    Coin, Msg as _,
+};
 
-use execution::{accounts, broadcast, config, dex, metrics, strategy};
+use execution::{accounts, config, dex, metrics, strategy};
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -170,34 +174,46 @@ async fn main() -> Result<(), Error> {
             for pool in pools.0.iter_mut() {
                 pool.update(&lcd, &mut token_cache).await?;
             }
-
             log::info!(
                 "Updated {} in {:?}",
                 pools.0.len(),
                 Instant::now().sub(start)
             );
 
-            // FIXME(xla): Use real balances.
+            // Fetch available funds for strategies to incorporate.
             let funds = accounts::fetch(&lcd, &account_id).await?;
+            // Get latest account information to ensure sequence is consistent.
+            // FIXME(xla): Handle situation when the account is not present on chain.
+            let account = lcd.auth_account(&account_id).await?.unwrap();
 
             for strategy in &strategies {
                 let trades = strategy
                     .execute(latest_block.header.height, &account_id, &funds, &pools)
                     .await;
 
-                for trade in &trades {
-                    match lcd.estimate_fee(&account_id, trade.messages.clone()).await {
-                        Ok(fee) => {
-                            broadcast::observe(
-                                Arc::clone(&metrics),
-                                trade.messages.len(),
-                                trade.expected_profit,
-                                fee,
-                            )
-                            .await
+                for strategy::Trade { messages, .. } in trades {
+                    let msgs: Vec<terrars::Message> = messages
+                        .into_iter()
+                        .map(|msg| msg.to_any().unwrap())
+                        .collect();
+
+                    // TODO(xla): Fetch gas prices.
+                    // TODO(xla): Figure out gas calculations and fees.
+                    let tx = terrars::sign(
+                        args.chain_id,
+                        secret_key,
+                        &account,
+                        Coin {
+                            denom: "uusd".parse().unwrap(),
+                            amount: Decimal256::one(),
                         },
-                        Err(err) => log::error!("msg='failed to estimate fee' err={:?}", err),
-                    }
+                        1000,
+                        Height::try_from(latest_block.header.height.value() + 1).unwrap(),
+                        msgs,
+                    )?;
+
+                    // TODO(xla): Guard with dry-run flag.
+                    let check = client.broadcast_tx_sync(Transaction::from(tx)).await?;
                 }
             }
         }
