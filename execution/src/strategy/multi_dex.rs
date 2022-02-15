@@ -2,7 +2,7 @@
 
 use std::str::FromStr as _;
 
-use cosmwasm_bignumber::Decimal256;
+use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::Decimal256 as StdDecimal256;
 use itertools::Itertools;
 use tendermint::block;
@@ -91,14 +91,6 @@ fn compute_cycle_liq(
     };
 
     log::debug!(
-        "p0 bid {:}, p0_ask {:}, p1_bid {:}, p1_ask {:}",
-        p0_bid.amount,
-        p0_ask.amount,
-        p1_bid.amount,
-        p1_ask.amount
-    );
-    // XXX: newer versions of decimal have a `from_atomics()`
-    log::debug!(
         "p0 bid amt {:}, p0_ask amt {:}, p1_bid amt {:}, p1_ask amt {:}",
         p0_bid.amount_decimal,
         p0_ask.amount_decimal,
@@ -111,19 +103,31 @@ fn compute_cycle_liq(
     let a_p = (p0_ask.amount_decimal * p1_ask.amount_decimal * r2)
         / (p1_bid.amount_decimal + r2 * p0_ask.amount_decimal);
 
-    // ??????
     let op_std = StdDecimal256::from_str(&(r2 * a * a_p).to_string())
         .unwrap()
         .sqrt();
     let op = Decimal256::from_str(&op_std.to_string()).unwrap();
 
+    log::debug!("op {:}", op);
+    log::debug!("a {:}", a);
+    log::debug!("a_p {:}", a_p);
     if op < a {
         return None;
     }
 
-    // scale back to 6 decimals
-    let scaled = (op - a) / Decimal256::from_uint256(10u128.pow(12));
-    Some(scaled)
+    let delta = op - a;
+    let t: Decimal256 = Decimal256::from_ratio(
+        Uint256::one(),
+        Into::<Uint256>::into(10u128.pow(p0_bid.decimals as u32)),
+    );
+    log::debug!("delta {:}", delta);
+    if delta < t {
+        log::debug!("compute_swap below threshold");
+        // If we are getting out less than the precision of the token then we just
+        // return None
+        return None;
+    }
+    Some(delta)
 }
 
 impl metrics::Labeled for SinglePair {
@@ -136,9 +140,9 @@ impl metrics::Labeled for SinglePair {
 impl Strategy for SinglePair {
     async fn execute(
         &self,
-        _height: block::Height,
+        height: block::Height,
         sender: &terrars::AccountId,
-        _funds: &accounts::Balances,
+        funds: &accounts::Balances,
         pools: &dex::Pools,
     ) -> Vec<Trade> {
         let mut bundles = vec![];
@@ -146,6 +150,7 @@ impl Strategy for SinglePair {
         // crazy arbs go here
         let start = dex::Token::ust();
 
+        log::info!("#{}", height);
         for (token, pairs) in pools.index_by_token() {
             // We're only looking at cross dex two hop arbs, i.e. take all two pair
             // permutations for any token, eg ust -> luna on astroport and luna -> ust
@@ -160,6 +165,11 @@ impl Strategy for SinglePair {
                 }
 
                 let (left, right) = (&pools.0[*(indices[0])], &pools.0[*(indices[1])]);
+                log::debug!(
+                    "compute liq for path left {:} right {:}",
+                    left.addr(),
+                    right.addr()
+                );
 
                 if let Some(liq) = compute_cycle_liq(&start, left, right) {
                     log::info!(
@@ -168,11 +178,24 @@ impl Strategy for SinglePair {
                         left.addr(),
                         right.addr(),
                     );
+                    // Check if we have sufficient funds available to execute the optimal trade.
+                    // If not, then we just trade max and hope we can still pull enough of a
+                    // profit.
+                    // We could also consider adding logic to spread the arb across multiple tx.
+                    // XXX: this still does not take gas fees into account
+                    let bal: Decimal256 = *funds.get(&start).unwrap_or(&Decimal256::zero());
+                    let trade_size = if liq > bal { bal } else { liq };
+                    // XXX: the mismatch between size and our balance should be captured in metrics
                     if let Some((expected_profit, msgs)) =
-                        trade_path(sender, &[left, right], &start, liq)
+                        trade_path(sender, &[left, right], &start, trade_size)
                     {
                         log::info!("{:?}", msgs);
-                        bundles.push((liq, expected_profit, msgs));
+                        bundles.push((trade_size, expected_profit, msgs));
+                    } else {
+                        log::info!(
+                            "but could not seize the opportunity with my balance {:}",
+                            bal
+                        );
                     }
                 }
             }
