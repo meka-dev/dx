@@ -145,7 +145,7 @@ impl Strategy for SinglePair {
         funds: &accounts::Balances,
         pools: &dex::Pools,
     ) -> Vec<Trade> {
-        let mut bundles = vec![];
+        let mut trades = vec![];
 
         // crazy arbs go here
         let start = dex::Token::ust();
@@ -184,13 +184,17 @@ impl Strategy for SinglePair {
                     // We could also consider adding logic to spread the arb across multiple tx.
                     // XXX: this still does not take gas fees into account
                     let bal: Decimal256 = *funds.get(&start).unwrap_or(&Decimal256::zero());
-                    let trade_size = if liq > bal { bal } else { liq };
+                    let size = if liq > bal { bal } else { liq };
                     // XXX: the mismatch between size and our balance should be captured in metrics
-                    if let Some((expected_profit, msgs)) =
-                        trade_path(sender, &[left, right], &start, trade_size)
+                    if let Some((expected_profit, messages)) =
+                        trade_path(sender, &[left, right], &start, size)
                     {
-                        log::info!("{:?}", msgs);
-                        bundles.push((trade_size, expected_profit, msgs));
+                        log::info!("{:?}", messages);
+                        trades.push(Trade {
+                            size,
+                            expected_profit,
+                            messages,
+                        });
                     } else {
                         log::info!(
                             "but could not seize the opportunity with my balance {:}",
@@ -201,6 +205,6 @@ impl Strategy for SinglePair {
             }
         }
 
-        bundles
+        trades
     }
 }

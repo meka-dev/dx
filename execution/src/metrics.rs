@@ -11,7 +11,7 @@ use axum_extra::{middleware, middleware::Next};
 use lazy_static::lazy_static;
 use prometheus_client::{
     encoding::text::{encode, Encode},
-    metrics::{counter::Counter, family::Family, histogram::Histogram},
+    metrics::{counter::Counter, family::Family, gauge::Gauge, histogram::Histogram},
     registry::Registry,
 };
 use tokio::{sync::Mutex, time::Instant};
@@ -40,10 +40,13 @@ struct HttpLabels {
 pub struct Metrics {
     http_request_duration: Family<HttpLabels, Histogram>,
     pub strategy_duration: Family<strategy::metrics::DurationLabels, Histogram>,
-    pub strategy_required_liquidity: Family<strategy::metrics::CoinLabels, Counter>,
-    pub strategy_expected_profit: Family<strategy::metrics::CoinLabels, Counter>,
-    pub strategy_trades_found: Family<strategy::metrics::TradesLabel, Counter>,
-    pub strategy_msgs_emit: Family<strategy::metrics::TradesLabel, Counter>,
+    pub strategy_size_max: Family<strategy::metrics::TradesLabel, Gauge>,
+    pub strategy_expected_profit_max: Family<strategy::metrics::TradesLabel, Gauge>,
+    pub strategy_trades: Family<strategy::metrics::TradesLabel, Counter>,
+    pub strategy_trade_size_uusd: Family<strategy::metrics::TradesLabel, Counter>,
+    pub strategy_trade_expected_profit_uusd: Family<strategy::metrics::TradesLabel, Counter>,
+    pub strategy_trade_messages_emitted: Family<strategy::metrics::TradesLabel, Counter>,
+    pub strategy_trade_insufficient_balance: Family<strategy::metrics::TradesLabel, Counter>,
 }
 
 impl Metrics {
@@ -61,11 +64,17 @@ impl Metrics {
             Family::<strategy::metrics::DurationLabels, Histogram>::new_with_constructor(|| {
                 Histogram::new(BUCKETS.clone().into_iter())
             });
-        let strategy_required_liquidity =
-            Family::<strategy::metrics::CoinLabels, Counter>::default();
-        let strategy_expected_profit = Family::<strategy::metrics::CoinLabels, Counter>::default();
-        let strategy_trades_found = Family::<strategy::metrics::TradesLabel, Counter>::default();
-        let strategy_msgs_emit = Family::<strategy::metrics::TradesLabel, Counter>::default();
+        let strategy_size_max = Family::<strategy::metrics::TradesLabel, Gauge>::default();
+        let strategy_expected_profit_max =
+            Family::<strategy::metrics::TradesLabel, Gauge>::default();
+        let strategy_trades = Family::<strategy::metrics::TradesLabel, Counter>::default();
+        let strategy_trade_size_uusd = Family::<strategy::metrics::TradesLabel, Counter>::default();
+        let strategy_trade_expected_profit_uusd =
+            Family::<strategy::metrics::TradesLabel, Counter>::default();
+        let strategy_trade_messages_emitted =
+            Family::<strategy::metrics::TradesLabel, Counter>::default();
+        let strategy_trade_insufficient_balance =
+            Family::<strategy::metrics::TradesLabel, Counter>::default();
 
         registry.register(
             prefix("http_request_duration_seconds"),
@@ -78,34 +87,52 @@ impl Metrics {
             Box::new(strategy_duration.clone()),
         );
         registry.register(
-            prefix("strategy_required_liquidity"),
-            "Liquidity required to execute optimal strategy trades",
-            Box::new(strategy_required_liquidity.clone()),
+            prefix("strategy_size_max"),
+            "Largest trade size within a strategy execution",
+            Box::new(strategy_size_max.clone()),
         );
         registry.register(
-            prefix("strategy_expected_profit"),
-            "Profit expected from trades made by strategies",
-            Box::new(strategy_expected_profit.clone()),
+            prefix("strategy_expected_profit_max"),
+            "Largest trade profit within a strategy execution",
+            Box::new(strategy_expected_profit_max.clone()),
         );
         registry.register(
-            prefix("strategy_trades_found"),
+            prefix("strategy_trades"),
             "Number of transactions emitted by strategies",
-            Box::new(strategy_trades_found.clone()),
+            Box::new(strategy_trades.clone()),
         );
         registry.register(
-            prefix("strategy_msgs_emit"),
+            prefix("strategy_trade_size_uusd"),
+            "Liquidity required to execute optimal strategy trades",
+            Box::new(strategy_trade_size_uusd.clone()),
+        );
+        registry.register(
+            prefix("strategy_trade_expected_profit_uusd"),
+            "Profit expected from trades made by strategies",
+            Box::new(strategy_trade_expected_profit_uusd.clone()),
+        );
+        registry.register(
+            prefix("strategy_trade_messages_emitted"),
             "Number of messages emitted by strategies",
-            Box::new(strategy_msgs_emit.clone()),
+            Box::new(strategy_trade_messages_emitted.clone()),
+        );
+        registry.register(
+            prefix("strategy_trade_insufficient_balance"),
+            "Number of trades which didn't produce messages because of lack of funds",
+            Box::new(strategy_trade_insufficient_balance.clone()),
         );
 
         let registry = Arc::new(Mutex::new(registry));
         let metrics = Self {
             http_request_duration,
             strategy_duration,
-            strategy_required_liquidity,
-            strategy_expected_profit,
-            strategy_trades_found,
-            strategy_msgs_emit,
+            strategy_size_max,
+            strategy_expected_profit_max,
+            strategy_trades,
+            strategy_trade_size_uusd,
+            strategy_trade_expected_profit_uusd,
+            strategy_trade_messages_emitted,
+            strategy_trade_insufficient_balance,
         };
         let metrics = Arc::new(Mutex::new(metrics));
 
