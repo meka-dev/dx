@@ -32,6 +32,10 @@ fn trade_path(
     for p in pools {
         let ask_token = p.ask_token(&bid_token);
         if let Some((r, s)) = p.compute_swap(&bid_token, &ask_token, cb) {
+            if r == Decimal256::zero() || s == Decimal256::zero() {
+                return None;
+            }
+
             log::info!(
                 "swap {} {:?} for {} {:?} with a spread of {} on {}",
                 cb,
