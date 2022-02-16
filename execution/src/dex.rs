@@ -168,10 +168,7 @@ pub trait Pool: Send + Sync {
         let out = ret - fee;
         log::debug!("out {}", out);
 
-        let spread_scaled = spread / Decimal256::from_uint256(10u128.pow(12));
-        let out_scaled = out / Decimal256::from_uint256(10u128.pow(12));
-
-        Some((out_scaled, spread_scaled))
+        Some((out, spread))
     }
 
     fn ask_token(&self, bid_token: &Token) -> Token {
