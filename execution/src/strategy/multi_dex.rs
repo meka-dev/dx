@@ -188,7 +188,8 @@ impl Strategy for SinglePair {
                     // We could also consider adding logic to spread the arb across multiple tx.
                     // XXX: this still does not take gas fees into account
                     let bal: Decimal256 = *funds.get(&start).unwrap_or(&Decimal256::zero());
-                    let size = if liq > bal { bal } else { liq };
+                    let _size = if liq > bal { bal } else { liq };
+                    let size = liq;
                     // XXX: the mismatch between size and our balance should be captured in metrics
                     if let Some((expected_profit, messages)) =
                         trade_path(sender, &[left, right], &start, size)
