@@ -51,23 +51,11 @@ impl Display for Output {
 }
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
-pub enum Coin {
-    Uusd,
-}
-
-#[derive(Clone, Hash, Encode, Eq, PartialEq)]
 pub struct DurationLabels {
     version: String,
     module: Module,
     name: Name,
     output: Output,
-}
-#[derive(Clone, Hash, Encode, Eq, PartialEq)]
-pub struct CoinLabels {
-    version: String,
-    module: Module,
-    name: Name,
-    coin: Coin,
 }
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
@@ -128,13 +116,32 @@ where
         let trades = self.next.execute(height, sender, funds, pools).await;
 
         let elapsed = start.elapsed().as_secs_f64();
-        let required_liquidity = trades.iter().fold(
-            Decimal256::from_uint256(Uint256::zero()),
-            |acc, (liq, _, _)| acc + *liq,
+        let (size_total, size_max) = trades.iter().fold(
+            (
+                Decimal256::from_uint256(Uint256::zero()),
+                Decimal256::from_uint256(Uint256::zero()),
+            ),
+            |(total, max), Trade { size, .. }| {
+                let max = if *size > max { *size } else { max };
+                (total + *size, max)
+            },
         );
-        let expected_profit = trades.iter().fold(
-            Decimal256::from_uint256(Uint256::zero()),
-            |acc, (_, profit, _)| acc + *profit,
+        let (expected_profit_total, expected_profit_max) = trades.iter().fold(
+            (
+                Decimal256::from_uint256(Uint256::zero()),
+                Decimal256::from_uint256(Uint256::zero()),
+            ),
+            |(total, max),
+             Trade {
+                 expected_profit, ..
+             }| {
+                let max = if *expected_profit > max {
+                    *expected_profit
+                } else {
+                    max
+                };
+                (total + *expected_profit, max)
+            },
         );
         let output = match trades.len() {
             0 => Output::NoTrade,
@@ -142,24 +149,18 @@ where
         };
 
         log::debug!(
-            "version={} module={} name={} height={} output={} required_liquidity={} expected_profit={} trades={} duration={}",
+            "version={} module={} name={} height={} output={} size={} expected_profit={} trades={} duration={}",
             self.version,
             self.next.module(),
             self.next.name(),
             height,
             output.clone(),
-            required_liquidity,
-            expected_profit,
+            size_total,
+            expected_profit_total,
             trades.len(),
             elapsed,
         );
 
-        let coin_labels = CoinLabels {
-            version: config::VERSION.to_string(),
-            module: self.next.module(),
-            name: self.next.name(),
-            coin: Coin::Uusd,
-        };
         let trade_labels = TradesLabel {
             version: config::VERSION.to_string(),
             module: self.next.module(),
@@ -176,23 +177,35 @@ where
             })
             .observe(elapsed);
         metrics
-            .strategy_required_liquidity
-            .get_or_create(&coin_labels)
-            .inc_by(required_liquidity.0.as_u64());
-        metrics
-            .strategy_expected_profit
-            .get_or_create(&coin_labels)
-            .inc_by(expected_profit.0.as_u64());
-        metrics
-            .strategy_trades_found
+            .strategy_size_max
             .get_or_create(&trade_labels)
-            .inc_by(trades.len().try_into().unwrap());
-        trades.iter().for_each(|(_, _, msgs)| {
-            metrics
-                .strategy_msgs_emit
-                .get_or_create(&trade_labels)
-                .inc_by(msgs.len().try_into().unwrap());
-        });
+            .set(size_max.0.as_u64());
+        metrics
+            .strategy_expected_profit_max
+            .get_or_create(&trade_labels)
+            .set(expected_profit_max.0.as_u64());
+
+        trades.iter().for_each(
+            |Trade {
+                 size,
+                 expected_profit,
+                 messages,
+             }| {
+                metrics.strategy_trades.get_or_create(&trade_labels).inc();
+                metrics
+                    .strategy_trade_size_uusd
+                    .get_or_create(&trade_labels)
+                    .inc_by(size.0.as_u64());
+                metrics
+                    .strategy_trade_expected_profit_uusd
+                    .get_or_create(&trade_labels)
+                    .inc_by(expected_profit.0.as_u64());
+                metrics
+                    .strategy_trade_messages_emitted
+                    .get_or_create(&trade_labels)
+                    .inc_by(messages.len().try_into().unwrap());
+            },
+        );
 
         trades
     }

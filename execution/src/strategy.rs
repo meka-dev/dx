@@ -7,7 +7,11 @@ use crate::{accounts, dex};
 pub mod metrics;
 pub mod multi_dex;
 
-pub type Trade = (Decimal256, Decimal256, Vec<MsgExecuteContract>);
+pub struct Trade {
+    size: Decimal256,
+    expected_profit: Decimal256,
+    messages: Vec<MsgExecuteContract>,
+}
 
 #[async_trait::async_trait]
 pub trait Strategy: Send {
