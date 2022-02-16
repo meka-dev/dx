@@ -31,13 +31,20 @@ pub struct Labels {
     result: ResultLabel,
 }
 
-pub struct Observed<L> {
+#[derive(Clone)]
+pub struct Observed<L>
+where
+    L: Clone,
+{
     next: L,
     metrics: Arc<Mutex<metrics::Metrics>>,
     version: String,
 }
 
-impl<L> Observed<L> {
+impl<L> Observed<L>
+where
+    L: Clone,
+{
     pub fn new(version: impl Into<String>, metrics: Arc<Mutex<metrics::Metrics>>, next: L) -> Self {
         Self {
             metrics,
@@ -63,7 +70,7 @@ impl<L> Observed<L> {
 #[async_trait::async_trait]
 impl<L> Lcd for Observed<L>
 where
-    L: Lcd,
+    L: Clone + Lcd,
 {
     async fn auth_account(&self, account_id: &AccountId) -> anyhow::Result<Option<BaseAccount>> {
         let start = Instant::now();

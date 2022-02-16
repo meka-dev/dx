@@ -13,18 +13,20 @@ use std::{fs, ops::Sub, sync::Arc, time::Instant};
 
 use cosmwasm_bignumber::Decimal256;
 use futures::{FutureExt as _, StreamExt};
-use tendermint::{abci::Transaction, block::Height};
-use tokio::sync::watch;
-
+use tendermint::{
+    abci::Transaction,
+    block::{self, Height},
+};
 use tendermint_rpc::{
     event::EventData,
     query::{EventType, Query},
     Client as _, SubscriptionClient, WebSocketClient,
 };
+use tokio::sync::{mpsc, watch};
 
 use terrars::{
     lcd::{self, Lcd as _},
-    Coin, Msg as _,
+    Coin, Message, Msg as _,
 };
 
 use execution::{accounts, config, dex, metrics, strategy};
@@ -33,6 +35,8 @@ use execution::{accounts, config, dex, metrics, strategy};
 enum Error {
     #[error(transparent)]
     Any(#[from] anyhow::Error),
+    #[error("Broadcast routine has vanished")]
+    BroadcasterGone,
     #[error("Node is still catching up")]
     NodeCatchingUp,
     #[error(transparent)]
@@ -59,7 +63,7 @@ async fn main() -> Result<(), Error> {
     let mut metrics_server_handle = tokio::spawn(metrics_server).fuse();
 
     let secret_key = {
-        let raw = fs::read(args.secret_key_file)?;
+        let raw = fs::read(args.secret_key_file.clone())?;
         let bytes = hex::decode(&raw)?;
         // FIXME(xla): Proper error handling.
         terrars::SigningKey::from_bytes(&bytes).unwrap()
@@ -146,6 +150,57 @@ async fn main() -> Result<(), Error> {
         .fuse()
     };
 
+    let (broadcast_sender, mut broadcast_receiver) =
+        mpsc::channel::<(block::Height, Vec<Message>)>(100);
+
+    // Subroutine which compiles, signs and broadcasts message bundles into transactions.
+    let mut broadcast_handle = {
+        let account_id = account_id.clone();
+        let client = client.clone();
+        let lcd = lcd.clone();
+
+        tokio::spawn(async move {
+            log::debug!("Init broadcaster");
+
+            let secret_key_bytes = {
+                let raw = fs::read(args.secret_key_file.clone())?;
+                hex::decode(&raw)?
+            };
+
+            // Get latest account information to ensure sequence is consistent.
+            // FIXME(xla): Handle case where account is not present on chain.
+            let account = lcd.auth_account(&account_id).await?.unwrap();
+            let mut sequence = account.sequence;
+
+            while let Some((height, msgs)) = broadcast_receiver.recv().await {
+                // TODO(xla): Fetch gas prices.
+                // TODO(xla): Figure out gas calculations and fees.
+                let tx = terrars::sign(
+                    args.chain_id.clone(),
+                    // FIXME(xla): Proper error handling.
+                    terrars::SigningKey::from_bytes(&secret_key_bytes).unwrap(),
+                    account.account_number,
+                    sequence,
+                    Coin {
+                        denom: "uusd".parse().unwrap(),
+                        amount: Decimal256::one(),
+                    },
+                    1000,
+                    Height::try_from(height.value() + 1).unwrap(),
+                    msgs,
+                )?;
+
+                // TODO(xla): Guard with dry-run flag.
+                let _check = client.broadcast_tx_sync(Transaction::from(tx)).await?;
+
+                sequence += 1;
+            }
+
+            Ok::<(), Error>(())
+        })
+        .fuse()
+    };
+
     // Subroutine to keep the dependent information for strategies up-to-date and execute
     // strategies.
     let mut execution_handle = tokio::spawn(async move {
@@ -182,9 +237,6 @@ async fn main() -> Result<(), Error> {
 
             // Fetch available funds for strategies to incorporate.
             let funds = accounts::fetch(&lcd, &account_id).await?;
-            // Get latest account information to ensure sequence is consistent.
-            // FIXME(xla): Handle situation when the account is not present on chain.
-            let account = lcd.auth_account(&account_id).await?.unwrap();
 
             for strategy in &strategies {
                 let trades = strategy
@@ -197,23 +249,10 @@ async fn main() -> Result<(), Error> {
                         .map(|msg| msg.to_any().unwrap())
                         .collect();
 
-                    // TODO(xla): Fetch gas prices.
-                    // TODO(xla): Figure out gas calculations and fees.
-                    let tx = terrars::sign(
-                        args.chain_id,
-                        secret_key,
-                        &account,
-                        Coin {
-                            denom: "uusd".parse().unwrap(),
-                            amount: Decimal256::one(),
-                        },
-                        1000,
-                        Height::try_from(latest_block.header.height.value() + 1).unwrap(),
-                        msgs,
-                    )?;
-
-                    // TODO(xla): Guard with dry-run flag.
-                    let check = client.broadcast_tx_sync(Transaction::from(tx)).await?;
+                    broadcast_sender
+                        .send((latest_block.header.height, msgs))
+                        .await
+                        .map_err(|_| Error::BroadcasterGone)?;
                 }
             }
         }
@@ -228,6 +267,7 @@ async fn main() -> Result<(), Error> {
             join = metrics_server_handle => join??,
             join = driver_handle => join??,
             join = latest_block_handle => join??,
+            join = broadcast_handle => join??,
             join = execution_handle => join??,
             complete => break
         }

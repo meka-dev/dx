@@ -39,6 +39,7 @@ pub trait Lcd: Send + Sync {
     ) -> anyhow::Result<T>;
 }
 
+#[derive(Clone)]
 pub struct Http {
     base_url: Url,
     client: Client,
