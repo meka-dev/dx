@@ -14,6 +14,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "astroport" => cosmwasm_std::from_slice::<astroport::pair::PoolResponse>(&data)
                 .and_then(|resp| cosmwasm_std::to_vec(&resp)),
 
+            "loopmarkets" => cosmwasm_std::from_slice::<terraswap::pair::PoolResponse>(&data)
+                .and_then(|resp| cosmwasm_std::to_vec(&resp)),
+
             _ => panic!("{}: unknown", arg),
         }?;
 
