@@ -99,7 +99,7 @@ impl From<(Token, Uint128, u8)> for Asset {
     }
 }
 
-fn to_scaled_decimal256<T: Into<Uint256>>(n: T, decimals: u32) -> Decimal256 {
+pub fn to_scaled_decimal256<T: Into<Uint256>>(n: T, decimals: u32) -> Decimal256 {
     Decimal256::from_uint256(n) / Decimal256::from_uint256(10u128.pow(decimals))
 }
 
