@@ -99,12 +99,17 @@ impl From<(Token, Uint128, u8)> for Asset {
     }
 }
 
-pub fn to_scaled_decimal256<T: Into<Uint256>>(n: T, decimals: u32) -> Decimal256 {
-    Decimal256::from_uint256(n) / Decimal256::from_uint256(10u128.pow(decimals))
+impl Asset {
+    fn min_val(&self) -> Decimal256 {
+        Decimal256::from_ratio(
+            Uint256::one(),
+            Into::<Uint256>::into(10u128.pow(self.decimals as u32)),
+        )
+    }
 }
 
-fn to_scaled(n: Decimal256, decimals: u32) -> Decimal256 {
-    n / Decimal256::from_uint256(10u128.pow(decimals))
+pub fn to_scaled_decimal256<T: Into<Uint256>>(n: T, decimals: u32) -> Decimal256 {
+    Decimal256::from_uint256(n) / Decimal256::from_uint256(10u128.pow(decimals))
 }
 
 #[async_trait::async_trait]
@@ -128,40 +133,35 @@ pub trait Pool: Send + Sync {
         ask_token: &Token,
         amount: Decimal256,
     ) -> Option<(Decimal256, Decimal256)> {
-        if amount == Decimal256::zero() {
-            return None;
-        }
-
-        let (bid_reserve, ask_reserve, amt) = match self.coins() {
-            [bid, ask] if bid.token == *bid_token && ask.token == *ask_token => {
-                let amt = to_scaled(amount, bid.decimals as u32);
-                (bid.amount_decimal, ask.amount_decimal, amt)
-            },
-            [ask, bid] if bid.token == *bid_token && ask.token == *ask_token => {
-                let amt = to_scaled(amount, bid.decimals as u32);
-                (bid.amount_decimal, ask.amount_decimal, amt)
-            },
+        let (bid_asset, ask_asset) = match self.coins() {
+            [bid, ask] if bid.token == *bid_token && ask.token == *ask_token => (bid, ask),
+            [ask, bid] if bid.token == *bid_token && ask.token == *ask_token => (bid, ask),
             _ => return None,
         };
+
+        let ask_reserve = ask_asset.amount_decimal;
+        let bid_reserve = bid_asset.amount_decimal;
+
         log::debug!(
-            "amt {} ask_reserve {} bid_reserve {}",
-            amt,
+            "amount {} ask_reserve {} bid_reserve {}",
+            amount,
             ask_reserve,
             bid_reserve
         );
 
-        if bid_reserve == Decimal256::zero()
-            || ask_reserve == Decimal256::zero()
-            || amt == Decimal256::zero()
-        {
+        if amount < bid_asset.min_val() {
+            return None;
+        }
+
+        if bid_reserve == Decimal256::zero() || ask_reserve == Decimal256::zero() {
             return None;
         }
 
         let cp = ask_reserve * bid_reserve;
         log::debug!("cp {}", cp);
-        let ret = ask_reserve - cp / (bid_reserve + amt);
+        let ret = ask_reserve - cp / (bid_reserve + amount);
         log::debug!("ret {}", ret);
-        let spread = amt * ask_reserve / bid_reserve - ret;
+        let spread = amount * ask_reserve / bid_reserve - ret;
         log::debug!("spread {}", spread);
         let fee = ret * Decimal256::permille(3); // XXX: get from chain
         log::debug!("fee {}", fee);
