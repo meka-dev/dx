@@ -179,11 +179,15 @@ where
         metrics
             .strategy_size_max
             .get_or_create(&trade_labels)
-            .set(size_max.0.as_u64());
+            .set(u64::from(
+                (size_max * Decimal256::from_uint256(Uint256::from(1e6 as u64))).0,
+            ));
         metrics
             .strategy_expected_profit_max
             .get_or_create(&trade_labels)
-            .set(expected_profit_max.0.as_u64());
+            .set(u64::from(
+                (expected_profit_max * Decimal256::from_uint256(Uint256::from(1e6 as u64))).0,
+            ));
 
         trades.iter().for_each(
             |Trade {
@@ -195,11 +199,15 @@ where
                 metrics
                     .strategy_trade_size_uusd
                     .get_or_create(&trade_labels)
-                    .inc_by(size.0.as_u64());
+                    .inc_by(u64::from(
+                        (*size * Decimal256::from_uint256(Uint256::from(1e6 as u64))).0,
+                    ));
                 metrics
                     .strategy_trade_expected_profit_uusd
                     .get_or_create(&trade_labels)
-                    .inc_by(expected_profit.0.as_u64());
+                    .inc_by(u64::from(
+                        (*expected_profit * Decimal256::from_uint256(Uint256::from(1e6 as u64))).0,
+                    ));
                 metrics
                     .strategy_trade_messages_emitted
                     .get_or_create(&trade_labels)
