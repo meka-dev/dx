@@ -10,7 +10,7 @@
 
 #![allow(clippy::or_fun_call)]
 
-use std::{collections::HashMap, fs, ops::Sub, sync::Arc, time::Instant};
+use std::{fs, ops::Sub, sync::Arc, time::Instant};
 
 use futures::{FutureExt as _, StreamExt};
 use tokio::sync::watch;
@@ -175,12 +175,7 @@ async fn main() -> Result<(), Error> {
             );
 
             // FIXME(xla): Use real balances.
-            // let funds = accounts::fetch(&lcd, &account_id).await?;
-            let mut funds = HashMap::new();
-            funds.insert(
-                dex::Token::ust(),
-                dex::to_scaled_decimal256(10u128.pow(12), 6),
-            );
+            let funds = accounts::fetch(&lcd, &account_id).await?;
 
             for strategy in &strategies {
                 let trades = strategy
