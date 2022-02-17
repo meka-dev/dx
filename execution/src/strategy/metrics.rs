@@ -179,11 +179,11 @@ where
         metrics
             .strategy_size_max
             .get_or_create(&trade_labels)
-            .set(size_max.0.as_u64());
+            .set((size_max.0 / 10u64.pow(12).into()).as_u64());
         metrics
             .strategy_expected_profit_max
             .get_or_create(&trade_labels)
-            .set(expected_profit_max.0.as_u64());
+            .set((expected_profit_max.0 / 10u64.pow(12).into()).as_u64());
 
         trades.iter().for_each(
             |Trade {
@@ -195,11 +195,11 @@ where
                 metrics
                     .strategy_trade_size_uusd
                     .get_or_create(&trade_labels)
-                    .inc_by(size.0.as_u64());
+                    .inc_by((size.0 / 10u64.pow(12).into()).as_u64());
                 metrics
                     .strategy_trade_expected_profit_uusd
                     .get_or_create(&trade_labels)
-                    .inc_by(expected_profit.0.as_u64());
+                    .inc_by((expected_profit.0 / 10u64.pow(12).into()).as_u64());
                 metrics
                     .strategy_trade_messages_emitted
                     .get_or_create(&trade_labels)
