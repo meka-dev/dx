@@ -689,6 +689,7 @@ dependencies = [
  "async-trait",
  "axum",
  "axum-extra",
+ "bigint",
  "cosmwasm-bignumber",
  "cosmwasm-std",
  "cw20",
