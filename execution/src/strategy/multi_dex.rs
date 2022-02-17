@@ -2,8 +2,9 @@
 
 use std::str::FromStr as _;
 
+use bigint::U256;
 use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::Decimal256 as StdDecimal256;
+use cosmwasm_std::{Decimal256 as StdDecimal256, Fraction, Uint256 as StdUint256};
 use itertools::Itertools;
 use tendermint::block;
 use terrars::{AccountId, MsgExecuteContract};
@@ -107,10 +108,8 @@ fn compute_cycle_liq(
     let a_p = (p0_ask.amount_decimal * p1_ask.amount_decimal * r2)
         / (p1_bid.amount_decimal + r2 * p0_ask.amount_decimal);
 
-    let op_std = StdDecimal256::from_str(&(r2 * a * a_p).to_string())
-        .unwrap()
-        .sqrt();
-    let op = Decimal256::from_str(&op_std.to_string()).unwrap();
+    let op_std: StdDecimal256 = d256_to_sd256(r2 * a * a_p).sqrt();
+    let op = sd256_to_d256(op_std);
 
     log::debug!("op {:}", op);
     log::debug!("a {:}", a);
@@ -132,6 +131,20 @@ fn compute_cycle_liq(
         return None;
     }
     Some(delta)
+}
+
+fn d256_to_sd256(d: Decimal256) -> StdDecimal256 {
+    let mut buf = [0u8; 32];
+    d.0.to_little_endian(buf.as_mut_slice());
+
+    StdDecimal256::from_ratio(
+        StdUint256::from_le_bytes(buf),
+        StdUint256::from(10u128.pow(18)),
+    )
+}
+
+fn sd256_to_d256(d: StdDecimal256) -> Decimal256 {
+    Decimal256(U256::from_little_endian(&d.numerator().to_le_bytes()))
 }
 
 impl metrics::Labeled for SinglePair {
