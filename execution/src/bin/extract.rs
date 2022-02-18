@@ -36,8 +36,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if any.type_url == "/terra.wasm.v1beta1.MsgExecuteContract" {
                 let msg = terrars::MsgExecuteContract::from_any(&any)?;
 
-                println!("CONTRACT: {}", msg.contract);
-                if msg.contract == TERRASWAP_LUNAUST_PAIR_ADDRESS {
+                println!("CONTRACT: {}", msg.contract_address);
+                if msg.contract_address == TERRASWAP_LUNAUST_PAIR_ADDRESS {
                     let exe: terraswap::pair::ExecuteMsg =
                         serde_json::from_slice(&msg.execute_msg).unwrap();
                     println!("\t\t{:?}", msg);

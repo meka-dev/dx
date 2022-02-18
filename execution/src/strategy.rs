@@ -14,7 +14,7 @@ pub struct Trade {
 }
 
 #[async_trait::async_trait]
-pub trait Strategy: Send {
+pub trait Strategy<L>: Send {
     /// Given the current prices of dex pairs a strategy should produce an ordered list of messages
     /// (most likely swaps) to be bundled into one atomic transaction.
     async fn execute(
@@ -22,6 +22,6 @@ pub trait Strategy: Send {
         height: block::Height,
         sender: &terrars::AccountId,
         funds: &accounts::Balances,
-        pools: &dex::Pools,
+        pools: &dex::Pools<L>,
     ) -> Vec<Trade>;
 }

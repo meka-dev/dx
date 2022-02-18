@@ -78,19 +78,13 @@ pub trait Labeled {
     }
 }
 
-pub struct Observed<S>
-where
-    S: Strategy,
-{
+pub struct Observed<S> {
     next: S,
     metrics: Arc<Mutex<metrics::Metrics>>,
     version: String,
 }
 
-impl<S> Observed<S>
-where
-    S: Strategy,
-{
+impl<S> Observed<S> {
     pub fn new(version: impl Into<String>, metrics: Arc<Mutex<metrics::Metrics>>, next: S) -> Self {
         Self {
             metrics,
@@ -101,16 +95,16 @@ where
 }
 
 #[async_trait::async_trait]
-impl<S> Strategy for Observed<S>
+impl<S, L> Strategy<L> for Observed<S>
 where
-    S: Strategy + Labeled + Sync,
+    S: Strategy<L> + Labeled + Sync,
 {
     async fn execute(
         &self,
         height: block::Height,
         sender: &terrars::AccountId,
         funds: &accounts::Balances,
-        pools: &crate::dex::Pools,
+        pools: &crate::dex::Pools<L>,
     ) -> Vec<Trade> {
         let start = Instant::now();
         let trades = self.next.execute(height, sender, funds, pools).await;
