@@ -9,8 +9,8 @@ pub mod multi_dex;
 
 pub struct Trade {
     size: Decimal256,
-    expected_profit: Decimal256,
-    messages: Vec<MsgExecuteContract>,
+    pub expected_profit: Decimal256,
+    pub messages: Vec<MsgExecuteContract>,
 }
 
 #[async_trait::async_trait]
