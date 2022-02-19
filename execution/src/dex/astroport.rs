@@ -92,7 +92,7 @@ where
             Token::Native { denom } => (
                 // FIXME(xla): Bignumber handling is all over the place, it needs consolidation.
                 vec![terrars::Coin {
-                    amount: amount / Decimal256::from_uint256(10u128.pow(6)),
+                    amount,
                     denom: terrars::Denom::from_str(denom).unwrap(),
                 }],
                 pair::ExecuteMsg::Swap {
