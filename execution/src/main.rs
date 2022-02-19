@@ -20,7 +20,8 @@ use tendermint_rpc::{
     query::{EventType, Query},
     Client as _, SubscriptionClient, WebSocketClient,
 };
-use terrars::Lcd;
+
+use terrars::lcd;
 
 use execution::{accounts, config, dex, metrics, strategy};
 
@@ -40,8 +41,6 @@ enum Error {
     Join(#[from] tokio::task::JoinError),
     #[error(transparent)]
     Rpc(#[from] tendermint_rpc::Error),
-    #[error(transparent)]
-    Terrars(#[from] terrars::Error),
 }
 
 #[tokio::main]
@@ -68,7 +67,7 @@ async fn main() -> Result<(), Error> {
         .unwrap();
 
     // Set up lcd client for state retrieval. This is a naïve and slow way.
-    let lcd = Lcd::lcd_client_no_tx(args.lcd_url, args.chain_id);
+    let lcd = lcd::Http::new(args.lcd_url, args.chain_id);
 
     let mut token_cache = dex::TokenCache::default();
     let mut pools = {
@@ -145,7 +144,7 @@ async fn main() -> Result<(), Error> {
         log::debug!("Init strategy executor");
 
         // TODO(xla): Load configured strategies.
-        let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
+        let strategies: Vec<Box<dyn strategy::Strategy<lcd::Http> + Sync>> =
             vec![Box::new(strategy::metrics::Observed::new(
                 config::VERSION.to_string(),
                 Arc::clone(&metrics),

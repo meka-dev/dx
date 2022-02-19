@@ -7,7 +7,7 @@ use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Decimal256 as StdDecimal256, Fraction, Uint256 as StdUint256};
 use itertools::Itertools;
 use tendermint::block;
-use terrars::{AccountId, MsgExecuteContract};
+use terrars::{lcd::Lcd, AccountId, MsgExecuteContract};
 
 use crate::{
     accounts, dex,
@@ -20,12 +20,15 @@ pub struct SinglePair {}
 // Iterate through a bunch of pools and properly arrange them s.t.
 // asset0 is always bid and asset1 is the ask.
 // XXX: do we actually want to implement this here?
-fn trade_path(
+fn trade_path<L>(
     sender: &AccountId,
-    pools: &[&Box<dyn dex::Pool>; 2],
+    pools: &[&Box<dyn dex::Pool<L>>; 2],
     start: &dex::Token,
     amount: Decimal256,
-) -> Option<(Decimal256, Vec<MsgExecuteContract>)> {
+) -> Option<(Decimal256, Vec<MsgExecuteContract>)>
+where
+    L: Lcd,
+{
     let mut msgs = vec![];
     let mut cb = amount;
     let mut bid_token = start.clone();
@@ -72,11 +75,14 @@ fn belief_price(amount_in: Decimal256, amount_out: Decimal256) -> Decimal256 {
 
 // XXX: this might eventually go into a contract
 // XXX: we also need to be aware of our own balances
-fn compute_cycle_liq(
+fn compute_cycle_liq<L>(
     start: &dex::Token,
-    left: &Box<dyn dex::Pool>,
-    right: &Box<dyn dex::Pool>,
-) -> Option<Decimal256> {
+    left: &Box<dyn dex::Pool<L>>,
+    right: &Box<dyn dex::Pool<L>>,
+) -> Option<Decimal256>
+where
+    L: Lcd,
+{
     let r2 = Decimal256::from_str("0.997").unwrap();
 
     let [p0_bid, p0_ask] = if left.coins()[0].token == *start {
@@ -154,13 +160,16 @@ impl metrics::Labeled for SinglePair {
 
 // XXX: make sure to properly calculate tax
 #[async_trait::async_trait]
-impl Strategy for SinglePair {
+impl<L> Strategy<L> for SinglePair
+where
+    L: Lcd,
+{
     async fn execute(
         &self,
         height: block::Height,
         sender: &terrars::AccountId,
         funds: &accounts::Balances,
-        pools: &dex::Pools,
+        pools: &dex::Pools<L>,
     ) -> Vec<Trade> {
         let mut trades = vec![];
 

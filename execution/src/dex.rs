@@ -5,7 +5,7 @@ use cosmwasm_std::{Addr, Uint128};
 use cw20::TokenInfoResponse;
 use serde::{Deserialize, Serialize};
 
-use terrars::{AccountId, Lcd, MsgExecuteContract};
+use terrars::{lcd::Lcd, AccountId, MsgExecuteContract};
 
 pub mod astroport;
 pub mod loopmarkets;
@@ -113,9 +113,9 @@ pub fn to_scaled_decimal256<T: Into<Uint256>>(n: T, decimals: u32) -> Decimal256
 }
 
 #[async_trait::async_trait]
-pub trait Pool: Send + Sync {
+pub trait Pool<L: Lcd>: Send + Sync {
     fn coins(&self) -> [Asset; 2];
-    fn addr(&self) -> &str;
+    fn addr(&self) -> Addr;
     fn swap(
         &self,
         sender: &AccountId,
@@ -125,7 +125,7 @@ pub trait Pool: Send + Sync {
         max_spread: Decimal256,
     ) -> MsgExecuteContract;
     fn token_pair(&self) -> TokenPair;
-    async fn update(&mut self, lcd: &Lcd, token_cache: &mut TokenCache) -> anyhow::Result<()>;
+    async fn update(&mut self, lcd: &L, token_cache: &mut TokenCache) -> anyhow::Result<()>;
 
     fn compute_swap(
         &self,
@@ -180,16 +180,19 @@ pub trait Pool: Send + Sync {
     }
 }
 
-pub struct Pools(pub Vec<Box<dyn Pool>>);
+pub struct Pools<L>(pub Vec<Box<dyn Pool<L>>>);
 
-impl From<Vec<Box<dyn Pool>>> for Pools {
-    fn from(input: Vec<Box<dyn Pool>>) -> Self {
+impl<L> From<Vec<Box<dyn Pool<L>>>> for Pools<L> {
+    fn from(input: Vec<Box<dyn Pool<L>>>) -> Self {
         Self(input)
     }
 }
 
 #[allow(clippy::or_fun_call)]
-impl Pools {
+impl<L> Pools<L>
+where
+    L: Lcd,
+{
     pub fn index_by_token(&self) -> TokenIndex {
         let mut map = HashMap::new();
 
@@ -218,11 +221,14 @@ impl Pools {
 pub struct TokenCache(pub HashMap<Addr, cw20::TokenInfoResponse>);
 
 impl TokenCache {
-    pub async fn get(
+    pub async fn get<L>(
         &mut self,
-        lcd: &Lcd,
+        lcd: &L,
         contract_addr: &Addr,
-    ) -> anyhow::Result<TokenInfoResponse> {
+    ) -> anyhow::Result<TokenInfoResponse>
+    where
+        L: Lcd,
+    {
         match self.0.entry(contract_addr.clone()) {
             Entry::Occupied(entry) => Ok(entry.get().clone()),
             Entry::Vacant(entry) => {
@@ -240,12 +246,14 @@ struct TokenInfoResult {
     result: cw20::TokenInfoResponse,
 }
 
-async fn token_info(lcd: &Lcd, contract_addr: &Addr) -> anyhow::Result<cw20::TokenInfoResponse> {
+async fn token_info<L>(lcd: &L, contract_addr: &Addr) -> anyhow::Result<cw20::TokenInfoResponse>
+where
+    L: Lcd,
+{
     let res = lcd
-        .wasm()
-        .query::<TokenInfoResult>(
-            contract_addr.as_ref(),
-            &serde_json::to_string(&cw20_base::msg::QueryMsg::TokenInfo {})?,
+        .wasm_query::<cw20_base::msg::QueryMsg, TokenInfoResult>(
+            contract_addr,
+            &cw20_base::msg::QueryMsg::TokenInfo {},
         )
         .await?;
 
