@@ -186,17 +186,18 @@ async fn main() -> Result<(), Error> {
                     .await;
 
                 for trade in &trades {
-                    let fee = lcd
-                        .estimate_fee(&account_id, trade.messages.clone())
-                        .await?;
-
-                    broadcast::observe(
-                        Arc::clone(&metrics),
-                        trade.messages.len(),
-                        trade.expected_profit,
-                        fee,
-                    )
-                    .await;
+                    match lcd.estimate_fee(&account_id, trade.messages.clone()).await {
+                        Ok(fee) => {
+                            broadcast::observe(
+                                Arc::clone(&metrics),
+                                trade.messages.len(),
+                                trade.expected_profit,
+                                fee,
+                            )
+                            .await
+                        },
+                        Err(err) => log::error!("msg='failed to estimate fee' err={:?}", err),
+                    }
                 }
             }
         }
