@@ -18,6 +18,8 @@ use tokio::{sync::Mutex, time::Instant};
 
 use crate::{config, strategy};
 
+pub mod lcd;
+
 const HEADER_OPENMETRICS: &str = "application/openmetrics-text; version=1.0.0; charset=utf-8";
 const ORG_NAMESPACE: &str = "mekatek";
 const BINARY_NAMESPACE: &str = "execution";
@@ -58,6 +60,7 @@ struct HttpLabels {
 
 pub struct Metrics {
     http_request_duration: Family<HttpLabels, Histogram>,
+    pub lcd_call_duration: Family<lcd::Labels, Histogram>,
     pub strategy_duration: Family<strategy::metrics::DurationLabels, Histogram>,
     pub strategy_size_max: Family<strategy::metrics::TradesLabel, Gauge>,
     pub strategy_expected_profit_max: Family<strategy::metrics::TradesLabel, Gauge>,
@@ -77,6 +80,9 @@ impl Metrics {
     ) {
         let mut registry = <Registry>::default();
         let http_request_duration = Family::<HttpLabels, Histogram>::new_with_constructor(|| {
+            Histogram::new(BUCKETS.clone().into_iter())
+        });
+        let lcd_call_duration = Family::<lcd::Labels, Histogram>::new_with_constructor(|| {
             Histogram::new(BUCKETS.clone().into_iter())
         });
         let strategy_duration =
@@ -99,6 +105,11 @@ impl Metrics {
             prefix("http_request_duration_seconds"),
             "HTTP request durations",
             Box::new(http_request_duration.clone()),
+        );
+        registry.register(
+            prefix("lcd_call_duration_seconds"),
+            "LCD call latency",
+            Box::new(lcd_call_duration.clone()),
         );
         registry.register(
             prefix("strategy_duration_seconds"),
@@ -144,6 +155,7 @@ impl Metrics {
         let registry = Arc::new(Mutex::new(registry));
         let metrics = Self {
             http_request_duration,
+            lcd_call_duration,
             strategy_duration,
             strategy_size_max,
             strategy_expected_profit_max,

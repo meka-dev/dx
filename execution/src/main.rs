@@ -67,7 +67,11 @@ async fn main() -> Result<(), Error> {
         .unwrap();
 
     // Set up lcd client for state retrieval. This is a naïve and slow way.
-    let lcd = lcd::Http::new(args.lcd_url, args.chain_id);
+    let lcd = metrics::lcd::Observed::new(
+        config::VERSION,
+        Arc::clone(&metrics),
+        lcd::Http::new(args.lcd_url, args.chain_id),
+    );
 
     let mut token_cache = dex::TokenCache::default();
     let mut pools = {
@@ -144,7 +148,7 @@ async fn main() -> Result<(), Error> {
         log::debug!("Init strategy executor");
 
         // TODO(xla): Load configured strategies.
-        let strategies: Vec<Box<dyn strategy::Strategy<lcd::Http> + Sync>> =
+        let strategies: Vec<Box<dyn strategy::Strategy<metrics::lcd::Observed<lcd::Http>> + Sync>> =
             vec![Box::new(strategy::metrics::Observed::new(
                 config::VERSION.to_string(),
                 Arc::clone(&metrics),
