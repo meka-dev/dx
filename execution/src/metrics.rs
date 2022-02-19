@@ -16,7 +16,7 @@ use prometheus_client::{
 };
 use tokio::{sync::Mutex, time::Instant};
 
-use crate::{config, strategy};
+use crate::{broadcast, config, strategy};
 
 pub mod lcd;
 
@@ -69,6 +69,8 @@ pub struct Metrics {
     pub strategy_trade_expected_profit_uusd: Family<strategy::metrics::TradesLabel, Counter>,
     pub strategy_trade_messages_emitted: Family<strategy::metrics::TradesLabel, Counter>,
     pub strategy_trade_insufficient_balance: Family<strategy::metrics::TradesLabel, Counter>,
+    pub broadcast_estimated_fee_uusd: Family<broadcast::Labels, Counter>,
+    pub broadcast_expected_profit_after_fee_uusd: Family<broadcast::Labels, Counter>,
 }
 
 impl Metrics {
@@ -100,6 +102,9 @@ impl Metrics {
             Family::<strategy::metrics::TradesLabel, Counter>::default();
         let strategy_trade_insufficient_balance =
             Family::<strategy::metrics::TradesLabel, Counter>::default();
+        let broadcast_estimated_fee_uusd = Family::<broadcast::Labels, Counter>::default();
+        let broadcast_expected_profit_after_fee_uusd =
+            Family::<broadcast::Labels, Counter>::default();
 
         registry.register(
             prefix("http_request_duration_seconds"),
@@ -151,6 +156,16 @@ impl Metrics {
             "Number of trades which didn't produce messages because of lack of funds",
             Box::new(strategy_trade_insufficient_balance.clone()),
         );
+        registry.register(
+            prefix("broadcast_estimated_fee_uusd"),
+            "Estimated transaction fee",
+            Box::new(broadcast_estimated_fee_uusd.clone()),
+        );
+        registry.register(
+            prefix("broadcast_expected_profit_after_fee_uusd"),
+            "Expected profit after fees have been subtracted",
+            Box::new(broadcast_expected_profit_after_fee_uusd.clone()),
+        );
 
         let registry = Arc::new(Mutex::new(registry));
         let metrics = Self {
@@ -164,6 +179,8 @@ impl Metrics {
             strategy_trade_expected_profit_uusd,
             strategy_trade_messages_emitted,
             strategy_trade_insufficient_balance,
+            broadcast_estimated_fee_uusd,
+            broadcast_expected_profit_after_fee_uusd,
         };
         let metrics = Arc::new(Mutex::new(metrics));
 

@@ -21,9 +21,9 @@ use tendermint_rpc::{
     Client as _, SubscriptionClient, WebSocketClient,
 };
 
-use terrars::lcd;
+use terrars::lcd::{self, Lcd};
 
-use execution::{accounts, config, dex, metrics, strategy};
+use execution::{accounts, broadcast, config, dex, metrics, strategy};
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -185,9 +185,18 @@ async fn main() -> Result<(), Error> {
                     .execute(latest_block.header.height, &account_id, &funds, &pools)
                     .await;
 
-                for _trade in &trades {
-                    // broadcast tx
-                    // lcd.submit_transaction_sync(&secp, &private_key, &messages, None).await?;
+                for trade in &trades {
+                    let fee = lcd
+                        .estimate_fee(&account_id, trade.messages.clone())
+                        .await?;
+
+                    broadcast::observe(
+                        Arc::clone(&metrics),
+                        trade.messages.len(),
+                        trade.expected_profit,
+                        fee,
+                    )
+                    .await;
                 }
             }
         }

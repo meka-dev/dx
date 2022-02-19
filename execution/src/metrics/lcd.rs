@@ -1,17 +1,19 @@
 use std::{sync::Arc, time::Instant};
 
+use cosmwasm_bignumber::Decimal256;
 use cosmwasm_std::Addr;
 use prometheus_client::encoding::text::Encode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-use terrars::{lcd::Lcd, AccountId, Coin};
+use terrars::{lcd::Lcd, AccountId, Coin, MsgExecuteContract};
 
 use crate::metrics;
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 pub enum Method {
     BankBalances,
+    EstimateFee,
     WasmQuery,
 }
 
@@ -68,6 +70,27 @@ where
         self.observe(
             start,
             Method::BankBalances,
+            if res.is_err() {
+                ResultLabel::Error
+            } else {
+                ResultLabel::Success
+            },
+        )
+        .await;
+
+        res
+    }
+
+    async fn estimate_fee(
+        &self,
+        account_id: &AccountId,
+        execute_msgs: Vec<MsgExecuteContract>,
+    ) -> anyhow::Result<Decimal256> {
+        let start = Instant::now();
+        let res = self.next.estimate_fee(account_id, execute_msgs).await;
+        self.observe(
+            start,
+            Method::EstimateFee,
             if res.is_err() {
                 ResultLabel::Error
             } else {
