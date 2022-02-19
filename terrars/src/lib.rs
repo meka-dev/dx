@@ -8,6 +8,7 @@ pub use cosmrs::{
 };
 use cosmwasm_bignumber::Decimal256;
 use cosmwasm_std::Addr;
+pub use terra_rust_api::client::tx_types::TxFee;
 
 pub mod lcd;
 mod proto;

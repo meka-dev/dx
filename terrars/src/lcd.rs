@@ -9,7 +9,7 @@ use crate::Coin;
 pub trait Lcd: Send + Sync {
     async fn bank_balances(&self, account_id: &AccountId) -> anyhow::Result<Vec<Coin>>;
 
-    async fn wasm_query<Q: ?Sized + Sync + Serialize, T: for<'de> Deserialize<'de>>(
+    async fn wasm_query<Q: ?Sized + Sync + Serialize, T: Send + for<'de> Deserialize<'de>>(
         &self,
         contract_addr: &Addr,
         query: &Q,
@@ -36,7 +36,7 @@ impl Lcd for Http {
         Ok(res.result.into_iter().map(Into::into).collect())
     }
 
-    async fn wasm_query<Q: ?Sized + Sync + Serialize, T: for<'de> Deserialize<'de>>(
+    async fn wasm_query<Q: ?Sized + Sync + Serialize, T: Send + for<'de> Deserialize<'de>>(
         &self,
         contract_address: &Addr,
         query: &Q,
