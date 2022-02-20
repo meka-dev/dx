@@ -25,7 +25,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [macos-latest, ubuntu-latest]
         toolchain: [stable]
 
     name: Build
@@ -110,6 +110,51 @@ jobs:
           # to a regression in 1.58, in progress here:
           # https://github.com/rust-lang/rust/pull/93449
           args: -p execution --no-deps --all-features --all-targets -- -Wrust-2021-compatibility
+
+  test:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        toolchain: [stable]
+
+    name: Test
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Cache toolchain
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.rustup/settings.toml
+            ~/.rustup/toolchains/${{ matrix.toolchain }}-*
+            ~/.rustup/update-hashes/${{ matrix.toolchain }}-*
+          key: rust-toolchain_${{ matrix.os }}-${{ matrix.toolchain }}
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          components: cargo, clippy, rustfmt
+          override: true
+
+      - name: Install nextest
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-nextest
+          version: latest
+          use-tool-cache: true
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: nextest
+          args: run --workspace --all-features --all-targets
 
   release-execution:
     if: "github.ref == 'refs/heads/main'"

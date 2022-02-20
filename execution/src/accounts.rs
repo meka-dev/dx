@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use cosmwasm_bignumber::Decimal256;
 use terrars::{lcd::Lcd, AccountId};
@@ -21,7 +21,7 @@ where
             dex::Token::Native {
                 denom: coin.denom.to_string(),
             },
-            Decimal256::from_str(&coin.amount.to_string())?,
+            coin.amount,
         );
     }
 

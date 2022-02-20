@@ -66,11 +66,13 @@ async fn main() -> Result<(), Error> {
         .account_id(accounts::PREFIX)
         .unwrap();
 
+    println!("{:?}", account_id);
+
     // Set up lcd client for state retrieval. This is a naïve and slow way.
     let lcd = metrics::lcd::Observed::new(
         config::VERSION,
         Arc::clone(&metrics),
-        lcd::Http::new(args.lcd_url, args.chain_id),
+        lcd::Http::new(args.lcd_url)?,
     );
 
     let mut token_cache = dex::TokenCache::default();
