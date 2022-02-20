@@ -3,7 +3,6 @@ use std::collections::{hash_map::Entry, HashMap};
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Addr, Uint128};
 use cw20::TokenInfoResponse;
-use serde::{Deserialize, Serialize};
 
 use terrars::{lcd::Lcd, AccountId, MsgExecuteContract};
 
@@ -240,22 +239,16 @@ impl TokenCache {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct TokenInfoResult {
-    height: String,
-    result: cw20::TokenInfoResponse,
-}
-
 async fn token_info<L>(lcd: &L, contract_addr: &Addr) -> anyhow::Result<cw20::TokenInfoResponse>
 where
     L: Lcd,
 {
     let res = lcd
-        .wasm_contract_store::<cw20_base::msg::QueryMsg, TokenInfoResult>(
+        .wasm_contract_store::<cw20_base::msg::QueryMsg, cw20::TokenInfoResponse>(
             contract_addr,
             &cw20_base::msg::QueryMsg::TokenInfo {},
         )
         .await?;
 
-    Ok(res.result)
+    Ok(res)
 }
