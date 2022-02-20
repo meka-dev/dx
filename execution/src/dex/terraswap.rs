@@ -2,7 +2,6 @@ use std::str::FromStr as _;
 
 use cosmwasm_bignumber::Decimal256;
 use cosmwasm_std::{Addr, Decimal, Fraction, Uint128};
-use serde::{Deserialize, Serialize};
 use terraswap::{asset, factory, pair};
 
 use terrars::{lcd::Lcd, AccountId, MsgExecuteContract};
@@ -31,24 +30,6 @@ impl From<Token> for asset::AssetInfo {
             },
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct PairsResult {
-    height: String,
-    result: factory::PairsResponse,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct PairInfoResult {
-    height: String,
-    result: asset::PairInfo,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct PoolResponseResult {
-    height: String,
-    result: pair::PoolResponse,
 }
 
 #[derive(Clone, Debug)]
@@ -223,7 +204,7 @@ where
 
     loop {
         let mut res = lcd
-            .wasm_contract_store::<factory::QueryMsg, PairsResult>(
+            .wasm_contract_store::<factory::QueryMsg, factory::PairsResponse>(
                 &Addr::unchecked(TERRASWAP_ADDRESS),
                 &factory::QueryMsg::Pairs {
                     start_after,
@@ -232,10 +213,10 @@ where
             )
             .await?;
 
-        start_after = res.result.pairs.last().map(|pair| pair.asset_infos.clone());
-        let size = res.result.pairs.len();
+        start_after = res.pairs.last().map(|pair| pair.asset_infos.clone());
+        let size = res.pairs.len();
 
-        pairs.append(&mut res.result.pairs);
+        pairs.append(&mut res.pairs);
 
         if size < limit {
             break;
@@ -250,11 +231,11 @@ where
     L: Lcd,
 {
     let res = lcd
-        .wasm_contract_store::<pair::QueryMsg, PoolResponseResult>(
+        .wasm_contract_store::<pair::QueryMsg, pair::PoolResponse>(
             contract_addr,
             &pair::QueryMsg::Pool {},
         )
         .await?;
 
-    Ok(res.result)
+    Ok(res)
 }
