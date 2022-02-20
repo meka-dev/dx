@@ -251,7 +251,7 @@ where
     L: Lcd,
 {
     let res = lcd
-        .wasm_query::<cw20_base::msg::QueryMsg, TokenInfoResult>(
+        .wasm_contract_store::<cw20_base::msg::QueryMsg, TokenInfoResult>(
             contract_addr,
             &cw20_base::msg::QueryMsg::TokenInfo {},
         )

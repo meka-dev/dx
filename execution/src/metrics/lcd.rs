@@ -6,12 +6,13 @@ use prometheus_client::encoding::text::Encode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-use terrars::{lcd::Lcd, AccountId, Coin, MsgExecuteContract};
+use terrars::{lcd::Lcd, AccountId, BaseAccount, Coin, MsgExecuteContract};
 
 use crate::metrics;
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 pub enum Method {
+    AuthAccount,
     BankBalances,
     EstimateFee,
     WasmQuery,
@@ -64,6 +65,23 @@ impl<L> Lcd for Observed<L>
 where
     L: Lcd,
 {
+    async fn auth_account(&self, account_id: &AccountId) -> anyhow::Result<Option<BaseAccount>> {
+        let start = Instant::now();
+        let res = self.next.auth_account(account_id).await;
+        self.observe(
+            start,
+            Method::AuthAccount,
+            if res.is_err() {
+                ResultLabel::Error
+            } else {
+                ResultLabel::Success
+            },
+        )
+        .await;
+
+        res
+    }
+
     async fn bank_balances(&self, account_id: &AccountId) -> anyhow::Result<Vec<Coin>> {
         let start = Instant::now();
         let res = self.next.bank_balances(account_id).await;
@@ -102,13 +120,19 @@ where
         res
     }
 
-    async fn wasm_query<Q: ?Sized + Sync + Serialize, T: Send + for<'de> Deserialize<'de>>(
+    async fn wasm_contract_store<
+        Q: ?Sized + Sync + Serialize,
+        T: Send + for<'de> Deserialize<'de>,
+    >(
         &self,
         contract_addr: &Addr,
-        query: &Q,
+        query_msg: &Q,
     ) -> anyhow::Result<T> {
         let start = Instant::now();
-        let res = self.next.wasm_query(contract_addr, query).await;
+        let res = self
+            .next
+            .wasm_contract_store(contract_addr, query_msg)
+            .await;
         self.observe(
             start,
             Method::WasmQuery,

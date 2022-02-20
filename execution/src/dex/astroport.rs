@@ -214,7 +214,7 @@ where
 
     loop {
         let mut res = lcd
-            .wasm_query::<factory::QueryMsg, PairsResult>(
+            .wasm_contract_store::<factory::QueryMsg, PairsResult>(
                 &Addr::unchecked(ASTROPORT_ADDRESS),
                 &factory::QueryMsg::Pairs {
                     start_after,
@@ -241,7 +241,10 @@ where
     L: Lcd,
 {
     let res = lcd
-        .wasm_query::<pair::QueryMsg, PoolResponseResult>(contract_addr, &pair::QueryMsg::Pool {})
+        .wasm_contract_store::<pair::QueryMsg, PoolResponseResult>(
+            contract_addr,
+            &pair::QueryMsg::Pool {},
+        )
         .await?;
 
     Ok(res.result)
