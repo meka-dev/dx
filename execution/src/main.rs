@@ -175,10 +175,10 @@ async fn main() -> Result<(), Error> {
             while let Some((height, msgs)) = broadcast_receiver.recv().await {
                 // TODO(xla): Fetch gas prices.
                 // TODO(xla): Figure out gas calculations and fees.
-                let tx = terrars::sign(
+                let tx = terrars::tx::sign(
                     args.chain_id.clone(),
                     // FIXME(xla): Proper error handling.
-                    terrars::SigningKey::from_bytes(&secret_key_bytes).unwrap(),
+                    &terrars::SigningKey::from_bytes(&secret_key_bytes).unwrap(),
                     account.account_number,
                     sequence,
                     Coin {

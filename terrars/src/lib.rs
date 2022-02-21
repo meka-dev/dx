@@ -1,14 +1,12 @@
 use anyhow::Result;
 
+use cosmrs::tx::MsgProto;
 pub use cosmrs::{
     auth::BaseAccount,
+    bank::MsgSend,
     crypto::secp256k1::SigningKey,
     tx::{Msg, Tx},
     AccountId, Any as Message, Decimal, Denom,
-};
-use cosmrs::{
-    tendermint::{block, chain},
-    tx::{self, Fee, Gas, MsgProto, SignDoc, SignerInfo},
 };
 use cosmwasm_std::Addr;
 
@@ -17,6 +15,7 @@ mod base;
 pub use base::Coin;
 pub mod lcd;
 mod proto;
+pub mod tx;
 mod wasm;
 
 #[derive(Clone, Debug)]
@@ -96,27 +95,4 @@ impl From<QueryAccountRequest> for proto::cosmos::auth::v1beta1::QueryAccountReq
 
 impl MsgProto for proto::cosmos::auth::v1beta1::QueryAccountRequest {
     const TYPE_URL: &'static str = "/cosmos.auth.v1beta1.QueryAccountRequest";
-}
-
-pub fn sign(
-    chain_id: chain::Id,
-    private_key: SigningKey,
-    account_number: u64,
-    sequence: u64,
-    amount: Coin,
-    gas_limit: impl Into<Gas>,
-    timeout_height: impl Into<block::Height>,
-    msgs: Vec<Message>,
-) -> Result<Vec<u8>> {
-    let body = tx::Body::new(msgs, "", timeout_height);
-    let signer_info = SignerInfo::single_direct(Some(private_key.public_key()), sequence);
-    let auth_info = signer_info.auth_info(Fee::from_amount_and_gas(amount.into(), gas_limit));
-    let doc = SignDoc::new(&body, &auth_info, &chain_id, account_number)
-        .map_err(|err| anyhow::anyhow!("SignDoc creation failed: {}", err))?;
-    let signed = doc
-        .sign(&private_key)
-        .map_err(|err| anyhow::anyhow!("signign failed: {}", err))?;
-    Ok(signed
-        .to_bytes()
-        .map_err(|err| anyhow::anyhow!("conversion to bytes failed: {}", err))?)
 }

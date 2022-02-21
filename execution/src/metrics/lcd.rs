@@ -1,12 +1,15 @@
 use std::{sync::Arc, time::Instant};
 
-use cosmwasm_bignumber::Decimal256;
+use anyhow::Result;
 use cosmwasm_std::Addr;
 use prometheus_client::encoding::text::Encode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-use terrars::{lcd::Lcd, AccountId, BaseAccount, Coin, MsgExecuteContract};
+use terrars::{
+    lcd::{self, Lcd, Response},
+    tx, AccountId, BaseAccount, Coin,
+};
 
 use crate::metrics;
 
@@ -14,7 +17,7 @@ use crate::metrics;
 pub enum Method {
     AuthAccount,
     BankBalances,
-    EstimateFee,
+    TxComputeTax,
     WasmQuery,
 }
 
@@ -72,7 +75,7 @@ impl<L> Lcd for Observed<L>
 where
     L: Clone + Lcd,
 {
-    async fn auth_account(&self, account_id: &AccountId) -> anyhow::Result<Option<BaseAccount>> {
+    async fn auth_account(&self, account_id: &AccountId) -> Result<Option<BaseAccount>> {
         let start = Instant::now();
         let res = self.next.auth_account(account_id).await;
         self.observe(
@@ -89,7 +92,7 @@ where
         res
     }
 
-    async fn bank_balances(&self, account_id: &AccountId) -> anyhow::Result<Vec<Coin>> {
+    async fn bank_balances(&self, account_id: &AccountId) -> Result<Vec<Coin>> {
         let start = Instant::now();
         let res = self.next.bank_balances(account_id).await;
         self.observe(
@@ -106,16 +109,29 @@ where
         res
     }
 
-    async fn estimate_fee(
-        &self,
-        account_id: &AccountId,
-        execute_msgs: Vec<MsgExecuteContract>,
-    ) -> anyhow::Result<Decimal256> {
+    async fn tx_compute_tax(&self, tx: &[u8]) -> Result<lcd::Response<Vec<Coin>>> {
         let start = Instant::now();
-        let res = self.next.estimate_fee(account_id, execute_msgs).await;
+        let res = self.next.tx_compute_tax(tx).await;
         self.observe(
             start,
-            Method::EstimateFee,
+            Method::TxComputeTax,
+            if res.is_err() {
+                ResultLabel::Error
+            } else {
+                ResultLabel::Success
+            },
+        )
+        .await;
+
+        res
+    }
+
+    async fn tx_simulate(&self, tx: &[u8]) -> Result<Response<tx::SimulateResponse>> {
+        let start = Instant::now();
+        let res = self.next.tx_simulate(tx).await;
+        self.observe(
+            start,
+            Method::TxComputeTax,
             if res.is_err() {
                 ResultLabel::Error
             } else {
@@ -134,7 +150,7 @@ where
         &self,
         contract_addr: &Addr,
         query_msg: &Q,
-    ) -> anyhow::Result<T> {
+    ) -> Result<T> {
         let start = Instant::now();
         let res = self
             .next
