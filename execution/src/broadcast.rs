@@ -38,7 +38,7 @@ pub async fn observe(
         })
         .inc_by((fee.0 / 10u64.pow(12).into()).as_u64());
 
-    log::debug!(
+    log::info!(
         "messages={} expected_profit={} estimated_fee={} outcome={:?}",
         messages_len,
         expected_profit,

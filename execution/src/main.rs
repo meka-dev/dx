@@ -66,8 +66,6 @@ async fn main() -> Result<(), Error> {
         .account_id(accounts::PREFIX)
         .unwrap();
 
-    println!("{:?}", account_id);
-
     // Set up lcd client for state retrieval. This is a naïve and slow way.
     let lcd = metrics::lcd::Observed::new(
         config::VERSION,
@@ -77,7 +75,7 @@ async fn main() -> Result<(), Error> {
 
     let mut token_cache = dex::TokenCache::default();
     let mut pools = {
-        log::debug!("Fetching DEX pairs with pool info");
+        log::info!("Fetching DEX pairs with pool info");
 
         // Fetch liquid UST pairs on Astroprot and Terraswap. This operation is expensive and will
         // take some time.
@@ -90,7 +88,7 @@ async fn main() -> Result<(), Error> {
             &mut dex::terraswap::liquid_pairs(&lcd, &mut token_cache, filter.clone()).await?,
         );
         pairs.append(&mut dex::loopmarkets::liquid_pairs(&lcd, &mut token_cache, filter).await?);
-        log::debug!(
+        log::info!(
             "Fetched {} pools in {:?}",
             pairs.len(),
             Instant::now().sub(start)
@@ -173,7 +171,7 @@ async fn main() -> Result<(), Error> {
                 pool.update(&lcd, &mut token_cache).await?;
             }
 
-            log::debug!(
+            log::info!(
                 "Updated {} in {:?}",
                 pools.0.len(),
                 Instant::now().sub(start)

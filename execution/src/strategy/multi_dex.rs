@@ -40,7 +40,7 @@ where
                 return None;
             }
 
-            log::info!(
+            log::debug!(
                 "swap {} {:?} for {} {:?} with a spread of {} on {}",
                 cb,
                 bid_token,
@@ -54,16 +54,16 @@ where
             cb = r;
             bid_token = ask_token;
         } else {
-            log::info!("could not swap on {}", p.addr());
+            log::debug!("could not swap on {}", p.addr());
             return None;
         }
     }
 
-    log::info!("started with {}, ended with {}", amount, cb);
+    log::debug!("started with {}, ended with {}", amount, cb);
     if cb <= amount {
         return None;
     }
-    log::info!("positive delta {}", cb - amount);
+    log::debug!("positive delta {}", cb - amount);
 
     Some((cb - amount, msgs))
 }
@@ -176,7 +176,7 @@ where
         // crazy arbs go here
         let start = dex::Token::ust();
 
-        log::info!("#{}", height);
+        log::debug!("#{}", height);
         for (token, pairs) in pools.index_by_token() {
             // We're only looking at cross dex two hop arbs, i.e. take all two pair
             // permutations for any token, eg ust -> luna on astroport and luna -> ust
@@ -198,7 +198,7 @@ where
                 );
 
                 if let Some(liq) = compute_cycle_liq(&start, left, right) {
-                    log::info!(
+                    log::debug!(
                         "got a good trade {} {} to {}",
                         liq,
                         left.addr(),
@@ -216,14 +216,14 @@ where
                     if let Some((expected_profit, messages)) =
                         trade_path(sender, &[left, right], &start, size)
                     {
-                        log::info!("{:?}", messages);
+                        log::debug!("{:?}", messages);
                         trades.push(Trade {
                             size,
                             expected_profit,
                             messages,
                         });
                     } else {
-                        log::info!(
+                        log::debug!(
                             "but could not seize the opportunity with my balance {:}",
                             bal
                         );
