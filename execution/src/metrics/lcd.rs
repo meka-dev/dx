@@ -18,6 +18,7 @@ pub enum Method {
     AuthAccount,
     BankBalances,
     TxComputeTax,
+    TxSimulate,
     WasmQuery,
 }
 
@@ -131,7 +132,7 @@ where
         let res = self.next.tx_simulate(tx).await;
         self.observe(
             start,
-            Method::TxComputeTax,
+            Method::TxSimulate,
             if res.is_err() {
                 ResultLabel::Error
             } else {

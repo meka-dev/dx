@@ -13,10 +13,7 @@ use std::{fs, ops::Sub, sync::Arc, time::Instant};
 
 use cosmwasm_bignumber::Decimal256;
 use futures::{FutureExt as _, StreamExt};
-use tendermint::{
-    abci::Transaction,
-    block::{self, Height},
-};
+use tendermint::block::{self, Height};
 use tendermint_rpc::{
     event::EventData,
     query::{EventType, Query},
@@ -26,10 +23,13 @@ use tokio::sync::{mpsc, watch};
 
 use terrars::{
     lcd::{self, Lcd as _},
-    Coin, Message, Msg as _,
+    tx, Coin, Message, Msg as _,
 };
 
-use execution::{accounts, config, dex, metrics, strategy};
+use execution::{
+    accounts, broadcast, config, dex, metrics,
+    strategy::{self, Trade},
+};
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -150,14 +150,14 @@ async fn main() -> Result<(), Error> {
         .fuse()
     };
 
-    let (broadcast_sender, mut broadcast_receiver) =
-        mpsc::channel::<(block::Height, Vec<Message>)>(100);
+    let (broadcast_sender, mut broadcast_receiver) = mpsc::channel::<(block::Height, Trade)>(100);
 
     // Subroutine which compiles, signs and broadcasts message bundles into transactions.
     let mut broadcast_handle = {
         let account_id = account_id.clone();
-        let client = client.clone();
+        let _client = client.clone();
         let lcd = lcd.clone();
+        let metrics = Arc::clone(&metrics);
 
         tokio::spawn(async move {
             log::debug!("Init broadcaster");
@@ -172,9 +172,22 @@ async fn main() -> Result<(), Error> {
             let account = lcd.auth_account(&account_id).await?.unwrap();
             let mut sequence = account.sequence;
 
-            while let Some((height, msgs)) = broadcast_receiver.recv().await {
+            while let Some((
+                height,
+                Trade {
+                    expected_profit,
+                    messages,
+                    ..
+                },
+            )) = broadcast_receiver.recv().await
+            {
+                let messages_len = messages.len();
+                let msgs: Vec<Message> = messages
+                    .into_iter()
+                    .map(|msg| msg.to_any().unwrap())
+                    .collect();
+
                 // TODO(xla): Fetch gas prices.
-                // TODO(xla): Figure out gas calculations and fees.
                 let tx = terrars::tx::sign(
                     args.chain_id.clone(),
                     // FIXME(xla): Proper error handling.
@@ -190,10 +203,26 @@ async fn main() -> Result<(), Error> {
                     msgs,
                 )?;
 
-                // TODO(xla): Guard with dry-run flag.
-                let _check = client.broadcast_tx_sync(Transaction::from(tx)).await?;
+                match lcd.tx_simulate(&tx).await? {
+                    lcd::Response::Ok(tx::SimulateResponse { gas_info, .. }) => {
+                        broadcast::observe(
+                            Arc::clone(&metrics),
+                            messages_len,
+                            expected_profit,
+                            // TODO(xla): Use actual gas prices.
+                            Decimal256::from_uint256(gas_info.gas_used) * Decimal256::percent(15),
+                        )
+                        .await;
 
-                sequence += 1;
+                        // TODO(xla): Guard with dry-run flag.
+                        // let _check = client.broadcast_tx_sync(Transaction::from(tx)).await?;
+
+                        sequence += 1;
+                    },
+                    lcd::Response::Error(lcd::Error { message, .. }) => {
+                        log::error!("tx simulation failed: {}", message);
+                    },
+                }
             }
 
             Ok::<(), Error>(())
@@ -243,14 +272,9 @@ async fn main() -> Result<(), Error> {
                     .execute(latest_block.header.height, &account_id, &funds, &pools)
                     .await;
 
-                for strategy::Trade { messages, .. } in trades {
-                    let msgs: Vec<terrars::Message> = messages
-                        .into_iter()
-                        .map(|msg| msg.to_any().unwrap())
-                        .collect();
-
+                for trade in trades {
                     broadcast_sender
-                        .send((latest_block.header.height, msgs))
+                        .send((latest_block.header.height, trade))
                         .await
                         .map_err(|_| Error::BroadcasterGone)?;
                 }
