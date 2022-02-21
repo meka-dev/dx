@@ -12,7 +12,9 @@ use crate::{
     AccountId, MsgExecuteContract,
 };
 
-const TERRASWAP_ADDRESS: &str = "terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj";
+pub use terraswap::pair::PoolResponse;
+
+pub const ADDRESS: &str = "terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj";
 
 impl From<asset::AssetInfo> for Token {
     fn from(input: asset::AssetInfo) -> Self {
@@ -209,7 +211,7 @@ where
     loop {
         let mut res = lcd
             .wasm_contract_store::<factory::QueryMsg, factory::PairsResponse>(
-                &Addr::unchecked(TERRASWAP_ADDRESS),
+                &Addr::unchecked(ADDRESS),
                 &factory::QueryMsg::Pairs {
                     start_after,
                     limit: Some(30),

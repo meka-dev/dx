@@ -12,7 +12,9 @@ use crate::{
     AccountId, MsgExecuteContract,
 };
 
-const LOOP_ADDRESS: &str = "terra16hdjuvghcumu6prg22cdjl96ptuay6r0hc6yns";
+pub use terraswap::pair::PoolResponse;
+
+pub const ADDRESS: &str = "terra16hdjuvghcumu6prg22cdjl96ptuay6r0hc6yns";
 
 #[derive(Clone, Debug)]
 pub struct Pair {
@@ -186,7 +188,7 @@ where
     loop {
         let mut res = lcd
             .wasm_contract_store::<factory::QueryMsg, factory::PairsResponse>(
-                &Addr::unchecked(LOOP_ADDRESS),
+                &Addr::unchecked(ADDRESS),
                 &factory::QueryMsg::Pairs {
                     start_after,
                     limit: Some(30),

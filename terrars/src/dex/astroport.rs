@@ -12,7 +12,9 @@ use crate::{
     AccountId, MsgExecuteContract,
 };
 
-const ASTROPORT_ADDRESS: &str = "terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g";
+pub use astroport::pair::PoolResponse;
+
+pub const ADDRESS: &str = "terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g";
 
 impl From<asset::AssetInfo> for Token {
     fn from(input: asset::AssetInfo) -> Self {
@@ -206,7 +208,7 @@ where
     loop {
         let mut res = lcd
             .wasm_contract_store::<factory::QueryMsg, factory::PairsResponse>(
-                &Addr::unchecked(ASTROPORT_ADDRESS),
+                &Addr::unchecked(ADDRESS),
                 &factory::QueryMsg::Pairs {
                     start_after,
                     limit: Some(30),

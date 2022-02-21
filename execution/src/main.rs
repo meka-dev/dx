@@ -9,6 +9,7 @@
 use std::{fs, ops::Sub, sync::Arc, time::Instant};
 
 use cosmwasm_bignumber::Decimal256;
+use cosmwasm_std::Addr;
 use futures::{FutureExt as _, StreamExt};
 use tendermint::{
     abci::Transaction,
@@ -22,12 +23,14 @@ use tendermint_rpc::{
 use tokio::sync::{mpsc, watch};
 
 use terrars::{
-    lcd::{self, Lcd as _},
+    dex,
+    lcd::{self, Lcd},
+    mekapi::{self, Mekapi as _},
     tx, BaseAccount, Coin, Message, Msg as _,
 };
 
 use execution::{
-    accounts, broadcast, config, dex, metrics,
+    accounts, broadcast, config, metrics,
     strategy::{self, Trade},
 };
 
@@ -79,6 +82,11 @@ async fn main() -> Result<(), Error> {
         config::VERSION,
         Arc::clone(&metrics),
         lcd::Http::new(args.lcd_url)?,
+    );
+    let mekapi = metrics::mekapi::Observed::new(
+        config::VERSION,
+        Arc::clone(&metrics),
+        mekapi::Http::new(args.mekapi_url)?,
     );
 
     let mut token_cache = dex::TokenCache::default();
@@ -253,10 +261,11 @@ async fn main() -> Result<(), Error> {
 
         while let Ok(()) = latest_block_receiver.changed().await {
             let latest_block = latest_block_receiver.borrow().clone();
+            let height = latest_block.header().height;
             log::debug!(
                 "Fetching latest pair prices for {} pools at height {}",
                 pools.0.len(),
-                latest_block.header.height,
+                height,
             );
 
             // Ensure latest prices of pairs.
@@ -286,6 +295,26 @@ async fn main() -> Result<(), Error> {
                         .await
                         .map_err(|_| Error::BroadcasterGone)?;
                 }
+            }
+
+            {
+                let mekapi = mekapi.clone();
+                tokio::spawn(async move {
+                    tokio::join!(
+                        mekapi.v1_pool_responses::<terrars::dex::astroport::PoolResponse>(
+                            Addr::unchecked(terrars::dex::astroport::ADDRESS),
+                            height
+                        ),
+                        mekapi.v1_pool_responses::<terrars::dex::loopmarkets::PoolResponse>(
+                            Addr::unchecked(terrars::dex::loopmarkets::ADDRESS),
+                            height
+                        ),
+                        mekapi.v1_pool_responses::<terrars::dex::terraswap::PoolResponse>(
+                            Addr::unchecked(terrars::dex::terraswap::ADDRESS),
+                            height
+                        )
+                    )
+                });
             }
         }
 

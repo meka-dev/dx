@@ -111,9 +111,9 @@ where
             start,
             Method::TxComputeTax,
             if res.is_err() {
-                ResultLabel::Error
+                metrics::ResultLabel::Error
             } else {
-                ResultLabel::Success
+                metrics::ResultLabel::Success
             },
         )
         .await;

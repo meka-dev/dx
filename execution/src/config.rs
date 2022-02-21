@@ -4,6 +4,7 @@ use tendermint::chain;
 
 pub const CHAIN_ID: &str = "columbus-5";
 pub const LCD_URL: &str = "http://127.0.0.1:1317";
+pub const MEKAPI_URL: &str = "http://127.0.0.1:4401";
 pub const RPC_URL: &str = "ws://127.0.0.1:26657/websocket";
 
 pub const VERSION: &str = env!("HASH");
@@ -23,6 +24,10 @@ pub struct Args {
     /// HTTP endpoint for Terra's LCD (http://127.0.0.1:1317)
     #[argh(option, default = "LCD_URL.to_string()")]
     pub lcd_url: String,
+
+    /// HTTP endpoint for Terra's LCD (http://127.0.0.1:1317)
+    #[argh(option, default = "MEKAPI_URL.to_string()")]
+    pub mekapi_url: String,
 
     /// HTTP server for metrics. (127.0.0.1:4444)
     #[argh(option, default = "([127, 0, 0, 1], 4444).into()")]

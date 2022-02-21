@@ -22,10 +22,21 @@ pub struct Labels {
     result: metrics::ResultLabel,
 }
 
+#[derive(Clone)]
 pub struct Observed<L> {
     next: L,
     metrics: Arc<Mutex<metrics::Metrics>>,
     version: String,
+}
+
+impl<L> Observed<L> {
+    pub fn new(version: impl Into<String>, metrics: Arc<Mutex<metrics::Metrics>>, next: L) -> Self {
+        Self {
+            metrics,
+            next,
+            version: version.into(),
+        }
+    }
 }
 
 #[async_trait::async_trait]
@@ -39,7 +50,11 @@ where
         height: block::Height,
     ) -> Result<Vec<T>> {
         let start = Instant::now();
-        let res = self.next.v1_pool_responses::<T>(factory, height).await;
+        let res = self
+            .next
+            .v1_pool_responses::<T>(factory.clone(), height)
+            .await;
+        let elapsed = start.elapsed();
 
         self.metrics
             .lock()
@@ -54,7 +69,15 @@ where
                     metrics::ResultLabel::Success
                 },
             })
-            .observe(start.elapsed().as_secs_f64());
+            .observe(elapsed.as_secs_f64());
+
+        log::debug!(
+            "method=v1_pool_resposes contract={} height={} elapsed={:?} err={:?}",
+            factory.to_string(),
+            height.to_string(),
+            elapsed,
+            res.as_ref().err()
+        );
 
         res
     }

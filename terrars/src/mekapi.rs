@@ -4,7 +4,7 @@ use cosmwasm_std::Addr;
 use reqwest::{header::HeaderValue, Client, ClientBuilder, StatusCode, Url};
 use serde::de::DeserializeOwned;
 
-const HEADER_COUNT: &str = "Mekatek-Height";
+const HEADER_COUNT: &str = "Mekatek-Count";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 #[async_trait::async_trait]
@@ -16,6 +16,7 @@ pub trait Mekapi: Send + Sync {
     ) -> Result<Vec<T>>;
 }
 
+#[derive(Clone)]
 pub struct Http {
     base_url: Url,
     client: Client,
@@ -90,6 +91,7 @@ mod tests {
     };
 
     use super::{Http, Mekapi as _};
+    use crate::dex;
 
     #[tokio::test]
     async fn v1_pool_responses_astroport() -> Result<()> {
@@ -110,7 +112,7 @@ mod tests {
 
         let http = Http::new(server.uri())?;
         let pools = http
-            .v1_pool_responses::<astroport::pair::PoolResponse>(factory, height)
+            .v1_pool_responses::<dex::astroport::PoolResponse>(factory, height)
             .await?;
 
         assert_eq!(pools.len(), 3);
@@ -137,7 +139,7 @@ mod tests {
 
         let http = Http::new(server.uri())?;
         let pools = http
-            .v1_pool_responses::<terraswap::pair::PoolResponse>(factory, height)
+            .v1_pool_responses::<dex::loopmarkets::PoolResponse>(factory, height)
             .await?;
 
         assert_eq!(pools.len(), 3);
@@ -164,7 +166,7 @@ mod tests {
 
         let http = Http::new(server.uri())?;
         let pools = http
-            .v1_pool_responses::<terraswap::pair::PoolResponse>(factory, height)
+            .v1_pool_responses::<dex::terraswap::PoolResponse>(factory, height)
             .await?;
 
         assert_eq!(pools.len(), 3);
