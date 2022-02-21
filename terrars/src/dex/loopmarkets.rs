@@ -1,38 +1,22 @@
 use std::str::FromStr as _;
 
-use astroport::{asset, factory, pair};
+use cosmrs::Denom;
 use cosmwasm_bignumber::Decimal256;
 use cosmwasm_std::{Addr, Decimal, Fraction, Uint128};
+use terraswap::{asset, factory, pair};
 
-use terrars::{lcd::Lcd, AccountId, MsgExecuteContract};
+use crate::{
+    base::Coin,
+    dex::{Asset, Pool, Token, TokenCache, TokenPair},
+    lcd::Lcd,
+    AccountId, MsgExecuteContract,
+};
 
-use crate::dex::{Asset, Pool, Token, TokenCache, TokenPair};
-
-const ASTROPORT_ADDRESS: &str = "terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g";
-
-impl From<asset::AssetInfo> for Token {
-    fn from(input: asset::AssetInfo) -> Self {
-        match input {
-            asset::AssetInfo::NativeToken { denom } => Self::Native { denom },
-            asset::AssetInfo::Token { contract_addr } => Self::Cw20 { contract_addr },
-        }
-    }
-}
-
-impl From<Token> for asset::AssetInfo {
-    fn from(input: Token) -> Self {
-        match input {
-            Token::Native { denom } => Self::NativeToken { denom },
-            Token::Cw20 { contract_addr } => Self::Token {
-                contract_addr: Addr::unchecked(contract_addr),
-            },
-        }
-    }
-}
+const LOOP_ADDRESS: &str = "terra16hdjuvghcumu6prg22cdjl96ptuay6r0hc6yns";
 
 #[derive(Clone, Debug)]
 pub struct Pair {
-    pub contract_address: Addr,
+    pub contract_addr: Addr,
     pub coins: [Asset; 2],
     pub liquidity_token: String,
     pub total_share: Uint128,
@@ -50,7 +34,7 @@ where
     }
 
     fn addr(&self) -> Addr {
-        self.contract_address.clone()
+        self.contract_addr.clone()
     }
 
     fn swap(
@@ -67,7 +51,7 @@ where
                 pair::ExecuteMsg::Swap {
                     offer_asset: asset::Asset {
                         info: asset::AssetInfo::Token {
-                            contract_addr: contract_addr.clone(),
+                            contract_addr: contract_addr.clone().to_string(),
                         },
                         amount: Into::<Decimal>::into(amount).numerator().into(), // ????
                     },
@@ -78,9 +62,9 @@ where
             ),
             Token::Native { denom } => (
                 // FIXME(xla): Bignumber handling is all over the place, it needs consolidation.
-                vec![terrars::Coin {
+                vec![Coin {
                     amount,
-                    denom: terrars::Denom::from_str(denom).unwrap(),
+                    denom: Denom::from_str(denom).unwrap(),
                 }],
                 pair::ExecuteMsg::Swap {
                     offer_asset: asset::Asset {
@@ -98,7 +82,7 @@ where
 
         MsgExecuteContract {
             coins,
-            contract_address: self.contract_address.clone(),
+            contract_address: self.contract_addr.clone(),
             execute_msg: serde_json::to_vec(&msg).unwrap(),
             sender: sender.to_string(),
         }
@@ -111,7 +95,7 @@ where
     }
 
     async fn update(&mut self, lcd: &L, token_cache: &mut TokenCache) -> anyhow::Result<()> {
-        let pool = pool_info(lcd, &self.contract_address).await?;
+        let pool = pool_info(lcd, &self.contract_addr).await?;
         let left = into_asset(lcd, token_cache, pool.assets[0].clone()).await?;
         let right = into_asset(lcd, token_cache, pool.assets[1].clone()).await?;
         self.coins = [left, right];
@@ -158,10 +142,10 @@ where
 
     let mut pairs: Vec<Box<dyn Pool<L>>> = vec![];
     for pair in ps {
-        log::debug!("Loading Astroport pool info for {}", pair.contract_addr);
+        log::debug!("Loading Loop pool info for {}", pair.contract_addr);
 
-        let contract_address = Addr::unchecked(pair.contract_addr.clone());
-        match pool_info(lcd, &contract_address).await {
+        let contract_addr = Addr::unchecked(pair.contract_addr.clone());
+        match pool_info(lcd, &contract_addr).await {
             Ok(pool) => {
                 if pool.total_share == Uint128::zero()
                     || pool.assets[0].amount == Uint128::zero()
@@ -174,9 +158,9 @@ where
                 let right = into_asset(lcd, token_cache, pool.assets[1].clone()).await?;
 
                 pairs.push(Box::new(Pair {
-                    contract_address,
+                    contract_addr,
                     coins: [left, right],
-                    liquidity_token: pair.liquidity_token.to_string(),
+                    liquidity_token: pair.liquidity_token.clone(),
                     total_share: pool.total_share,
                 }));
             },
@@ -202,7 +186,7 @@ where
     loop {
         let mut res = lcd
             .wasm_contract_store::<factory::QueryMsg, factory::PairsResponse>(
-                &Addr::unchecked(ASTROPORT_ADDRESS),
+                &Addr::unchecked(LOOP_ADDRESS),
                 &factory::QueryMsg::Pairs {
                     start_after,
                     limit: Some(30),

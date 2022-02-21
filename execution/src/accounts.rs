@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use cosmwasm_bignumber::Decimal256;
-use terrars::{lcd::Lcd, AccountId};
-
-use crate::dex;
+use terrars::{dex, lcd::Lcd, AccountId};
 
 pub const PREFIX: &str = "terra";
 

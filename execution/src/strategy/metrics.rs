@@ -6,6 +6,7 @@ use tendermint::block;
 use tokio::{sync::Mutex, time::Instant};
 
 use crate::{accounts, config, metrics, strategy::Strategy};
+use terrars::dex;
 
 use super::Trade;
 
@@ -104,7 +105,7 @@ where
         height: block::Height,
         sender: &terrars::AccountId,
         funds: &accounts::Balances,
-        pools: &crate::dex::Pools<L>,
+        pools: &dex::Pools<L>,
     ) -> Vec<Trade> {
         let start = Instant::now();
         let trades = self.next.execute(height, sender, funds, pools).await;

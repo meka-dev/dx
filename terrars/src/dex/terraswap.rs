@@ -1,14 +1,40 @@
 use std::str::FromStr as _;
 
+use cosmrs::Denom;
 use cosmwasm_bignumber::Decimal256;
 use cosmwasm_std::{Addr, Decimal, Fraction, Uint128};
 use terraswap::{asset, factory, pair};
 
-use terrars::{lcd::Lcd, AccountId, MsgExecuteContract};
+use crate::{
+    base::Coin,
+    dex::{Asset, Pool, Token, TokenCache, TokenPair},
+    lcd::Lcd,
+    AccountId, MsgExecuteContract,
+};
 
-use crate::dex::{Asset, Pool, Token, TokenCache, TokenPair};
+const TERRASWAP_ADDRESS: &str = "terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj";
 
-const LOOP_ADDRESS: &str = "terra16hdjuvghcumu6prg22cdjl96ptuay6r0hc6yns";
+impl From<asset::AssetInfo> for Token {
+    fn from(input: asset::AssetInfo) -> Self {
+        match input {
+            asset::AssetInfo::NativeToken { denom } => Self::Native { denom },
+            asset::AssetInfo::Token { contract_addr } => Self::Cw20 {
+                contract_addr: Addr::unchecked(contract_addr),
+            },
+        }
+    }
+}
+
+impl From<Token> for asset::AssetInfo {
+    fn from(input: Token) -> Self {
+        match input {
+            Token::Native { denom } => Self::NativeToken { denom },
+            Token::Cw20 { contract_addr } => Self::Token {
+                contract_addr: contract_addr.into(),
+            },
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Pair {
@@ -58,9 +84,9 @@ where
             ),
             Token::Native { denom } => (
                 // FIXME(xla): Bignumber handling is all over the place, it needs consolidation.
-                vec![terrars::Coin {
+                vec![Coin {
                     amount,
-                    denom: terrars::Denom::from_str(denom).unwrap(),
+                    denom: Denom::from_str(denom).unwrap(),
                 }],
                 pair::ExecuteMsg::Swap {
                     offer_asset: asset::Asset {
@@ -138,9 +164,10 @@ where
 
     let mut pairs: Vec<Box<dyn Pool<L>>> = vec![];
     for pair in ps {
-        log::debug!("Loading Loop pool info for {}", pair.contract_addr);
+        log::debug!("Loading Terraswap pool info for {}", pair.contract_addr);
 
         let contract_addr = Addr::unchecked(pair.contract_addr.clone());
+
         match pool_info(lcd, &contract_addr).await {
             Ok(pool) => {
                 if pool.total_share == Uint128::zero()
@@ -182,7 +209,7 @@ where
     loop {
         let mut res = lcd
             .wasm_contract_store::<factory::QueryMsg, factory::PairsResponse>(
-                &Addr::unchecked(LOOP_ADDRESS),
+                &Addr::unchecked(TERRASWAP_ADDRESS),
                 &factory::QueryMsg::Pairs {
                     start_after,
                     limit: Some(30),

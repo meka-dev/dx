@@ -4,7 +4,7 @@ use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Addr, Uint128};
 use cw20::TokenInfoResponse;
 
-use terrars::{lcd::Lcd, AccountId, MsgExecuteContract};
+use crate::{lcd::Lcd, AccountId, MsgExecuteContract};
 
 pub mod astroport;
 pub mod loopmarkets;

@@ -7,10 +7,10 @@ use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Decimal256 as StdDecimal256, Fraction, Uint256 as StdUint256};
 use itertools::Itertools;
 use tendermint::block;
-use terrars::{lcd::Lcd, AccountId, MsgExecuteContract};
+use terrars::{dex, lcd::Lcd, AccountId, MsgExecuteContract};
 
 use crate::{
-    accounts, dex,
+    accounts,
     strategy::{metrics, Strategy, Trade},
 };
 

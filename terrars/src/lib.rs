@@ -12,6 +12,7 @@ use cosmwasm_std::Addr;
 
 mod bank;
 mod base;
+pub mod dex;
 pub use base::Coin;
 pub mod lcd;
 mod proto;
