@@ -8,8 +8,8 @@ const HEADER_COUNT: &str = "Mekatek-Height";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 #[async_trait::async_trait]
-pub trait Mekapi {
-    async fn v1_pool_responses<T: DeserializeOwned>(
+pub trait Mekapi: Send + Sync {
+    async fn v1_pool_responses<T: Send + DeserializeOwned>(
         &self,
         contract: Addr,
         height: block::Height,
@@ -34,7 +34,7 @@ impl Http {
 impl Mekapi for Http {
     async fn v1_pool_responses<T>(&self, factory: Addr, height: block::Height) -> Result<Vec<T>>
     where
-        T: DeserializeOwned,
+        T: Send + DeserializeOwned,
     {
         let mut url = self.base_url.join("v1/poolresponses")?;
         url.query_pairs_mut()

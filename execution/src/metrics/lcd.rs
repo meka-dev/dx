@@ -22,17 +22,11 @@ pub enum Method {
     WasmQuery,
 }
 
-#[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
-pub enum ResultLabel {
-    Success,
-    Error,
-}
-
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
 pub struct Labels {
     version: String,
     method: Method,
-    result: ResultLabel,
+    result: metrics::ResultLabel,
 }
 
 #[derive(Clone)]
@@ -57,7 +51,7 @@ where
         }
     }
 
-    async fn observe(&self, start: Instant, method: Method, result: ResultLabel) {
+    async fn observe(&self, start: Instant, method: Method, result: metrics::ResultLabel) {
         self.metrics
             .lock()
             .await
@@ -83,9 +77,9 @@ where
             start,
             Method::AuthAccount,
             if res.is_err() {
-                ResultLabel::Error
+                metrics::ResultLabel::Error
             } else {
-                ResultLabel::Success
+                metrics::ResultLabel::Success
             },
         )
         .await;
@@ -100,9 +94,9 @@ where
             start,
             Method::BankBalances,
             if res.is_err() {
-                ResultLabel::Error
+                metrics::ResultLabel::Error
             } else {
-                ResultLabel::Success
+                metrics::ResultLabel::Success
             },
         )
         .await;
@@ -134,9 +128,9 @@ where
             start,
             Method::TxSimulate,
             if res.is_err() {
-                ResultLabel::Error
+                metrics::ResultLabel::Error
             } else {
-                ResultLabel::Success
+                metrics::ResultLabel::Success
             },
         )
         .await;
@@ -161,9 +155,9 @@ where
             start,
             Method::WasmQuery,
             if res.is_err() {
-                ResultLabel::Error
+                metrics::ResultLabel::Error
             } else {
-                ResultLabel::Success
+                metrics::ResultLabel::Success
             },
         )
         .await;
