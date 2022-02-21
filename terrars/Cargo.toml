@@ -23,6 +23,7 @@ serde_json          = { version = "1.0",  default-features = false }
 terraswap           = { version = "2.4",  default-features = false }
 
 [dev-dependencies]
+astroport           = { version = "1.0",  default-features = false }
 prost-build         = { version = "0.9",  default-features = false }
 tokio               = { version = "1.0",  default-features = false, features = [ "macros", "rt-multi-thread", "sync", "time" ] }
 walkdir             = { version = "2.3",  default-features = false }

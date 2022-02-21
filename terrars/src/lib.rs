@@ -15,6 +15,7 @@ mod base;
 pub mod dex;
 pub use base::Coin;
 pub mod lcd;
+pub mod mekapi;
 mod proto;
 pub mod tx;
 mod wasm;
