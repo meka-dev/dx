@@ -1,8 +1,5 @@
 // TODO(xla): Set up logging/tracing.
-// TODO(xla): Set up telemetry (Prometheus): process, futures, strategies
-// TODO(xla): Move from lcd to direct RPC calls to support height queries.
-// TODO(xla): Bundle messages into txs and broadcast.
-// TODO(xla): Review depdencies and remove duplications.
+// TODO(xla): Set up telemetry (Prometheus): process, futures
 // TODO(xla): Extend telemetry with
 //              * fetch durations (pools, accounts)
 //              * current account balances
@@ -13,7 +10,10 @@ use std::{fs, ops::Sub, sync::Arc, time::Instant};
 
 use cosmwasm_bignumber::Decimal256;
 use futures::{FutureExt as _, StreamExt};
-use tendermint::block::{self, Height};
+use tendermint::{
+    abci::Transaction,
+    block::{self, Height},
+};
 use tendermint_rpc::{
     event::EventData,
     query::{EventType, Query},
@@ -155,7 +155,7 @@ async fn main() -> Result<(), Error> {
     // Subroutine which compiles, signs and broadcasts message bundles into transactions.
     let mut broadcast_handle = {
         let account_id = account_id.clone();
-        let _client = client.clone();
+        let client = client.clone();
         let lcd = lcd.clone();
         let metrics = Arc::clone(&metrics);
 
@@ -198,7 +198,9 @@ async fn main() -> Result<(), Error> {
                         denom: "uusd".parse().unwrap(),
                         amount: Decimal256::one(),
                     },
-                    1000,
+                    // XXX(xla): Based on the observation that txs with two swaps cost around 180k
+                    // and the typical gas price in uusd is 0.15.
+                    30000,
                     Height::try_from(height.value() + 1).unwrap(),
                     msgs,
                 )?;
@@ -214,12 +216,14 @@ async fn main() -> Result<(), Error> {
                         )
                         .await;
 
-                        // TODO(xla): Guard with dry-run flag.
-                        // let _check = client.broadcast_tx_sync(Transaction::from(tx)).await?;
+                        if !args.dry_run {
+                            let _check = client.broadcast_tx_sync(Transaction::from(tx)).await?;
+                        }
 
                         sequence += 1;
                     },
                     lcd::Response::Error(lcd::Error { message, .. }) => {
+                        // TODO(xla): Emit as metric.
                         log::error!("tx simulation failed: {}", message);
                     },
                 }

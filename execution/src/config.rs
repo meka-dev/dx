@@ -16,6 +16,10 @@ pub struct Args {
     #[argh(option, default = "CHAIN_ID.parse().unwrap()")]
     pub chain_id: chain::Id,
 
+    /// signs and broadcasts tx to the network when disabled.
+    #[argh(option, default = "true")]
+    pub dry_run: bool,
+
     /// HTTP endpoint for Terra's LCD (http://127.0.0.1:1317)
     #[argh(option, default = "LCD_URL.to_string()")]
     pub lcd_url: String,

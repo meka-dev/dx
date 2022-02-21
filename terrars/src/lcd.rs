@@ -109,7 +109,6 @@ impl Lcd for Http {
     }
 
     async fn tx_simulate(&self, tx: &[u8]) -> Result<Response<tx::SimulateResponse>> {
-        println!("{}", base64::encode_config(tx, base64::STANDARD));
         let raw = self
             .client
             .post(self.base_url.join("cosmos/tx/v1beta1/simulate")?)
