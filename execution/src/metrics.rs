@@ -131,7 +131,7 @@ impl Metrics {
         registry.register(
             prefix("mekapi_call_duration_seconds"),
             "Mekapi call latency",
-            Box::new(lcd_call_duration.clone()),
+            Box::new(mekapi_call_duration.clone()),
         );
         registry.register(
             prefix("strategy_duration_seconds"),
