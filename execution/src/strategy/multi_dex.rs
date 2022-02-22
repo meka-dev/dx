@@ -35,8 +35,8 @@ where
 
     for p in pools {
         let ask_token = p.ask_token(&bid_token);
-        if let Some((r, s)) = p.compute_swap(&bid_token, &ask_token, cb) {
-            if r == Decimal256::zero() || s == Decimal256::zero() {
+        if let Some((swap_ret, s)) = p.compute_swap(&bid_token, &ask_token, cb) {
+            if swap_ret == Decimal256::zero() || s == Decimal256::zero() {
                 return None;
             }
 
@@ -44,14 +44,14 @@ where
                 "swap {} {:?} for {} {:?} with a spread of {} on {}",
                 cb,
                 bid_token,
-                r,
+                swap_ret,
                 ask_token,
                 s,
                 p.addr(),
             );
-            msgs.push(p.swap(sender, &bid_token, r, belief_price(cb, r), s));
+            msgs.push(p.swap(sender, &bid_token, cb, belief_price(cb, swap_ret), s));
 
-            cb = r;
+            cb = swap_ret;
             bid_token = ask_token;
         } else {
             log::debug!("could not swap on {}", p.addr());
