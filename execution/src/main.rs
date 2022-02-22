@@ -23,7 +23,7 @@ use tokio::sync::{mpsc, watch};
 
 use terrars::{
     lcd::{self, Lcd as _},
-    tx, Coin, Message, Msg as _,
+    tx, BaseAccount, Coin, Message, Msg as _,
 };
 
 use execution::{
@@ -168,8 +168,12 @@ async fn main() -> Result<(), Error> {
             };
 
             // Get latest account information to ensure sequence is consistent.
-            // FIXME(xla): Handle case where account is not present on chain.
-            let account = lcd.auth_account(&account_id).await?.unwrap();
+            let account = lcd.auth_account(&account_id).await?.unwrap_or(BaseAccount {
+                account_number: 0,
+                address: account_id.to_string(),
+                pub_key: None,
+                sequence: 0,
+            });
             let mut sequence = account.sequence;
 
             while let Some((
