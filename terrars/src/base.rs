@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::str::FromStr as _;
 
 use anyhow::{Error, Result};
 use cosmrs::Denom;
@@ -36,9 +36,30 @@ impl ToString for Coin {
 
 impl From<Coin> for cosmrs::Coin {
     fn from(input: Coin) -> Self {
+        cosmrs::Coin::from(&input)
+    }
+}
+
+impl From<&Coin> for cosmrs::Coin {
+    fn from(input: &Coin) -> Self {
         Self {
-            denom: input.denom,
+            denom: input.denom.clone(),
             amount: cosmrs::Decimal::from((input.amount.0 / 10u64.pow(12).into()).as_u64()),
+        }
+    }
+}
+
+impl From<cosmrs::Coin> for Coin {
+    fn from(input: cosmrs::Coin) -> Self {
+        Coin::from(&input)
+    }
+}
+
+impl From<&cosmrs::Coin> for Coin {
+    fn from(input: &cosmrs::Coin) -> Self {
+        Self {
+            amount: Decimal256::from_uint256(input.amount.0 / 10u64.pow(6)),
+            denom: input.denom.clone(),
         }
     }
 }
@@ -56,7 +77,7 @@ impl TryFrom<&proto::cosmos::base::v1beta1::Coin> for Coin {
 
     fn try_from(input: &proto::cosmos::base::v1beta1::Coin) -> cosmrs::Result<Self> {
         Ok(Self {
-            amount: input.amount.parse()?,
+            amount: Decimal256::from_uint256(u64::from_str(&input.amount)? / 10u64.pow(6)),
             denom: input.denom.parse()?,
         })
     }
@@ -72,7 +93,7 @@ impl From<&Coin> for proto::cosmos::base::v1beta1::Coin {
     fn from(coin: &Coin) -> proto::cosmos::base::v1beta1::Coin {
         proto::cosmos::base::v1beta1::Coin {
             denom: coin.denom.to_string(),
-            amount: coin.amount.to_string(),
+            amount: (coin.amount.0 / 10u64.pow(12).into()).as_u64().to_string(),
         }
     }
 }
@@ -121,12 +142,32 @@ impl TryFrom<&CoinJson> for Coin {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr as _;
+
+    use cosmrs::Denom;
+    use cosmwasm_bignumber::Decimal256;
+    use prost::Message as _;
     use serde_json::json;
+
+    use crate::proto;
 
     use super::Coin;
 
     #[test]
-    fn json_round_trip() {
+    fn coin_cosmrs_round_trip() {
+        let want = Coin {
+            amount: Decimal256::from_uint256(2622376u64),
+            denom: Denom::from_str("uusd").unwrap(),
+        };
+
+        let cosmrs_coin = cosmrs::Coin::from(&want);
+        let have = Coin::from(cosmrs_coin);
+
+        assert_eq!(have, want);
+    }
+
+    #[test]
+    fn coin_json_round_trip() {
         assert_eq!(Coin::TYPE_URL, "/cosmos.base.v1beta1.Coin");
 
         let example_value = json!({
@@ -136,6 +177,22 @@ mod tests {
         let example_json = example_value.to_string();
         let coin: Coin = serde_json::from_value(example_value).unwrap();
         assert_eq!(example_json, coin.to_string());
+    }
+
+    #[test]
+    fn coin_protobuf_round_trip() {
+        assert_eq!(Coin::TYPE_URL, "/cosmos.base.v1beta1.Coin");
+
+        let want = Coin {
+            amount: Decimal256::from_uint256(2622376u64),
+            denom: Denom::from_str("uusd").unwrap(),
+        };
+        let proto_msg = proto::cosmos::base::v1beta1::Coin::from(&want);
+        let buf = proto_msg.encode_to_vec();
+        let have =
+            Coin::try_from(proto::cosmos::base::v1beta1::Coin::decode(&*buf).unwrap()).unwrap();
+
+        assert_eq!(have, want);
     }
 }
 

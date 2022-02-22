@@ -1,15 +1,9 @@
-use std::str::FromStr as _;
-
 use astroport::{asset, factory, pair};
-use cosmrs::Denom;
-use cosmwasm_bignumber::Decimal256;
-use cosmwasm_std::{Addr, Decimal, Fraction, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 
 use crate::{
-    base::Coin,
     dex::{self, Pool, Token, TokenCache, TokenPair},
     lcd::Lcd,
-    AccountId, MsgExecuteContract,
 };
 
 pub use astroport::{
@@ -60,57 +54,6 @@ where
 
     fn addr(&self) -> Addr {
         self.contract_address.clone()
-    }
-
-    fn swap(
-        &self,
-        sender: &AccountId,
-        token: &Token,
-        amount: Decimal256,
-        belief_price: Decimal256,
-        max_spread: Decimal256,
-    ) -> MsgExecuteContract {
-        let (coins, msg) = match token {
-            Token::Cw20 { contract_addr } => (
-                vec![],
-                pair::ExecuteMsg::Swap {
-                    offer_asset: asset::Asset {
-                        info: asset::AssetInfo::Token {
-                            contract_addr: contract_addr.clone(),
-                        },
-                        amount: Into::<Decimal>::into(amount).numerator().into(), // ????
-                    },
-                    belief_price: Some(belief_price.into()),
-                    max_spread: Some(max_spread.into()),
-                    to: None,
-                },
-            ),
-            Token::Native { denom } => (
-                // FIXME(xla): Bignumber handling is all over the place, it needs consolidation.
-                vec![Coin {
-                    amount,
-                    denom: Denom::from_str(denom).unwrap(),
-                }],
-                pair::ExecuteMsg::Swap {
-                    offer_asset: asset::Asset {
-                        info: asset::AssetInfo::NativeToken {
-                            denom: denom.clone(),
-                        },
-                        amount: Into::<Decimal>::into(amount).numerator().into(), // ????
-                    },
-                    belief_price: Some(belief_price.into()),
-                    max_spread: Some(max_spread.into()),
-                    to: None,
-                },
-            ),
-        };
-
-        MsgExecuteContract {
-            coins,
-            contract_address: self.contract_address.clone(),
-            execute_msg: serde_json::to_vec(&msg).unwrap(),
-            sender: sender.to_string(),
-        }
     }
 
     fn token_pair(&self) -> TokenPair {
