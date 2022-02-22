@@ -8,7 +8,7 @@ pub mod metrics;
 pub mod multi_dex;
 
 pub struct Trade {
-    size: Decimal256,
+    pub size: Decimal256,
     pub expected_profit: Decimal256,
     pub messages: Vec<MsgExecuteContract>,
 }

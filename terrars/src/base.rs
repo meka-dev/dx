@@ -7,6 +7,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::proto;
 
+pub mod abci;
+pub mod query;
+
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Deserialize, Serialize)]
 #[serde(try_from = "CoinJson", into = "CoinJson")]
 pub struct Coin {
@@ -35,7 +38,7 @@ impl From<Coin> for cosmrs::Coin {
     fn from(input: Coin) -> Self {
         Self {
             denom: input.denom,
-            amount: cosmrs::Decimal::from(input.amount.0.as_u64()),
+            amount: cosmrs::Decimal::from((input.amount.0 / 10u64.pow(12).into()).as_u64()),
         }
     }
 }
@@ -89,6 +92,7 @@ impl From<Coin> for CoinJson {
 impl From<&Coin> for CoinJson {
     fn from(coin: &Coin) -> Self {
         CoinJson {
+            // amount: (coin.amount.0 / 10u64.pow(12).into()).as_u64().to_string(),
             amount: coin.amount.to_string(),
             denom: coin.denom.to_string(),
         }
@@ -109,9 +113,8 @@ impl TryFrom<&CoinJson> for Coin {
     fn try_from(json: &CoinJson) -> Result<Self, Self::Error> {
         Ok(Coin {
             amount: Decimal256::from_str(&json.amount)?,
-            // FIXME(xla): cosmrs::ErrorReport doesn't implement std::error::Error that's why a try
-            // is not possible at the moment.
-            denom: Denom::from_str(&json.denom).unwrap(),
+            denom: Denom::from_str(&json.denom)
+                .map_err(|err| anyhow::anyhow!("unable to parse Denom: {}", err))?,
         })
     }
 }
@@ -136,38 +139,47 @@ mod tests {
     }
 }
 
-pub mod query {
-    use serde::{Deserialize, Serialize};
+mod serialize_bytes_as_base64 {
+    use serde::{de, Deserialize, Deserializer, Serializer};
 
-    #[derive(Clone, PartialEq, Deserialize, Serialize)]
-    pub struct PageResponse {
-        pub next_key: Option<Vec<u8>>,
-        #[serde(with = "serialize_field_as_string")]
-        pub total: u64,
+    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: AsRef<[u8]>,
+        S: Serializer,
+    {
+        serializer.collect_str(&base64::encode_config(value, base64::STANDARD))
     }
 
-    mod serialize_field_as_string {
-        use std::{fmt::Display, str::FromStr};
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let input = String::deserialize(deserializer)?;
+        base64::decode(input.as_bytes()).map_err(de::Error::custom)
+    }
+}
 
-        use serde::{de, Deserialize, Deserializer, Serializer};
+mod serialize_field_as_string {
+    use std::{fmt::Display, str::FromStr};
 
-        pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            T: Display,
-            S: Serializer,
-        {
-            serializer.collect_str(value)
-        }
+    use serde::{de, Deserialize, Deserializer, Serializer};
 
-        pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
-        where
-            T: FromStr,
-            T::Err: Display,
-            D: Deserializer<'de>,
-        {
-            String::deserialize(deserializer)?
-                .parse()
-                .map_err(de::Error::custom)
-        }
+    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Display,
+        S: Serializer,
+    {
+        serializer.collect_str(value)
+    }
+
+    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+    where
+        T: FromStr,
+        T::Err: Display,
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(de::Error::custom)
     }
 }

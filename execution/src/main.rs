@@ -1,9 +1,5 @@
 // TODO(xla): Set up logging/tracing.
-// TODO(xla): Set up telemetry (Prometheus): process, futures, strategies
-// TODO(xla): Move from lcd to direct RPC calls to support height queries.
-// TODO(xla): Implement swaps for DEXes to produce proper messages.
-// TODO(xla): Bundle messages into txs and broadcast.
-// TODO(xla): Review depdencies and remove duplications.
+// TODO(xla): Set up telemetry (Prometheus): process, futures
 // TODO(xla): Extend telemetry with
 //              * fetch durations (pools, accounts)
 //              * current account balances
@@ -12,23 +8,35 @@
 
 use std::{fs, ops::Sub, sync::Arc, time::Instant};
 
+use cosmwasm_bignumber::Decimal256;
 use futures::{FutureExt as _, StreamExt};
-use tokio::sync::watch;
-
+use tendermint::{
+    abci::Transaction,
+    block::{self, Height},
+};
 use tendermint_rpc::{
     event::EventData,
     query::{EventType, Query},
     Client as _, SubscriptionClient, WebSocketClient,
 };
+use tokio::sync::{mpsc, watch};
 
-use terrars::lcd::{self, Lcd};
+use terrars::{
+    lcd::{self, Lcd as _},
+    tx, Coin, Message, Msg as _,
+};
 
-use execution::{accounts, broadcast, config, dex, metrics, strategy};
+use execution::{
+    accounts, broadcast, config, dex, metrics,
+    strategy::{self, Trade},
+};
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
     #[error(transparent)]
     Any(#[from] anyhow::Error),
+    #[error("Broadcast routine has vanished")]
+    BroadcasterGone,
     #[error("Node is still catching up")]
     NodeCatchingUp,
     #[error(transparent)]
@@ -55,7 +63,7 @@ async fn main() -> Result<(), Error> {
     let mut metrics_server_handle = tokio::spawn(metrics_server).fuse();
 
     let secret_key = {
-        let raw = fs::read(args.secret_key_file)?;
+        let raw = fs::read(args.secret_key_file.clone())?;
         let bytes = hex::decode(&raw)?;
         // FIXME(xla): Proper error handling.
         terrars::SigningKey::from_bytes(&bytes).unwrap()
@@ -142,6 +150,90 @@ async fn main() -> Result<(), Error> {
         .fuse()
     };
 
+    let (broadcast_sender, mut broadcast_receiver) = mpsc::channel::<(block::Height, Trade)>(100);
+
+    // Subroutine which compiles, signs and broadcasts message bundles into transactions.
+    let mut broadcast_handle = {
+        let account_id = account_id.clone();
+        let client = client.clone();
+        let lcd = lcd.clone();
+        let metrics = Arc::clone(&metrics);
+
+        tokio::spawn(async move {
+            log::debug!("Init broadcaster");
+
+            let secret_key_bytes = {
+                let raw = fs::read(args.secret_key_file.clone())?;
+                hex::decode(&raw)?
+            };
+
+            // Get latest account information to ensure sequence is consistent.
+            // FIXME(xla): Handle case where account is not present on chain.
+            let account = lcd.auth_account(&account_id).await?.unwrap();
+            let mut sequence = account.sequence;
+
+            while let Some((
+                height,
+                Trade {
+                    expected_profit,
+                    messages,
+                    ..
+                },
+            )) = broadcast_receiver.recv().await
+            {
+                let messages_len = messages.len();
+                let msgs: Vec<Message> = messages
+                    .into_iter()
+                    .map(|msg| msg.to_any().unwrap())
+                    .collect();
+
+                // TODO(xla): Fetch gas prices.
+                let tx = terrars::tx::sign(
+                    args.chain_id.clone(),
+                    // FIXME(xla): Proper error handling.
+                    &terrars::SigningKey::from_bytes(&secret_key_bytes).unwrap(),
+                    account.account_number,
+                    sequence,
+                    Coin {
+                        denom: "uusd".parse().unwrap(),
+                        amount: Decimal256::one(),
+                    },
+                    // XXX(xla): Based on the observation that txs with two swaps cost around 180k
+                    // and the typical gas price in uusd is 0.15.
+                    30000,
+                    Height::try_from(height.value() + 1).unwrap(),
+                    msgs,
+                )?;
+
+                match lcd.tx_simulate(&tx).await? {
+                    lcd::Response::Ok(tx::SimulateResponse { gas_info, .. }) => {
+                        broadcast::observe(
+                            Arc::clone(&metrics),
+                            messages_len,
+                            expected_profit,
+                            // TODO(xla): Use actual gas prices.
+                            Decimal256::from_uint256(gas_info.gas_used) * Decimal256::percent(15),
+                        )
+                        .await;
+
+                        if !args.dry_run {
+                            let _check = client.broadcast_tx_sync(Transaction::from(tx)).await?;
+                        }
+
+                        sequence += 1;
+                    },
+                    lcd::Response::Error(lcd::Error { message, .. }) => {
+                        // TODO(xla): Emit as metric.
+                        log::error!("tx simulation failed: {}", message);
+                    },
+                }
+            }
+
+            Ok::<(), Error>(())
+        })
+        .fuse()
+    };
+
     // Subroutine to keep the dependent information for strategies up-to-date and execute
     // strategies.
     let mut execution_handle = tokio::spawn(async move {
@@ -170,14 +262,13 @@ async fn main() -> Result<(), Error> {
             for pool in pools.0.iter_mut() {
                 pool.update(&lcd, &mut token_cache).await?;
             }
-
             log::info!(
                 "Updated {} in {:?}",
                 pools.0.len(),
                 Instant::now().sub(start)
             );
 
-            // FIXME(xla): Use real balances.
+            // Fetch available funds for strategies to incorporate.
             let funds = accounts::fetch(&lcd, &account_id).await?;
 
             for strategy in &strategies {
@@ -185,19 +276,11 @@ async fn main() -> Result<(), Error> {
                     .execute(latest_block.header.height, &account_id, &funds, &pools)
                     .await;
 
-                for trade in &trades {
-                    match lcd.estimate_fee(&account_id, trade.messages.clone()).await {
-                        Ok(fee) => {
-                            broadcast::observe(
-                                Arc::clone(&metrics),
-                                trade.messages.len(),
-                                trade.expected_profit,
-                                fee,
-                            )
-                            .await
-                        },
-                        Err(err) => log::error!("msg='failed to estimate fee' err={:?}", err),
-                    }
+                for trade in trades {
+                    broadcast_sender
+                        .send((latest_block.header.height, trade))
+                        .await
+                        .map_err(|_| Error::BroadcasterGone)?;
                 }
             }
         }
@@ -212,6 +295,7 @@ async fn main() -> Result<(), Error> {
             join = metrics_server_handle => join??,
             join = driver_handle => join??,
             join = latest_block_handle => join??,
+            join = broadcast_handle => join??,
             join = execution_handle => join??,
             complete => break
         }

@@ -1,33 +1,36 @@
-use std::str::FromStr;
-
+use anyhow::Result;
 use cosmrs::{
     auth::{BaseAccount, QueryAccountReponse},
     AccountId,
 };
-use cosmwasm_bignumber::Decimal256;
 use cosmwasm_std::Addr;
-use reqwest::{Client, ClientBuilder, Url};
+use reqwest::{Client, ClientBuilder, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    bank::QueryAllBalancesResponse, wasm::QueryContractStoreResponse, Coin, MsgExecuteContract,
-};
+use crate::{bank::QueryAllBalancesResponse, tx, wasm::QueryContractStoreResponse, Coin};
 
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct Error {
+    pub code: usize,
+    pub message: String,
+}
+
+#[derive(Debug)]
+pub enum Response<T> {
+    Error(Error),
+    Ok(T),
+}
+
 #[async_trait::async_trait]
 pub trait Lcd: Send + Sync {
-    async fn auth_account(&self, account_id: &AccountId) -> anyhow::Result<Option<BaseAccount>>;
+    async fn auth_account(&self, account_id: &AccountId) -> Result<Option<BaseAccount>>;
 
-    async fn bank_balances(&self, account_id: &AccountId) -> anyhow::Result<Vec<Coin>>;
+    async fn bank_balances(&self, account_id: &AccountId) -> Result<Vec<Coin>>;
 
-    // FIXME(xla): The endpoint is deprecated, the new one to use is /compute_tax.
-    // FIXME(xla): Only works if messages are contract executions.
-    async fn estimate_fee(
-        &self,
-        account_id: &AccountId,
-        execute_msgs: Vec<MsgExecuteContract>,
-    ) -> anyhow::Result<Decimal256>;
+    async fn tx_compute_tax(&self, tx: &[u8]) -> Result<Response<Vec<Coin>>>;
+    async fn tx_simulate(&self, tx: &[u8]) -> Result<Response<tx::SimulateResponse>>;
 
     async fn wasm_contract_store<
         Q: ?Sized + Sync + Serialize,
@@ -36,16 +39,17 @@ pub trait Lcd: Send + Sync {
         &self,
         contract_addr: &Addr,
         query_msg: &Q,
-    ) -> anyhow::Result<T>;
+    ) -> Result<T>;
 }
 
+#[derive(Clone)]
 pub struct Http {
     base_url: Url,
     client: Client,
 }
 
 impl Http {
-    pub fn new(url: String) -> anyhow::Result<Self> {
+    pub fn new(url: String) -> Result<Self> {
         let base_url = Url::parse(&url)?;
         let client = ClientBuilder::new().user_agent(USER_AGENT).build()?;
 
@@ -55,7 +59,7 @@ impl Http {
 
 #[async_trait::async_trait]
 impl Lcd for Http {
-    async fn auth_account(&self, account_id: &AccountId) -> anyhow::Result<Option<BaseAccount>> {
+    async fn auth_account(&self, account_id: &AccountId) -> Result<Option<BaseAccount>> {
         let res = self
             .client
             .get(
@@ -70,7 +74,7 @@ impl Lcd for Http {
         Ok(res.account)
     }
 
-    async fn bank_balances(&self, account_id: &AccountId) -> anyhow::Result<Vec<Coin>> {
+    async fn bank_balances(&self, account_id: &AccountId) -> Result<Vec<Coin>> {
         let res = self
             .client
             .get(
@@ -85,13 +89,42 @@ impl Lcd for Http {
         Ok(res.balances)
     }
 
-    // FIXME(xla): Short-circuit this as it will be superseded by compute_tax.
-    async fn estimate_fee(
-        &self,
-        _account_id: &AccountId,
-        _execute_msgs: Vec<MsgExecuteContract>,
-    ) -> anyhow::Result<Decimal256> {
-        Ok(Decimal256::from_str("25000")?)
+    async fn tx_compute_tax(&self, tx: &[u8]) -> Result<Response<Vec<Coin>>> {
+        let raw = self
+            .client
+            .post(self.base_url.join("terra/tx/v1beta1/compute_tax")?)
+            .json(&tx::ComputeTaxRequest {
+                tx_bytes: base64::encode(tx),
+            })
+            .send()
+            .await?;
+
+        let res = match raw.status() {
+            StatusCode::OK => Response::Ok(raw.json::<tx::ComputeTaxResponse>().await?.tax_amount),
+            StatusCode::BAD_REQUEST => Response::Error(raw.json::<Error>().await?),
+            code => return Err(anyhow::anyhow!("unexpected response status code: {}", code)),
+        };
+
+        Ok(res)
+    }
+
+    async fn tx_simulate(&self, tx: &[u8]) -> Result<Response<tx::SimulateResponse>> {
+        let raw = self
+            .client
+            .post(self.base_url.join("cosmos/tx/v1beta1/simulate")?)
+            .json(&tx::SimulateRequest {
+                tx_bytes: base64::encode(tx),
+            })
+            .send()
+            .await?;
+
+        let res = match raw.status() {
+            StatusCode::OK => Response::Ok(raw.json::<tx::SimulateResponse>().await?),
+            StatusCode::BAD_REQUEST => Response::Error(raw.json::<Error>().await?),
+            code => return Err(anyhow::anyhow!("unexpected response status code: {}", code)),
+        };
+
+        Ok(res)
     }
 
     async fn wasm_contract_store<
@@ -127,6 +160,11 @@ impl Lcd for Http {
 mod tests {
     use std::str::FromStr as _;
 
+    use cosmrs::{
+        tendermint::{block::Height, chain},
+        tx::Msg as _,
+    };
+    use cosmwasm_bignumber::Decimal256;
     use cosmwasm_std::Addr;
     use serde::{Deserialize, Serialize};
     use serde_json::json;
@@ -135,9 +173,9 @@ mod tests {
         Mock, MockServer, ResponseTemplate,
     };
 
-    use crate::{AccountId, BaseAccount, SigningKey};
+    use crate::{tx, AccountId, BaseAccount, Coin, SigningKey};
 
-    use super::{Http, Lcd};
+    use super::{Http, Lcd, Response};
 
     #[tokio::test]
     async fn http_auth_account() -> Result<(), Box<dyn std::error::Error>> {
@@ -145,7 +183,7 @@ mod tests {
         let expected_account = BaseAccount {
             account_number: 2932070,
             address: account_id.to_string(),
-            pub_key: SigningKey::random().public_key(),
+            pub_key: Some(SigningKey::random().public_key()),
             sequence: 6,
         };
 
@@ -204,7 +242,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn http_auth_bank_balances() -> Result<(), Box<dyn std::error::Error>> {
+    async fn http_bank_balances() -> Result<(), Box<dyn std::error::Error>> {
         let account_id = AccountId::from_str("terra1eml7g3ll6jkyhtfv2g0gvqnzzpy6kjyd7qr302")?;
 
         let server = MockServer::start().await;
@@ -241,7 +279,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn http_auth_bank_balances_empty() -> Result<(), Box<dyn std::error::Error>> {
+    async fn http_bank_balances_empty() -> Result<(), Box<dyn std::error::Error>> {
         let account_id = AccountId::from_str("terra175yp3rnjk2av64zlkt777kkqa7f829g2hfpn4l")?;
 
         let server = MockServer::start().await;
@@ -269,6 +307,149 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn http_tx_simulate() -> Result<(), Box<dyn std::error::Error>> {
+        let account_id = AccountId::from_str("terra175yp3rnjk2av64zlkt777kkqa7f829g2hfpn4l")?;
+        let private_key = SigningKey::random();
+        let bank_account = BaseAccount {
+            account_number: 0,
+            address: account_id.to_string(),
+            pub_key: Some(private_key.public_key()),
+            sequence: 0,
+        };
+        let tx = {
+            let send = cosmrs::bank::MsgSend {
+                amount: vec![Coin {
+                    amount: Decimal256::one(),
+                    denom: cosmrs::Denom::from_str("uusd")?,
+                }
+                .into()],
+                from_address: AccountId::from_str("terra175yp3rnjk2av64zlkt777kkqa7f829g2hfpn4l")?,
+                to_address: AccountId::from_str("terra1eml7g3ll6jkyhtfv2g0gvqnzzpy6kjyd7qr302")?,
+            };
+
+            tx::sign(
+                chain::Id::from_str("columbus-5")?,
+                &private_key,
+                bank_account.account_number,
+                bank_account.sequence,
+                Coin {
+                    denom: "uusd".parse().unwrap(),
+                    amount: cosmwasm_bignumber::Decimal256::one(),
+                },
+                1000,
+                Height::try_from(0u64)?,
+                vec![send.to_any()?],
+            )?
+        };
+
+        let server = MockServer::start().await;
+        let response = ResponseTemplate::new(200).set_body_json(&json!({
+            "gas_info": {
+                "gas_wanted": "0",
+                "gas_used": "66467"
+            },
+            "result": {
+                "data": "Ch4KHC9jb3Ntb3MuYmFuay52MWJldGExLk1zZ1NlbmQ=",
+                "log": "[{\"events\":[{\"type\":\"coin_received\",\"attributes\":[{\"key\":\"receiver\",\"value\":\"terra1eml7g3ll6jkyhtfv2g0gvqnzzpy6kjyd7qr302\"},{\"key\":\"amount\",\"value\":\"1000000uusd\"}]},{\"type\":\"coin_spent\",\"attributes\":[{\"key\":\"spender\",\"value\":\"terra175yp3rnjk2av64zlkt777kkqa7f829g2hfpn4l\"},{\"key\":\"amount\",\"value\":\"1000000uusd\"}]},{\"type\":\"message\",\"attributes\":[{\"key\":\"action\",\"value\":\"/cosmos.bank.v1beta1.MsgSend\"},{\"key\":\"sender\",\"value\":\"terra175yp3rnjk2av64zlkt777kkqa7f829g2hfpn4l\"},{\"key\":\"module\",\"value\":\"bank\"}]},{\"type\":\"transfer\",\"attributes\":[{\"key\":\"recipient\",\"value\":\"terra1eml7g3ll6jkyhtfv2g0gvqnzzpy6kjyd7qr302\"},{\"key\":\"sender\",\"value\":\"terra175yp3rnjk2av64zlkt777kkqa7f829g2hfpn4l\"},{\"key\":\"amount\",\"value\":\"1000000uusd\"}]}]}]",
+                "events": [
+                {
+                    "type": "message",
+                    "attributes": [
+                    {
+                        "key": "YWN0aW9u",
+                        "value": "L2Nvc21vcy5iYW5rLnYxYmV0YTEuTXNnU2VuZA==",
+                        "index": false
+                    }
+                    ]
+                },
+                {
+                    "type": "coin_spent",
+                    "attributes": [
+                    {
+                        "key": "c3BlbmRlcg==",
+                        "value": "dGVycmExNzV5cDNybmprMmF2NjR6bGt0Nzc3a2txYTdmODI5ZzJoZnBuNGw=",
+                        "index": false
+                    },
+                    {
+                        "key": "YW1vdW50",
+                        "value": "MTAwMDAwMHV1c2Q=",
+                        "index": false
+                    }
+                    ]
+                },
+                {
+                    "type": "coin_received",
+                    "attributes": [
+                    {
+                        "key": "cmVjZWl2ZXI=",
+                        "value": "dGVycmExZW1sN2czbGw2amt5aHRmdjJnMGd2cW56enB5NmtqeWQ3cXIzMDI=",
+                        "index": false
+                    },
+                    {
+                        "key": "YW1vdW50",
+                        "value": "MTAwMDAwMHV1c2Q=",
+                        "index": false
+                    }
+                    ]
+                },
+                {
+                    "type": "transfer",
+                    "attributes": [
+                    {
+                        "key": "cmVjaXBpZW50",
+                        "value": "dGVycmExZW1sN2czbGw2amt5aHRmdjJnMGd2cW56enB5NmtqeWQ3cXIzMDI=",
+                        "index": false
+                    },
+                    {
+                        "key": "c2VuZGVy",
+                        "value": "dGVycmExNzV5cDNybmprMmF2NjR6bGt0Nzc3a2txYTdmODI5ZzJoZnBuNGw=",
+                        "index": false
+                    },
+                    {
+                        "key": "YW1vdW50",
+                        "value": "MTAwMDAwMHV1c2Q=",
+                        "index": false
+                    }
+                    ]
+                },
+                {
+                    "type": "message",
+                    "attributes": [
+                    {
+                        "key": "c2VuZGVy",
+                        "value": "dGVycmExNzV5cDNybmprMmF2NjR6bGt0Nzc3a2txYTdmODI5ZzJoZnBuNGw=",
+                        "index": false
+                    }
+                    ]
+                },
+                {
+                    "type": "message",
+                    "attributes": [
+                    {
+                        "key": "bW9kdWxl",
+                        "value": "YmFuaw==",
+                        "index": false
+                    }
+                    ]
+                }
+                ]
+            }
+            }));
+        Mock::given(method("POST"))
+            .and(path("/cosmos/tx/v1beta1/simulate"))
+            .respond_with(response)
+            .mount(&server)
+            .await;
+
+        let lcd = Http::new(server.uri())?;
+        let res = lcd.tx_simulate(&tx).await?;
+
+        matches!(res, Response::Ok(_));
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn http_query_wasm() -> Result<(), Box<dyn std::error::Error>> {
         #[derive(Deserialize, Serialize)]
         enum Query {
@@ -289,9 +470,9 @@ mod tests {
           },
         }));
         Mock::given(method("GET"))
-            .and(path(format!(
-                "/terra/wasm/v1beta1/contracts/terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g/store"
-            )))
+            .and(path(
+                "/terra/wasm/v1beta1/contracts/terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g/store",
+            ))
             .and(query_param(
                 "query_msg",
                 base64::encode_config(serde_json::to_vec(&Query::Ask {})?, base64::URL_SAFE),

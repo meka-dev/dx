@@ -1,6 +1,9 @@
+use anyhow::Result;
+
 use cosmrs::tx::MsgProto;
 pub use cosmrs::{
     auth::BaseAccount,
+    bank::MsgSend,
     crypto::secp256k1::SigningKey,
     tx::{Msg, Tx},
     AccountId, Any as Message, Decimal, Denom,
@@ -12,6 +15,7 @@ mod base;
 pub use base::Coin;
 pub mod lcd;
 mod proto;
+pub mod tx;
 mod wasm;
 
 #[derive(Clone, Debug)]
