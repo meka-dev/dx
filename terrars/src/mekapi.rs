@@ -1,0 +1,240 @@
+use anyhow::Result;
+use cosmrs::tendermint::block;
+use cosmwasm_std::Addr;
+use reqwest::{header::HeaderValue, Client, ClientBuilder, StatusCode, Url};
+use serde::de::DeserializeOwned;
+
+const HEADER_COUNT: &str = "Mekatek-Count";
+static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+
+#[async_trait::async_trait]
+pub trait Mekapi: Send + Sync {
+    async fn v1_pool_responses<T: Send + DeserializeOwned>(
+        &self,
+        contract: Addr,
+        height: block::Height,
+    ) -> Result<Vec<T>>;
+}
+
+#[derive(Clone)]
+pub struct Http {
+    base_url: Url,
+    client: Client,
+}
+
+impl Http {
+    pub fn new(url: String) -> Result<Self> {
+        let base_url = Url::parse(&url)?;
+        let client = ClientBuilder::new().user_agent(USER_AGENT).build()?;
+
+        Ok(Self { base_url, client })
+    }
+}
+
+#[async_trait::async_trait]
+impl Mekapi for Http {
+    async fn v1_pool_responses<T>(&self, factory: Addr, height: block::Height) -> Result<Vec<T>>
+    where
+        T: Send + DeserializeOwned,
+    {
+        let mut url = self.base_url.join("v1/poolresponses")?;
+        url.query_pairs_mut()
+            .clear()
+            .append_pair("factory", factory.as_ref())
+            .append_pair("height", &height.to_string());
+
+        let raw = self.client.get(url).send().await?;
+        let pools = match raw.status() {
+            StatusCode::OK => {
+                let expected_len: usize = raw
+                    .headers()
+                    .get(HEADER_COUNT)
+                    .unwrap_or(&HeaderValue::from_static("0"))
+                    .to_str()?
+                    .parse()?;
+
+                let body = raw.text_with_charset("utf-8").await?;
+                let pools: Vec<T> = body
+                    .lines()
+                    .into_iter()
+                    .filter_map(|val| hex::decode(val).ok())
+                    .filter_map(|value| cosmwasm_std::from_slice::<T>(&value).ok())
+                    .collect();
+
+                if pools.len() < expected_len {
+                    return Err(anyhow::anyhow!(
+                        "decoded less pools than sent: {} < {}",
+                        pools.len(),
+                        expected_len
+                    ));
+                }
+
+                pools
+            },
+            code => return Err(anyhow::anyhow!("unexpected response status code: {}", code)),
+        };
+
+        Ok(pools)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use anyhow::Result;
+    use cosmrs::tendermint::block;
+    use cosmwasm_std::Addr;
+    use wiremock::{
+        matchers::{method, path, query_param},
+        Mock, MockServer, ResponseTemplate,
+    };
+
+    use super::{Http, Mekapi as _};
+    use crate::dex;
+
+    #[tokio::test]
+    async fn v1_pool_responses_astroport() -> Result<()> {
+        let factory = Addr::unchecked("terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g");
+        let height = block::Height::from_str("1111")?;
+
+        let server = MockServer::start().await;
+        let response = ResponseTemplate::new(200).set_body_raw(r#"7b22636f6e74726163745f61646472657373223a22746572726131717075397665376c6c6539776c376e706b71713734356a386677656b77356768666e74746b6a222c226c69717569646974795f746f6b656e223a227465727261317a656a796a70776636667065673766706134327675306435666a77656a76377478347473337a222c22617373657473223a5b7b22696e666f223a7b22746f6b656e223a7b226e616d65223a22464f5820546f6b656e222c22636f6e74726163745f61646472223a2274657272613137636b7832356b7168777a663366756470727337386b716770336c6870723277373479663774227d7d2c22616d6f756e74223a2230222c22746f74616c5f737570706c79223a2232303030303030303030303030303030303030227d2c7b22696e666f223a7b226e61746976655f746f6b656e223a7b2264656e6f6d223a2275757364227d7d2c22616d6f756e74223a2230222c22746f74616c5f737570706c79223a223132303730363134343334363633383433227d5d2c22746f74616c5f7368617265223a2230227d
+7b22636f6e74726163745f61646472657373223a227465727261317172326b36796a6a643570326b6165777176673933616737346b3667796a7237726533376673222c226c69717569646974795f746f6b656e223a22746572726131776d61747936357974376d6a7736666a66796d6b64397a736d36617473713832643961726364222c22617373657473223a5b7b22696e666f223a7b22746f6b656e223a7b226e616d65223a22416e63686f7220546f6b656e222c22636f6e74726163745f61646472223a22746572726131347a35366c306670326c736638367a7933687479327a3437657a6b686e746874723979713736227d7d2c22616d6f756e74223a223339343636343233313031303535222c22746f74616c5f737570706c79223a2231303030303030303030303030303030227d2c7b22696e666f223a7b226e61746976655f746f6b656e223a7b2264656e6f6d223a2275757364227d7d2c22616d6f756e74223a223839343831313736373735383238222c22746f74616c5f737570706c79223a223132303730363134343334363633383433227d5d2c22746f74616c5f7368617265223a223539303631343139383537353637227d
+7b22636f6e74726163745f61646472657373223a227465727261317176306a35756467326c636e716b757935727174326e366e327a396d327a7073367a66783276222c226c69717569646974795f746f6b656e223a22746572726131753564767070747068677134337167766a396367376365386133676c36716863706c366a7866222c22617373657473223a5b7b22696e666f223a7b22746f6b656e223a7b226e616d65223a22507269736d2050726f746f636f6c20546f6b656e222c22636f6e74726163745f61646472223a227465727261316468393437386b32717671687165616a686e37356132613764736e6637347935756b72656777227d7d2c22616d6f756e74223a2230222c22746f74616c5f737570706c79223a2231303030303030303030303030303030227d2c7b22696e666f223a7b22746f6b656e223a7b226e616d65223a225465727261525820546f6b656e222c22636f6e74726163745f61646472223a22746572726131386b79396c6e34673678336e3966397338613574747368796e76366c677a6670706d726d7967227d7d2c22616d6f756e74223a2230222c22746f74616c5f737570706c79223a2232303030303030303030303030303030303030227d5d2c22746f74616c5f7368617265223a2230227d"#, "text/plain; charset=utf-8");
+        Mock::given(method("GET"))
+            .and(path(format!("/v1/poolresponses")))
+            .and(query_param("factory", &factory.to_string()))
+            .and(query_param("height", &height.to_string()))
+            .respond_with(response)
+            .mount(&server)
+            .await;
+
+        let http = Http::new(server.uri())?;
+        let pools = http
+            .v1_pool_responses::<dex::astroport::PoolResponse>(factory, height)
+            .await?;
+
+        assert_eq!(pools.len(), 3);
+        assert_eq!(
+            pools,
+            vec![
+                dex::astroport::PoolResponse {
+                    assets: [
+                        dex::astroport::Asset {
+                            amount: 0u128.into(),
+                            info: dex::astroport::AssetInfo::Token {
+                                contract_addr: Addr::unchecked(
+                                    "terra17ckx25kqhwzf3fudprs78kqgp3lhpr2w74yf7t"
+                                ),
+                            },
+                        },
+                        astroport::asset::Asset {
+                            amount: 0u128.into(),
+                            info: dex::astroport::AssetInfo::NativeToken {
+                                denom: "uusd".to_string()
+                            },
+                        },
+                    ],
+                    total_share: 0u128.into(),
+                },
+                dex::astroport::PoolResponse {
+                    assets: [
+                        dex::astroport::Asset {
+                            amount: 39466423101055u128.into(),
+                            info: dex::astroport::AssetInfo::Token {
+                                contract_addr: Addr::unchecked(
+                                    "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76"
+                                ),
+                            },
+                        },
+                        astroport::asset::Asset {
+                            amount: 89481176775828u128.into(),
+                            info: dex::astroport::AssetInfo::NativeToken {
+                                denom: "uusd".to_string()
+                            },
+                        },
+                    ],
+                    total_share: 59061419857567u128.into(),
+                },
+                dex::astroport::PoolResponse {
+                    assets: [
+                        dex::astroport::Asset {
+                            amount: 0u128.into(),
+                            info: dex::astroport::AssetInfo::Token {
+                                contract_addr: Addr::unchecked(
+                                    "terra1dh9478k2qvqhqeajhn75a2a7dsnf74y5ukregw"
+                                ),
+                            },
+                        },
+                        dex::astroport::Asset {
+                            amount: 0u128.into(),
+                            info: dex::astroport::AssetInfo::Token {
+                                contract_addr: Addr::unchecked(
+                                    "terra18ky9ln4g6x3n9f9s8a5ttshynv6lgzfppmrmyg"
+                                ),
+                            },
+                        },
+                    ],
+                    total_share: 0u128.into(),
+                },
+            ],
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn v1_pool_responses_loopmarkets() -> Result<()> {
+        let factory = Addr::unchecked("terra16hdjuvghcumu6prg22cdjl96ptuay6r0hc6yns");
+        let height = block::Height::from_str("1111")?;
+
+        let server = MockServer::start().await;
+        let response = ResponseTemplate::new(200).set_body_raw(r#"7b22636f6e74726163745f61646472657373223a22746572726131706d6d667a3230356573376178796d77706c346a6a327275786e657675667533343632663032222c226c69717569646974795f746f6b656e223a22746572726131617a7a716e3838773363633678386a776c326d61707573706a7a646b7a707a32367165326c6b222c22617373657473223a5b7b22696e666f223a7b22746f6b656e223a7b22636f6e74726163745f61646472223a2274657272613134746c3833786377716a79306b656e3970657534706a6a75753735356c727279327579323572227d7d2c22616d6f756e74223a22343331343337313439227d2c7b22696e666f223a7b226e61746976655f746f6b656e223a7b2264656e6f6d223a22756c756e61227d7d2c22616d6f756e74223a22323330333731363739227d5d2c22746f74616c5f7368617265223a223935393030313335227d
+7b22636f6e74726163745f61646472657373223a227465727261317a37746b3430717a676d643272687a327663706c636b6761743033726c36743837677463666d222c226c69717569646974795f746f6b656e223a227465727261316172736c676c747179757a6d79703032777a35777268683861796579656c74747935666a7373222c22617373657473223a5b7b22696e666f223a7b22746f6b656e223a7b22636f6e74726163745f61646472223a227465727261316e6b756c746e776676767565336368306c667768736c30706e70337a64393733346c33753733227d7d2c22616d6f756e74223a2230227d2c7b22696e666f223a7b226e61746976655f746f6b656e223a7b2264656e6f6d223a2275757364227d7d2c22616d6f756e74223a2230227d5d2c22746f74616c5f7368617265223a2230227d
+7b22636f6e74726163745f61646472657373223a22746572726131796a673074756863366b7a777a396a6c38797167786e66326374776c66756d6e767363757070222c226c69717569646974795f746f6b656e223a2274657272613137707a74387432686d78363538377a6e36796835656e73796c6d3373396d6d346d373276326e222c22617373657473223a5b7b22696e666f223a7b22746f6b656e223a7b22636f6e74726163745f61646472223a2274657272613177386b7664366371707374687570736b346c30636c776e6d656b346c337a72376338346b7771227d7d2c22616d6f756e74223a223230323339333739313633333433227d2c7b22696e666f223a7b226e61746976655f746f6b656e223a7b2264656e6f6d223a2275757364227d7d2c22616d6f756e74223a2231323035303237333038383231227d5d2c22746f74616c5f7368617265223a2234383832303738323633383730227d"#, "text/plain; charset=utf-8");
+        Mock::given(method("GET"))
+            .and(path(format!("/v1/poolresponses")))
+            .and(query_param("factory", &factory.to_string()))
+            .and(query_param("height", &height.to_string()))
+            .respond_with(response)
+            .mount(&server)
+            .await;
+
+        let http = Http::new(server.uri())?;
+        let pools = http
+            .v1_pool_responses::<dex::loopmarkets::PoolResponse>(factory, height)
+            .await?;
+
+        assert_eq!(pools.len(), 3);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn v1_pool_responses_terraswap() -> Result<()> {
+        let factory = Addr::unchecked("terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj");
+        let height = block::Height::from_str("1111")?;
+
+        let server = MockServer::start().await;
+        let response = ResponseTemplate::new(200).set_body_raw(r#"7b22636f6e74726163745f61646472657373223a227465727261317170703961726c777a30303839706c36307839796d616b6a6c637a393338386566756b787070222c226c69717569646974795f746f6b656e223a227465727261316334367937337a78616a78776b356c7a6530307a63653373657861666d7237666e6b71786867222c22617373657473223a5b7b22696e666f223a7b22746f6b656e223a7b22636f6e74726163745f61646472223a22746572726131746e703876677572637568746175307230716a7473783373776d723068686e366c3872343032227d7d2c22616d6f756e74223a2230227d2c7b22696e666f223a7b226e61746976655f746f6b656e223a7b2264656e6f6d223a2275757364227d7d2c22616d6f756e74223a2230227d5d2c22746f74616c5f7368617265223a2230227d
+7b22636f6e74726163745f61646472657373223a22746572726131717064396e37616677663435726b6a6c70756a72726466683833706c646563387270756a676e222c226c69717569646974795f746f6b656e223a22746572726131716d72386a336d397835336468777330797868796d7a73766e6b6a71383836796b386b39336d222c22617373657473223a5b7b22696e666f223a7b22746f6b656e223a7b22636f6e74726163745f61646472223a227465727261316b6338376d7534363066776b71746532397271756834686332306d3534667877747378376770227d7d2c22616d6f756e74223a22333131323831343538227d2c7b22696e666f223a7b226e61746976655f746f6b656e223a7b2264656e6f6d223a2275757364227d7d2c22616d6f756e74223a223135363237333535373135227d5d2c22746f74616c5f7368617265223a2231393134343734393231227d
+7b22636f6e74726163745f61646472657373223a227465727261317170366a70327366737638676d64683274753333773930347171796d333934667a6b786e7864222c226c69717569646974795f746f6b656e223a2274657272613133656b3978383768703974336766356c7463687a686c3378756868616b6d32366a796a34767a222c22617373657473223a5b7b22696e666f223a7b22746f6b656e223a7b22636f6e74726163745f61646472223a22746572726131756b6b3839676e3235703778736571633473346434357961726a6c7779636872777837756d76227d7d2c22616d6f756e74223a223130373233393137383333227d2c7b22696e666f223a7b226e61746976655f746f6b656e223a7b2264656e6f6d223a2275757364227d7d2c22616d6f756e74223a2231323635393238227d5d2c22746f74616c5f7368617265223a22313030303030303030227d"#, "text/plain; charset=utf-8");
+        Mock::given(method("GET"))
+            .and(path(format!("/v1/poolresponses")))
+            .and(query_param("factory", &factory.to_string()))
+            .and(query_param("height", &height.to_string()))
+            .respond_with(response)
+            .mount(&server)
+            .await;
+
+        let http = Http::new(server.uri())?;
+        let pools = http
+            .v1_pool_responses::<dex::terraswap::PoolResponse>(factory, height)
+            .await?;
+
+        assert_eq!(pools.len(), 3);
+
+        Ok(())
+    }
+}

@@ -1,8 +1,8 @@
 use cosmwasm_bignumber::Decimal256;
 use tendermint::block;
-use terrars::MsgExecuteContract;
+use terrars::{dex, MsgExecuteContract};
 
-use crate::{accounts, dex};
+use crate::accounts;
 
 pub mod metrics;
 pub mod multi_dex;

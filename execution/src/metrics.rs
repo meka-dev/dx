@@ -19,6 +19,7 @@ use tokio::{sync::Mutex, time::Instant};
 use crate::{broadcast, config, strategy};
 
 pub mod lcd;
+pub mod mekapi;
 
 const HEADER_OPENMETRICS: &str = "application/openmetrics-text; version=1.0.0; charset=utf-8";
 const ORG_NAMESPACE: &str = "mekatek";
@@ -58,9 +59,16 @@ struct HttpLabels {
     status: String,
 }
 
+#[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
+pub enum ResultLabel {
+    Success,
+    Error,
+}
+
 pub struct Metrics {
     http_request_duration: Family<HttpLabels, Histogram>,
     pub lcd_call_duration: Family<lcd::Labels, Histogram>,
+    pub mekapi_call_duration: Family<mekapi::Labels, Histogram>,
     pub strategy_duration: Family<strategy::metrics::DurationLabels, Histogram>,
     pub strategy_size_max: Family<strategy::metrics::TradesLabel, Gauge>,
     pub strategy_expected_profit_max: Family<strategy::metrics::TradesLabel, Gauge>,
@@ -87,6 +95,10 @@ impl Metrics {
         let lcd_call_duration = Family::<lcd::Labels, Histogram>::new_with_constructor(|| {
             Histogram::new(BUCKETS.clone().into_iter())
         });
+        let mekapi_call_duration =
+            Family::<mekapi::Labels, Histogram>::new_with_constructor(|| {
+                Histogram::new(BUCKETS.clone().into_iter())
+            });
         let strategy_duration =
             Family::<strategy::metrics::DurationLabels, Histogram>::new_with_constructor(|| {
                 Histogram::new(BUCKETS.clone().into_iter())
@@ -114,6 +126,11 @@ impl Metrics {
         registry.register(
             prefix("lcd_call_duration_seconds"),
             "LCD call latency",
+            Box::new(lcd_call_duration.clone()),
+        );
+        registry.register(
+            prefix("mekapi_call_duration_seconds"),
+            "Mekapi call latency",
             Box::new(lcd_call_duration.clone()),
         );
         registry.register(
@@ -171,6 +188,7 @@ impl Metrics {
         let metrics = Self {
             http_request_duration,
             lcd_call_duration,
+            mekapi_call_duration,
             strategy_duration,
             strategy_size_max,
             strategy_expected_profit_max,

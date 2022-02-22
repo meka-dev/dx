@@ -1,7 +1,5 @@
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
-
     for arg in std::env::args().skip(1) {
         let mut split = arg.split(':');
         let kind = split.next().unwrap();

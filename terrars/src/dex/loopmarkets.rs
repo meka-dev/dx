@@ -1,14 +1,20 @@
 use std::str::FromStr as _;
 
+use cosmrs::Denom;
 use cosmwasm_bignumber::Decimal256;
 use cosmwasm_std::{Addr, Decimal, Fraction, Uint128};
 use terraswap::{asset, factory, pair};
 
-use terrars::{lcd::Lcd, AccountId, MsgExecuteContract};
+use crate::{
+    base::Coin,
+    dex::{Asset, Pool, Token, TokenCache, TokenPair},
+    lcd::Lcd,
+    AccountId, MsgExecuteContract,
+};
 
-use crate::dex::{Asset, Pool, Token, TokenCache, TokenPair};
+pub use terraswap::pair::PoolResponse;
 
-const LOOP_ADDRESS: &str = "terra16hdjuvghcumu6prg22cdjl96ptuay6r0hc6yns";
+pub const ADDRESS: &str = "terra16hdjuvghcumu6prg22cdjl96ptuay6r0hc6yns";
 
 #[derive(Clone, Debug)]
 pub struct Pair {
@@ -58,9 +64,9 @@ where
             ),
             Token::Native { denom } => (
                 // FIXME(xla): Bignumber handling is all over the place, it needs consolidation.
-                vec![terrars::Coin {
+                vec![Coin {
                     amount,
-                    denom: terrars::Denom::from_str(denom).unwrap(),
+                    denom: Denom::from_str(denom).unwrap(),
                 }],
                 pair::ExecuteMsg::Swap {
                     offer_asset: asset::Asset {
@@ -182,7 +188,7 @@ where
     loop {
         let mut res = lcd
             .wasm_contract_store::<factory::QueryMsg, factory::PairsResponse>(
-                &Addr::unchecked(LOOP_ADDRESS),
+                &Addr::unchecked(ADDRESS),
                 &factory::QueryMsg::Pairs {
                     start_after,
                     limit: Some(30),

@@ -1,22 +1,29 @@
 use std::str::FromStr as _;
 
+use astroport::{asset, factory, pair};
+use cosmrs::Denom;
 use cosmwasm_bignumber::Decimal256;
 use cosmwasm_std::{Addr, Decimal, Fraction, Uint128};
-use terraswap::{asset, factory, pair};
 
-use terrars::{lcd::Lcd, AccountId, MsgExecuteContract};
+use crate::{
+    base::Coin,
+    dex::{self, Pool, Token, TokenCache, TokenPair},
+    lcd::Lcd,
+    AccountId, MsgExecuteContract,
+};
 
-use crate::dex::{Asset, Pool, Token, TokenCache, TokenPair};
+pub use astroport::{
+    asset::{Asset, AssetInfo},
+    pair::PoolResponse,
+};
 
-const TERRASWAP_ADDRESS: &str = "terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj";
+pub const ADDRESS: &str = "terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g";
 
 impl From<asset::AssetInfo> for Token {
     fn from(input: asset::AssetInfo) -> Self {
         match input {
             asset::AssetInfo::NativeToken { denom } => Self::Native { denom },
-            asset::AssetInfo::Token { contract_addr } => Self::Cw20 {
-                contract_addr: Addr::unchecked(contract_addr),
-            },
+            asset::AssetInfo::Token { contract_addr } => Self::Cw20 { contract_addr },
         }
     }
 }
@@ -26,7 +33,7 @@ impl From<Token> for asset::AssetInfo {
         match input {
             Token::Native { denom } => Self::NativeToken { denom },
             Token::Cw20 { contract_addr } => Self::Token {
-                contract_addr: contract_addr.into(),
+                contract_addr: Addr::unchecked(contract_addr),
             },
         }
     }
@@ -34,8 +41,8 @@ impl From<Token> for asset::AssetInfo {
 
 #[derive(Clone, Debug)]
 pub struct Pair {
-    pub contract_addr: Addr,
-    pub coins: [Asset; 2],
+    pub contract_address: Addr,
+    pub coins: [dex::Asset; 2],
     pub liquidity_token: String,
     pub total_share: Uint128,
 }
@@ -45,14 +52,14 @@ impl<L> Pool<L> for Pair
 where
     L: Lcd,
 {
-    fn coins(&self) -> [Asset; 2] {
+    fn coins(&self) -> [dex::Asset; 2] {
         let mut coins = self.coins.clone();
         coins.sort();
         coins
     }
 
     fn addr(&self) -> Addr {
-        self.contract_addr.clone()
+        self.contract_address.clone()
     }
 
     fn swap(
@@ -69,7 +76,7 @@ where
                 pair::ExecuteMsg::Swap {
                     offer_asset: asset::Asset {
                         info: asset::AssetInfo::Token {
-                            contract_addr: contract_addr.clone().to_string(),
+                            contract_addr: contract_addr.clone(),
                         },
                         amount: Into::<Decimal>::into(amount).numerator().into(), // ????
                     },
@@ -80,9 +87,9 @@ where
             ),
             Token::Native { denom } => (
                 // FIXME(xla): Bignumber handling is all over the place, it needs consolidation.
-                vec![terrars::Coin {
+                vec![Coin {
                     amount,
-                    denom: terrars::Denom::from_str(denom).unwrap(),
+                    denom: Denom::from_str(denom).unwrap(),
                 }],
                 pair::ExecuteMsg::Swap {
                     offer_asset: asset::Asset {
@@ -100,7 +107,7 @@ where
 
         MsgExecuteContract {
             coins,
-            contract_address: self.contract_addr.clone(),
+            contract_address: self.contract_address.clone(),
             execute_msg: serde_json::to_vec(&msg).unwrap(),
             sender: sender.to_string(),
         }
@@ -113,7 +120,7 @@ where
     }
 
     async fn update(&mut self, lcd: &L, token_cache: &mut TokenCache) -> anyhow::Result<()> {
-        let pool = pool_info(lcd, &self.contract_addr).await?;
+        let pool = pool_info(lcd, &self.contract_address).await?;
         let left = into_asset(lcd, token_cache, pool.assets[0].clone()).await?;
         let right = into_asset(lcd, token_cache, pool.assets[1].clone()).await?;
         self.coins = [left, right];
@@ -126,7 +133,7 @@ async fn into_asset<L>(
     lcd: &L,
     token_cache: &mut TokenCache,
     input: asset::Asset,
-) -> anyhow::Result<Asset>
+) -> anyhow::Result<dex::Asset>
 where
     L: Lcd,
 {
@@ -135,9 +142,9 @@ where
     match token {
         Token::Cw20 { ref contract_addr } => {
             let info = token_cache.get(lcd, contract_addr).await?;
-            Ok(Asset::from((token, input.amount, info.decimals)))
+            Ok(dex::Asset::from((token, input.amount, info.decimals)))
         },
-        Token::Native { .. } => Ok(Asset::from((token, input.amount, 6))),
+        Token::Native { .. } => Ok(dex::Asset::from((token, input.amount, 6))),
     }
 }
 
@@ -160,11 +167,10 @@ where
 
     let mut pairs: Vec<Box<dyn Pool<L>>> = vec![];
     for pair in ps {
-        log::debug!("Loading Terraswap pool info for {}", pair.contract_addr);
+        log::debug!("Loading Astroport pool info for {}", pair.contract_addr);
 
-        let contract_addr = Addr::unchecked(pair.contract_addr.clone());
-
-        match pool_info(lcd, &contract_addr).await {
+        let contract_address = Addr::unchecked(pair.contract_addr.clone());
+        match pool_info(lcd, &contract_address).await {
             Ok(pool) => {
                 if pool.total_share == Uint128::zero()
                     || pool.assets[0].amount == Uint128::zero()
@@ -177,9 +183,9 @@ where
                 let right = into_asset(lcd, token_cache, pool.assets[1].clone()).await?;
 
                 pairs.push(Box::new(Pair {
-                    contract_addr,
+                    contract_address,
                     coins: [left, right],
-                    liquidity_token: pair.liquidity_token.clone(),
+                    liquidity_token: pair.liquidity_token.to_string(),
                     total_share: pool.total_share,
                 }));
             },
@@ -205,7 +211,7 @@ where
     loop {
         let mut res = lcd
             .wasm_contract_store::<factory::QueryMsg, factory::PairsResponse>(
-                &Addr::unchecked(TERRASWAP_ADDRESS),
+                &Addr::unchecked(ADDRESS),
                 &factory::QueryMsg::Pairs {
                     start_after,
                     limit: Some(30),
