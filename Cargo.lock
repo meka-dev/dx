@@ -13,9 +13,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.54"
+version = "1.0.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a99269dff3bc004caa411f38845c20303f1e393ca2bd6581576fa3a7f59577d"
+checksum = "159bb86af3a200e19a068f4224eae4c8bb2d0fa054c7e5d1cacd5cef95e684cd"
 
 [[package]]
 name = "argh"
@@ -323,7 +323,7 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 [[package]]
 name = "cosmos-sdk-proto"
 version = "0.9.0"
-source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#654ff45243eeb4178a97bf23adda622cc193ddfc"
+source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#6a9a797fb047d50ef3c3c8ef4cd5802d97a1a44d"
 dependencies = [
  "prost",
  "prost-types",
@@ -333,7 +333,7 @@ dependencies = [
 [[package]]
 name = "cosmrs"
 version = "0.4.1"
-source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#654ff45243eeb4178a97bf23adda622cc193ddfc"
+source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#6a9a797fb047d50ef3c3c8ef4cd5802d97a1a44d"
 dependencies = [
  "cosmos-sdk-proto",
  "ecdsa 0.13.4",
