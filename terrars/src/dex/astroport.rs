@@ -7,12 +7,15 @@ use cosmwasm_std::{Addr, Decimal, Fraction, Uint128};
 
 use crate::{
     base::Coin,
-    dex::{Asset, Pool, Token, TokenCache, TokenPair},
+    dex::{self, Pool, Token, TokenCache, TokenPair},
     lcd::Lcd,
     AccountId, MsgExecuteContract,
 };
 
-pub use astroport::pair::PoolResponse;
+pub use astroport::{
+    asset::{Asset, AssetInfo},
+    pair::PoolResponse,
+};
 
 pub const ADDRESS: &str = "terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g";
 
@@ -39,7 +42,7 @@ impl From<Token> for asset::AssetInfo {
 #[derive(Clone, Debug)]
 pub struct Pair {
     pub contract_address: Addr,
-    pub coins: [Asset; 2],
+    pub coins: [dex::Asset; 2],
     pub liquidity_token: String,
     pub total_share: Uint128,
 }
@@ -49,7 +52,7 @@ impl<L> Pool<L> for Pair
 where
     L: Lcd,
 {
-    fn coins(&self) -> [Asset; 2] {
+    fn coins(&self) -> [dex::Asset; 2] {
         let mut coins = self.coins.clone();
         coins.sort();
         coins
@@ -130,7 +133,7 @@ async fn into_asset<L>(
     lcd: &L,
     token_cache: &mut TokenCache,
     input: asset::Asset,
-) -> anyhow::Result<Asset>
+) -> anyhow::Result<dex::Asset>
 where
     L: Lcd,
 {
@@ -139,9 +142,9 @@ where
     match token {
         Token::Cw20 { ref contract_addr } => {
             let info = token_cache.get(lcd, contract_addr).await?;
-            Ok(Asset::from((token, input.amount, info.decimals)))
+            Ok(dex::Asset::from((token, input.amount, info.decimals)))
         },
-        Token::Native { .. } => Ok(Asset::from((token, input.amount, 6))),
+        Token::Native { .. } => Ok(dex::Asset::from((token, input.amount, 6))),
     }
 }
 

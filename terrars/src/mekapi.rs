@@ -116,6 +116,70 @@ mod tests {
             .await?;
 
         assert_eq!(pools.len(), 3);
+        assert_eq!(
+            pools,
+            vec![
+                dex::astroport::PoolResponse {
+                    assets: [
+                        dex::astroport::Asset {
+                            amount: 0u128.into(),
+                            info: dex::astroport::AssetInfo::Token {
+                                contract_addr: Addr::unchecked(
+                                    "terra17ckx25kqhwzf3fudprs78kqgp3lhpr2w74yf7t"
+                                ),
+                            },
+                        },
+                        astroport::asset::Asset {
+                            amount: 0u128.into(),
+                            info: dex::astroport::AssetInfo::NativeToken {
+                                denom: "uusd".to_string()
+                            },
+                        },
+                    ],
+                    total_share: 0u128.into(),
+                },
+                dex::astroport::PoolResponse {
+                    assets: [
+                        dex::astroport::Asset {
+                            amount: 39466423101055u128.into(),
+                            info: dex::astroport::AssetInfo::Token {
+                                contract_addr: Addr::unchecked(
+                                    "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76"
+                                ),
+                            },
+                        },
+                        astroport::asset::Asset {
+                            amount: 89481176775828u128.into(),
+                            info: dex::astroport::AssetInfo::NativeToken {
+                                denom: "uusd".to_string()
+                            },
+                        },
+                    ],
+                    total_share: 59061419857567u128.into(),
+                },
+                dex::astroport::PoolResponse {
+                    assets: [
+                        dex::astroport::Asset {
+                            amount: 0u128.into(),
+                            info: dex::astroport::AssetInfo::Token {
+                                contract_addr: Addr::unchecked(
+                                    "terra1dh9478k2qvqhqeajhn75a2a7dsnf74y5ukregw"
+                                ),
+                            },
+                        },
+                        dex::astroport::Asset {
+                            amount: 0u128.into(),
+                            info: dex::astroport::AssetInfo::Token {
+                                contract_addr: Addr::unchecked(
+                                    "terra18ky9ln4g6x3n9f9s8a5ttshynv6lgzfppmrmyg"
+                                ),
+                            },
+                        },
+                    ],
+                    total_share: 0u128.into(),
+                },
+            ],
+        );
 
         Ok(())
     }
