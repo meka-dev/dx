@@ -230,9 +230,8 @@ async fn main() -> Result<(), Error> {
 
                         if !args.dry_run {
                             let _check = client.broadcast_tx_sync(Transaction::from(tx)).await?;
+                            sequence += 1;
                         }
-
-                        sequence += 1;
                     },
                     lcd::Response::Error(lcd::Error { message, .. }) => {
                         // TODO(xla): Emit as metric.
