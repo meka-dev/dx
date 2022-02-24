@@ -4,12 +4,10 @@
 //              * fetch durations (pools, accounts)
 //              * current account balances
 
-#![allow(clippy::or_fun_call)]
+use std::{fs, sync::Arc};
 
-use std::{fs, ops::Sub, sync::Arc, time::Instant};
-
+use anyhow::Result;
 use cosmwasm_bignumber::Decimal256;
-use cosmwasm_std::Addr;
 use futures::{FutureExt as _, StreamExt};
 use tendermint::{
     abci::Transaction,
@@ -25,14 +23,13 @@ use tokio::sync::{mpsc, watch};
 use terrars::{
     dex,
     lcd::{self, Lcd},
-    mekapi::{self, Mekapi as _},
-    tx, BaseAccount, Coin, Message, Msg as _,
+    mekapi, tx, BaseAccount, Coin, Message, Msg as _,
 };
 
 use execution::{
     accounts, broadcast, config, metrics,
-    risk_engine::{RiskClassifier, RiskEngine, StaticPoolDenyList},
-    strategy::{self, Trade},
+    risk_engine::{EmptyPoolDeny, RiskClassifier, RiskEngine, StaticPoolDenyList},
+    strategy::{self, fetcher::Fetcher as _, Trade},
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -82,43 +79,6 @@ async fn main() -> Result<(), Error> {
     let lcd = metrics::lcd::Observed::new(Arc::clone(&metrics), lcd::Http::new(args.lcd_url)?);
     let mekapi =
         metrics::mekapi::Observed::new(Arc::clone(&metrics), mekapi::Http::new(args.mekapi_url)?);
-
-    let deny_list = StaticPoolDenyList::new();
-    let risk: RiskEngine<
-        execution::metrics::lcd::Observed<lcd::Http>,
-        dyn RiskClassifier<execution::metrics::lcd::Observed<lcd::Http>>,
-    > = RiskEngine::new(vec![deny_list]);
-
-    let mut token_cache = dex::TokenCache::default();
-    let mut pools = {
-        log::info!("Fetching DEX pairs with pool info");
-
-        // Fetch liquid UST pairs on Astroprot and Terraswap. This operation is expensive and will
-        // take some time.
-        let filter = Some(dex::Token::ust());
-
-        let start = Instant::now();
-        let mut pairs =
-            dex::astroport::liquid_pairs(&lcd, &mut token_cache, filter.clone()).await?;
-        pairs.append(
-            &mut dex::terraswap::liquid_pairs(&lcd, &mut token_cache, filter.clone()).await?,
-        );
-        pairs.append(&mut dex::loopmarkets::liquid_pairs(&lcd, &mut token_cache, filter).await?);
-        log::info!(
-            "Fetched {} pools in {:?}",
-            pairs.len(),
-            Instant::now().sub(start)
-        );
-
-        let ps = dex::Pools::from(
-            pairs
-                .into_iter()
-                .filter(|p| !risk.exclude(p.as_ref()))
-                .collect::<Vec<_>>(),
-        );
-        log::debug!("Left with {} pools after risk engine", ps.0.len(),);
-        ps
-    };
 
     // Set up RPC client.
     let (client, driver) = WebSocketClient::new(args.rpc_url.as_str()).await?;
@@ -268,8 +228,16 @@ async fn main() -> Result<(), Error> {
     let mut execution_handle = tokio::spawn(async move {
         log::debug!("Init strategy executor");
 
+        let risk: RiskEngine<dyn RiskClassifier> = RiskEngine::new(vec![
+            Box::new(EmptyPoolDeny {}),
+            Box::new(StaticPoolDenyList::new()),
+        ]);
+
+        let fetcher =
+            strategy::fetcher::Observed::new(Arc::clone(&metrics), strategy::fetcher::Mekapi {});
+
         // TODO(xla): Load configured strategies.
-        let strategies: Vec<Box<dyn strategy::Strategy<metrics::lcd::Observed<lcd::Http>> + Sync>> =
+        let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
             vec![Box::new(strategy::metrics::Observed::new(
                 Arc::clone(&metrics),
                 strategy::multi_dex::SinglePair::default(),
@@ -278,59 +246,29 @@ async fn main() -> Result<(), Error> {
         while let Ok(()) = latest_block_receiver.changed().await {
             let latest_block = latest_block_receiver.borrow().clone();
             let height = latest_block.header().height;
-            log::debug!(
-                "Fetching latest pair prices for {} pools at height {}",
-                pools.0.len(),
-                height,
-            );
 
-            // Ensure latest prices of pairs.
-            let start = Instant::now();
-            // TODO(xla): Parallelise with batches modulo num cpus.
-            // TODO(xla): Query at consistent block height.
-            for pool in pools.0.iter_mut() {
-                pool.update(&lcd, &mut token_cache).await?;
-            }
-            log::info!(
-                "Updated {} in {:?}",
-                pools.0.len(),
-                Instant::now().sub(start)
-            );
-
-            // Fetch available funds for strategies to incorporate.
-            let funds = accounts::fetch(&lcd, &account_id).await?;
-
-            for strategy in &strategies {
-                let trades = strategy
-                    .execute(latest_block.header.height, &account_id, &funds, &pools)
-                    .await;
-
-                for trade in trades {
-                    broadcast_sender
-                        .send((latest_block.header.height, trade))
-                        .await
-                        .map_err(|_| Error::BroadcasterGone)?;
-                }
-            }
-
+            if let Ok((funds, pairs)) = fetcher
+                .fetch(lcd.clone(), mekapi.clone(), &account_id.clone(), height)
+                .await
             {
-                let mekapi = mekapi.clone();
-                tokio::spawn(async move {
-                    tokio::join!(
-                        mekapi.v1_pool_responses::<terrars::dex::astroport::PoolResponse>(
-                            Addr::unchecked(terrars::dex::astroport::ADDRESS),
-                            height
-                        ),
-                        mekapi.v1_pool_responses::<terrars::dex::loopmarkets::PoolResponse>(
-                            Addr::unchecked(terrars::dex::loopmarkets::ADDRESS),
-                            height
-                        ),
-                        mekapi.v1_pool_responses::<terrars::dex::terraswap::PoolResponse>(
-                            Addr::unchecked(terrars::dex::terraswap::ADDRESS),
-                            height
-                        )
-                    )
-                });
+                let pools = dex::Pools::from(
+                    pairs
+                        .into_iter()
+                        .filter(|pool| !risk.exclude(pool))
+                        .collect::<Vec<_>>(),
+                );
+                for strategy in &strategies {
+                    let trades = strategy
+                        .execute(latest_block.header.height, &account_id, &funds, &pools)
+                        .await;
+
+                    for trade in trades {
+                        broadcast_sender
+                            .send((latest_block.header.height, trade))
+                            .await
+                            .map_err(|_| Error::BroadcasterGone)?;
+                    }
+                }
             }
         }
 

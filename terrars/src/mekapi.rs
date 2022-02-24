@@ -2,18 +2,15 @@ use anyhow::Result;
 use cosmrs::tendermint::block;
 use cosmwasm_std::Addr;
 use reqwest::{header::HeaderValue, Client, ClientBuilder, StatusCode, Url};
-use serde::de::DeserializeOwned;
+
+use crate::dex::Pool;
 
 const HEADER_COUNT: &str = "Mekatek-Count";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 #[async_trait::async_trait]
 pub trait Mekapi: Send + Sync {
-    async fn v1_pool_responses<T: Send + DeserializeOwned>(
-        &self,
-        contract: Addr,
-        height: block::Height,
-    ) -> Result<Vec<T>>;
+    async fn v1_pool_responses(&self, contract: Addr, height: block::Height) -> Result<Vec<Pool>>;
 }
 
 #[derive(Clone)]
@@ -33,10 +30,7 @@ impl Http {
 
 #[async_trait::async_trait]
 impl Mekapi for Http {
-    async fn v1_pool_responses<T>(&self, factory: Addr, height: block::Height) -> Result<Vec<T>>
-    where
-        T: Send + DeserializeOwned,
-    {
+    async fn v1_pool_responses(&self, factory: Addr, height: block::Height) -> Result<Vec<Pool>> {
         let mut url = self.base_url.join("v1/poolresponses")?;
         url.query_pairs_mut()
             .clear()
@@ -54,19 +48,19 @@ impl Mekapi for Http {
                     .parse()?;
 
                 let body = raw.text_with_charset("utf-8").await?;
-                let pools: Vec<T> = body
+
+                let pools = body
                     .lines()
                     .into_iter()
                     .filter_map(|val| hex::decode(val).ok())
-                    .filter_map(|value| cosmwasm_std::from_slice::<T>(&value).ok())
-                    .collect();
+                    .filter_map(|value| cosmwasm_std::from_slice::<Pool>(&value).ok())
+                    .collect::<Vec<_>>();
 
                 if pools.len() < expected_len {
-                    return Err(anyhow::anyhow!(
-                        "decoded less pools than sent: {} < {}",
+                    log::debug!(target: "mekapi", "decoded less pools than sent: {} < {}",
                         pools.len(),
                         expected_len
-                    ));
+                    );
                 }
 
                 pools
@@ -84,14 +78,17 @@ mod tests {
 
     use anyhow::Result;
     use cosmrs::tendermint::block;
-    use cosmwasm_std::Addr;
+    use cosmwasm_bignumber::Decimal256;
+    use cosmwasm_std::{Addr, Uint128};
+    use pretty_assertions::assert_eq;
     use wiremock::{
         matchers::{method, path, query_param},
         Mock, MockServer, ResponseTemplate,
     };
 
+    use crate::dex::{self, Token};
+
     use super::{Http, Mekapi as _};
-    use crate::dex;
 
     #[tokio::test]
     async fn v1_pool_responses_astroport() -> Result<()> {
@@ -111,74 +108,100 @@ mod tests {
             .await;
 
         let http = Http::new(server.uri())?;
-        let pools = http
-            .v1_pool_responses::<dex::astroport::PoolResponse>(factory, height)
-            .await?;
+        let pools = http.v1_pool_responses(factory, height).await?;
 
         assert_eq!(pools.len(), 3);
         assert_eq!(
             pools,
             vec![
-                dex::astroport::PoolResponse {
+                dex::Pool {
                     assets: [
-                        dex::astroport::Asset {
-                            amount: 0u128.into(),
-                            info: dex::astroport::AssetInfo::Token {
+                        dex::Asset {
+                            amount: Uint128::zero(),
+                            amount_decimal: Decimal256::zero(),
+                            decimals: 6,
+                            token: Token::Cw20 {
                                 contract_addr: Addr::unchecked(
                                     "terra17ckx25kqhwzf3fudprs78kqgp3lhpr2w74yf7t"
                                 ),
                             },
                         },
-                        astroport::asset::Asset {
-                            amount: 0u128.into(),
-                            info: dex::astroport::AssetInfo::NativeToken {
-                                denom: "uusd".to_string()
-                            },
+                        dex::Asset {
+                            amount: Uint128::zero(),
+                            amount_decimal: Decimal256::zero(),
+                            decimals: 6,
+                            token: Token::ust(),
                         },
                     ],
-                    total_share: 0u128.into(),
+                    contract_address: Addr::unchecked(
+                        "terra1qpu9ve7lle9wl7npkqq745j8fwekw5ghfnttkj"
+                    ),
+                    liquidity_token: Addr::unchecked(
+                        "terra1zejyjpwf6fpeg7fpa42vu0d5fjwejv7tx4ts3z"
+                    ),
+                    total_share: Uint128::zero(),
                 },
-                dex::astroport::PoolResponse {
+                dex::Pool {
                     assets: [
-                        dex::astroport::Asset {
-                            amount: 39466423101055u128.into(),
-                            info: dex::astroport::AssetInfo::Token {
+                        dex::Asset {
+                            amount: Uint128::from(39466423101055u64),
+                            amount_decimal: Decimal256::from_uint256(39466423101055u64)
+                                / Decimal256::from_uint256(10u64.pow(6)),
+                            decimals: 6,
+                            token: Token::Cw20 {
                                 contract_addr: Addr::unchecked(
                                     "terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76"
                                 ),
                             },
                         },
-                        astroport::asset::Asset {
-                            amount: 89481176775828u128.into(),
-                            info: dex::astroport::AssetInfo::NativeToken {
-                                denom: "uusd".to_string()
-                            },
+                        dex::Asset {
+                            amount: Uint128::from(89481176775828u64),
+                            amount_decimal: Decimal256::from_uint256(89481176775828u64)
+                                / Decimal256::from_uint256(10u64.pow(6)),
+                            decimals: 6,
+                            token: Token::ust(),
                         },
                     ],
-                    total_share: 59061419857567u128.into(),
+                    contract_address: Addr::unchecked(
+                        "terra1qr2k6yjjd5p2kaewqvg93ag74k6gyjr7re37fs"
+                    ),
+                    liquidity_token: Addr::unchecked(
+                        "terra1wmaty65yt7mjw6fjfymkd9zsm6atsq82d9arcd"
+                    ),
+                    total_share: Uint128::from(59061419857567u64),
                 },
-                dex::astroport::PoolResponse {
+                dex::Pool {
                     assets: [
-                        dex::astroport::Asset {
-                            amount: 0u128.into(),
-                            info: dex::astroport::AssetInfo::Token {
+                        dex::Asset {
+                            amount: Uint128::zero(),
+                            amount_decimal: Decimal256::zero(),
+                            decimals: 6,
+                            token: Token::Cw20 {
                                 contract_addr: Addr::unchecked(
                                     "terra1dh9478k2qvqhqeajhn75a2a7dsnf74y5ukregw"
                                 ),
                             },
                         },
-                        dex::astroport::Asset {
-                            amount: 0u128.into(),
-                            info: dex::astroport::AssetInfo::Token {
+                        dex::Asset {
+                            amount: Uint128::zero(),
+                            amount_decimal: Decimal256::zero(),
+                            decimals: 6,
+                            token: Token::Cw20 {
                                 contract_addr: Addr::unchecked(
                                     "terra18ky9ln4g6x3n9f9s8a5ttshynv6lgzfppmrmyg"
                                 ),
                             },
                         },
                     ],
-                    total_share: 0u128.into(),
+                    contract_address: Addr::unchecked(
+                        "terra1qv0j5udg2lcnqkuy5rqt2n6n2z9m2zps6zfx2v"
+                    ),
+                    liquidity_token: Addr::unchecked(
+                        "terra1u5dvpptphgq43qgvj9cg7ce8a3gl6qhcpl6jxf"
+                    ),
+                    total_share: Uint128::zero(),
                 },
-            ],
+            ]
         );
 
         Ok(())
@@ -202,9 +225,7 @@ mod tests {
             .await;
 
         let http = Http::new(server.uri())?;
-        let pools = http
-            .v1_pool_responses::<dex::loopmarkets::PoolResponse>(factory, height)
-            .await?;
+        let pools = http.v1_pool_responses(factory, height).await?;
 
         assert_eq!(pools.len(), 3);
 
@@ -229,9 +250,7 @@ mod tests {
             .await;
 
         let http = Http::new(server.uri())?;
-        let pools = http
-            .v1_pool_responses::<dex::terraswap::PoolResponse>(factory, height)
-            .await?;
+        let pools = http.v1_pool_responses(factory, height).await?;
 
         assert_eq!(pools.len(), 3);
 

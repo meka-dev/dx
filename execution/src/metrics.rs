@@ -74,6 +74,7 @@ pub struct Metrics {
     pub latest_block_height: Family<LatestHeightLabels, Gauge>,
     pub lcd_call_duration: Family<lcd::Labels, Histogram>,
     pub mekapi_call_duration: Family<mekapi::Labels, Histogram>,
+    pub fetcher_pools_duration: Family<strategy::fetcher::Labels, Histogram>,
     pub strategy_duration: Family<strategy::metrics::DurationLabels, Histogram>,
     pub strategy_size_max: Family<strategy::metrics::TradesLabel, Gauge>,
     pub strategy_expected_profit_max: Family<strategy::metrics::TradesLabel, Gauge>,
@@ -103,6 +104,10 @@ impl Metrics {
         });
         let mekapi_call_duration =
             Family::<mekapi::Labels, Histogram>::new_with_constructor(|| {
+                Histogram::new(BUCKETS.clone().into_iter())
+            });
+        let fetcher_pools_duration =
+            Family::<strategy::fetcher::Labels, Histogram>::new_with_constructor(|| {
                 Histogram::new(BUCKETS.clone().into_iter())
             });
         let strategy_duration =
@@ -143,6 +148,11 @@ impl Metrics {
             prefix("mekapi_call_duration_seconds"),
             "Mekapi call latency",
             Box::new(mekapi_call_duration.clone()),
+        );
+        registry.register(
+            prefix("fetcher_pools_duration_seconds"),
+            "Fetcher pools retrieval durations",
+            Box::new(strategy_duration.clone()),
         );
         registry.register(
             prefix("strategy_duration_seconds"),
@@ -201,6 +211,7 @@ impl Metrics {
             latest_block_height,
             lcd_call_duration,
             mekapi_call_duration,
+            fetcher_pools_duration,
             strategy_duration,
             strategy_size_max,
             strategy_expected_profit_max,

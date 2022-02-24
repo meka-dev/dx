@@ -1,9 +1,10 @@
 use cosmwasm_bignumber::Decimal256;
-use tendermint::block;
-use terrars::{dex, MsgExecuteContract};
+use tendermint::block::{self};
+use terrars::{dex::Pools, MsgExecuteContract};
 
 use crate::accounts;
 
+pub mod fetcher;
 pub mod metrics;
 pub mod multi_dex;
 
@@ -14,7 +15,7 @@ pub struct Trade {
 }
 
 #[async_trait::async_trait]
-pub trait Strategy<L>: Send {
+pub trait Strategy: Send {
     /// Given the current prices of dex pairs a strategy should produce an ordered list of messages
     /// (most likely swaps) to be bundled into one atomic transaction.
     async fn execute(
@@ -22,6 +23,6 @@ pub trait Strategy<L>: Send {
         height: block::Height,
         sender: &terrars::AccountId,
         funds: &accounts::Balances,
-        pools: &dex::Pools<L>,
+        pools: &Pools,
     ) -> Vec<Trade>;
 }
