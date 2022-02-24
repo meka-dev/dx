@@ -5,7 +5,7 @@ use prometheus_client::encoding::text::Encode;
 use tendermint::block;
 use tokio::{sync::Mutex, time::Instant};
 
-use crate::{accounts, config, metrics, strategy::Strategy};
+use crate::{accounts, metrics, strategy::Strategy};
 use terrars::dex;
 
 use super::Trade;
@@ -53,7 +53,6 @@ impl Display for Output {
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
 pub struct DurationLabels {
-    version: String,
     module: Module,
     name: Name,
     output: Output,
@@ -61,7 +60,6 @@ pub struct DurationLabels {
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
 pub struct TradesLabel {
-    version: String,
     module: Module,
     name: Name,
 }
@@ -82,16 +80,11 @@ pub trait Labeled {
 pub struct Observed<S> {
     next: S,
     metrics: Arc<Mutex<metrics::Metrics>>,
-    version: String,
 }
 
 impl<S> Observed<S> {
-    pub fn new(version: impl Into<String>, metrics: Arc<Mutex<metrics::Metrics>>, next: S) -> Self {
-        Self {
-            metrics,
-            next,
-            version: version.into(),
-        }
+    pub fn new(metrics: Arc<Mutex<metrics::Metrics>>, next: S) -> Self {
+        Self { metrics, next }
     }
 }
 
@@ -144,8 +137,7 @@ where
         };
 
         log::debug!(
-            "version={} module={} name={} height={} output={} size={} expected_profit={} trades={} duration={}",
-            self.version,
+            "module={} name={} height={} output={} size={} expected_profit={} trades={} duration={}",
             self.next.module(),
             self.next.name(),
             height,
@@ -157,7 +149,6 @@ where
         );
 
         let trade_labels = TradesLabel {
-            version: config::VERSION.to_string(),
             module: self.next.module(),
             name: self.next.name(),
         };
@@ -165,7 +156,6 @@ where
         metrics
             .strategy_duration
             .get_or_create(&DurationLabels {
-                version: config::VERSION.to_string(),
                 module: self.next.module(),
                 name: self.next.name(),
                 output: output.clone(),

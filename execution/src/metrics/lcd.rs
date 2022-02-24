@@ -24,7 +24,6 @@ pub enum Method {
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
 pub struct Labels {
-    version: String,
     method: Method,
     result: metrics::ResultLabel,
 }
@@ -36,19 +35,14 @@ where
 {
     next: L,
     metrics: Arc<Mutex<metrics::Metrics>>,
-    version: String,
 }
 
 impl<L> Observed<L>
 where
     L: Clone,
 {
-    pub fn new(version: impl Into<String>, metrics: Arc<Mutex<metrics::Metrics>>, next: L) -> Self {
-        Self {
-            metrics,
-            next,
-            version: version.into(),
-        }
+    pub fn new(metrics: Arc<Mutex<metrics::Metrics>>, next: L) -> Self {
+        Self { metrics, next }
     }
 
     async fn observe(&self, start: Instant, method: Method, result: metrics::ResultLabel) {
@@ -56,11 +50,7 @@ where
             .lock()
             .await
             .lcd_call_duration
-            .get_or_create(&Labels {
-                version: self.version.clone(),
-                method,
-                result,
-            })
+            .get_or_create(&Labels { method, result })
             .observe(start.elapsed().as_secs_f64());
     }
 }
