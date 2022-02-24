@@ -78,16 +78,9 @@ async fn main() -> Result<(), Error> {
         .unwrap();
 
     // Set up lcd client for state retrieval. This is a naïve and slow way.
-    let lcd = metrics::lcd::Observed::new(
-        config::VERSION,
-        Arc::clone(&metrics),
-        lcd::Http::new(args.lcd_url)?,
-    );
-    let mekapi = metrics::mekapi::Observed::new(
-        config::VERSION,
-        Arc::clone(&metrics),
-        mekapi::Http::new(args.mekapi_url)?,
-    );
+    let lcd = metrics::lcd::Observed::new(Arc::clone(&metrics), lcd::Http::new(args.lcd_url)?);
+    let mekapi =
+        metrics::mekapi::Observed::new(Arc::clone(&metrics), mekapi::Http::new(args.mekapi_url)?);
 
     let mut token_cache = dex::TokenCache::default();
     let mut pools = {
@@ -136,6 +129,7 @@ async fn main() -> Result<(), Error> {
     // Subroutine to keep lastest block up-to-date.
     let mut latest_block_handle = {
         let client = client.clone();
+        let metrics = Arc::clone(&metrics);
         tokio::spawn(async move {
             log::debug!("Init block subscription");
 
@@ -149,7 +143,17 @@ async fn main() -> Result<(), Error> {
                     block: Some(block), ..
                 } = event.data
                 {
+                    let height = block.header().height.value();
                     latest_block_sender.send(block).unwrap();
+
+                    metrics
+                        .lock()
+                        .await
+                        .latest_block_height
+                        .get_or_create(&metrics::LatestHeightLabels {
+                            version: config::VERSION.to_string(),
+                        })
+                        .set(height);
                 }
             }
 
@@ -253,7 +257,6 @@ async fn main() -> Result<(), Error> {
         // TODO(xla): Load configured strategies.
         let strategies: Vec<Box<dyn strategy::Strategy<metrics::lcd::Observed<lcd::Http>> + Sync>> =
             vec![Box::new(strategy::metrics::Observed::new(
-                config::VERSION.to_string(),
                 Arc::clone(&metrics),
                 strategy::multi_dex::SinglePair::default(),
             ))];

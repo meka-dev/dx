@@ -17,7 +17,6 @@ pub enum Method {
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
 pub struct Labels {
-    version: String,
     method: Method,
     result: metrics::ResultLabel,
 }
@@ -26,16 +25,11 @@ pub struct Labels {
 pub struct Observed<L> {
     next: L,
     metrics: Arc<Mutex<metrics::Metrics>>,
-    version: String,
 }
 
 impl<L> Observed<L> {
-    pub fn new(version: impl Into<String>, metrics: Arc<Mutex<metrics::Metrics>>, next: L) -> Self {
-        Self {
-            metrics,
-            next,
-            version: version.into(),
-        }
+    pub fn new(metrics: Arc<Mutex<metrics::Metrics>>, next: L) -> Self {
+        Self { metrics, next }
     }
 }
 
@@ -61,7 +55,6 @@ where
             .await
             .mekapi_call_duration
             .get_or_create(&Labels {
-                version: self.version.clone(),
                 method: Method::V1PoolResponses,
                 result: if res.is_err() {
                     metrics::ResultLabel::Error

@@ -16,7 +16,7 @@ use prometheus_client::{
 };
 use tokio::{sync::Mutex, time::Instant};
 
-use crate::{broadcast, config, strategy};
+use crate::{broadcast, strategy};
 
 pub mod lcd;
 pub mod mekapi;
@@ -53,10 +53,14 @@ lazy_static! {
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
 struct HttpLabels {
-    version: String,
     method: String,
     path: String,
     status: String,
+}
+
+#[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
+pub struct LatestHeightLabels {
+    pub version: String,
 }
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
@@ -67,6 +71,7 @@ pub enum ResultLabel {
 
 pub struct Metrics {
     http_request_duration: Family<HttpLabels, Histogram>,
+    pub latest_block_height: Family<LatestHeightLabels, Gauge>,
     pub lcd_call_duration: Family<lcd::Labels, Histogram>,
     pub mekapi_call_duration: Family<mekapi::Labels, Histogram>,
     pub strategy_duration: Family<strategy::metrics::DurationLabels, Histogram>,
@@ -92,6 +97,7 @@ impl Metrics {
         let http_request_duration = Family::<HttpLabels, Histogram>::new_with_constructor(|| {
             Histogram::new(BUCKETS.clone().into_iter())
         });
+        let latest_block_height = Family::<LatestHeightLabels, Gauge>::default();
         let lcd_call_duration = Family::<lcd::Labels, Histogram>::new_with_constructor(|| {
             Histogram::new(BUCKETS.clone().into_iter())
         });
@@ -122,6 +128,11 @@ impl Metrics {
             prefix("http_request_duration_seconds"),
             "HTTP request durations",
             Box::new(http_request_duration.clone()),
+        );
+        registry.register(
+            prefix("latest_block_height"),
+            "Latest observed block height",
+            Box::new(latest_block_height.clone()),
         );
         registry.register(
             prefix("lcd_call_duration_seconds"),
@@ -187,6 +198,7 @@ impl Metrics {
         let registry = Arc::new(Mutex::new(registry));
         let metrics = Self {
             http_request_duration,
+            latest_block_height,
             lcd_call_duration,
             mekapi_call_duration,
             strategy_duration,
@@ -244,7 +256,6 @@ async fn track<B>(
         .await
         .http_request_duration
         .get_or_create(&HttpLabels {
-            version: config::VERSION.to_string(),
             path,
             method,
             status: response.status().as_str().to_string(),
