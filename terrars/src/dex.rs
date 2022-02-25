@@ -271,8 +271,6 @@ pub fn swap(
     use ::terraswap::{asset, pair};
 
     let normalized_amount = Uint256::from((amount / Decimal256::from_uint256(10u64.pow(12))).0);
-    let normalized_belief_price = belief_price * Decimal256::from_uint256(10u64.pow(6));
-    let normalized_max_spread = max_spread * Decimal256::from_uint256(10u64.pow(6));
 
     let (coins, msg) = match token {
         Token::Cw20 { contract_addr } => (
@@ -284,8 +282,8 @@ pub fn swap(
                     },
                     amount: normalized_amount.into(), // ????
                 },
-                belief_price: Some(normalized_belief_price.into()),
-                max_spread: Some(normalized_max_spread.into()),
+                belief_price: Some(belief_price.into()),
+                max_spread: Some(max_spread.into()),
                 to: None,
             },
         ),
@@ -301,7 +299,7 @@ pub fn swap(
                     },
                     amount: normalized_amount.into(),
                 },
-                belief_price: Some(normalized_belief_price.into()),
+                belief_price: Some(belief_price.into()),
                 max_spread: None,
                 to: None,
             },

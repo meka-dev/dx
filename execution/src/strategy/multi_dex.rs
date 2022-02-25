@@ -35,21 +35,28 @@ where
 
     for p in pools {
         let ask_token = p.ask_token(&bid_token);
-        if let Some((swap_ret, s)) = p.compute_swap(&bid_token, &ask_token, cb) {
-            if swap_ret == Decimal256::zero() || s == Decimal256::zero() {
+        if let Some((swap_ret, spread)) = p.compute_swap(&bid_token, &ask_token, cb) {
+            if swap_ret == Decimal256::zero() || spread == Decimal256::zero() {
                 return None;
             }
 
             log::debug!(
-                "swap {} {:?} for {} {:?} with a spread of {} on {}",
+                "swap {} {:?} for {} {:?} with a spread of {} using max_spread {} on {}",
                 cb,
                 bid_token,
                 swap_ret,
                 ask_token,
-                s,
+                spread,
+                max_spread(swap_ret, spread),
                 p.addr(),
             );
-            msgs.push(p.swap(sender, &bid_token, cb, belief_price(cb, swap_ret), s));
+            msgs.push(p.swap(
+                sender,
+                &bid_token,
+                cb,
+                belief_price(cb, swap_ret),
+                max_spread(swap_ret, spread),
+            ));
 
             cb = swap_ret;
             bid_token = ask_token;
@@ -71,6 +78,11 @@ where
 // only need this for the actual msg
 fn belief_price(amount_in: Decimal256, amount_out: Decimal256) -> Decimal256 {
     amount_in / amount_out
+}
+
+// XXX: astroport has an upper limit on max_spread of 0.5
+fn max_spread(amount_out: Decimal256, spread: Decimal256) -> Decimal256 {
+    spread / amount_out
 }
 
 // XXX: this might eventually go into a contract
