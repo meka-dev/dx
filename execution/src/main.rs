@@ -31,6 +31,7 @@ use terrars::{
 
 use execution::{
     accounts, broadcast, config, metrics,
+    risk_engine::{RiskClassifier, RiskEngine, StaticPoolDenyList},
     strategy::{self, Trade},
 };
 
@@ -82,6 +83,12 @@ async fn main() -> Result<(), Error> {
     let mekapi =
         metrics::mekapi::Observed::new(Arc::clone(&metrics), mekapi::Http::new(args.mekapi_url)?);
 
+    let deny_list = StaticPoolDenyList::new();
+    let risk: RiskEngine<
+        execution::metrics::lcd::Observed<lcd::Http>,
+        dyn RiskClassifier<execution::metrics::lcd::Observed<lcd::Http>>,
+    > = RiskEngine::new(vec![deny_list]);
+
     let mut token_cache = dex::TokenCache::default();
     let mut pools = {
         log::info!("Fetching DEX pairs with pool info");
@@ -103,7 +110,14 @@ async fn main() -> Result<(), Error> {
             Instant::now().sub(start)
         );
 
-        dex::Pools::from(pairs)
+        let ps = dex::Pools::from(
+            pairs
+                .into_iter()
+                .filter(|p| !risk.exclude(p.as_ref()))
+                .collect::<Vec<_>>(),
+        );
+        log::debug!("Left with {} pools after risk engine", ps.0.len(),);
+        ps
     };
 
     // Set up RPC client.
