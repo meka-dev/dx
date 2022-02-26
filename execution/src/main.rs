@@ -230,7 +230,7 @@ async fn main() -> Result<(), Error> {
                     },
                     // XXX(xla): Based on the observation that txs with two swaps cost around 180k
                     // and the typical gas price in uusd is 0.15.
-                    30000,
+                    200000,
                     Height::try_from(height.value() + 1).unwrap(),
                     msgs,
                 )?;
