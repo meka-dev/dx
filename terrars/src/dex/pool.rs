@@ -2,8 +2,10 @@ use std::{collections::HashMap, str::FromStr as _};
 
 use cosmrs::Denom;
 use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{to_binary, Addr, Uint128};
+use cw20::Cw20ExecuteMsg;
 use serde::Deserialize;
+use terraswap::pair::Cw20HookMsg;
 
 use crate::{
     dex::{Asset, Token, TokenPair},
@@ -28,6 +30,10 @@ impl Pool {
         } else {
             self.assets[0].token.clone()
         }
+    }
+
+    pub fn has_token(&self, tok: &Token) -> bool {
+        self.assets[0].token == *tok || self.assets[1].token == *tok
     }
 
     pub fn compute_swap(
@@ -141,27 +147,32 @@ pub fn swap(
 
     let normalized_amount = Uint256::from((amount / Decimal256::from_uint256(10u64.pow(12))).0);
 
-    let (coins, msg) = match token {
-        Token::Cw20 { contract_addr } => (
-            vec![],
-            pair::ExecuteMsg::Swap {
-                offer_asset: asset::Asset {
-                    info: asset::AssetInfo::Token {
-                        contract_addr: contract_addr.clone().to_string(),
-                    },
-                    amount: normalized_amount.into(), // ????
-                },
+    let (to, coins, msg) = match token {
+        Token::Cw20 { contract_addr } => {
+            // token -> native is a send to the token contract
+            let swp = Cw20HookMsg::Swap {
                 belief_price: Some(belief_price.into()),
                 max_spread: Some(max_spread.into()),
                 to: None,
-            },
-        ),
+            };
+            let snd = Cw20ExecuteMsg::Send {
+                amount: normalized_amount.into(),
+                msg: to_binary(&swp).unwrap(),
+                contract: contract_address.to_string(),
+            };
+            (
+                contract_addr.clone(),
+                vec![],
+                serde_json::to_vec(&snd).unwrap(),
+            )
+        },
         Token::Native { denom } => (
+            contract_address,
             vec![Coin {
                 amount,
                 denom: Denom::from_str(denom).unwrap(),
             }],
-            pair::ExecuteMsg::Swap {
+            serde_json::to_vec(&pair::ExecuteMsg::Swap {
                 offer_asset: asset::Asset {
                     info: asset::AssetInfo::NativeToken {
                         denom: denom.clone(),
@@ -171,14 +182,15 @@ pub fn swap(
                 belief_price: Some(belief_price.into()),
                 max_spread: Some(max_spread.into()),
                 to: None,
-            },
+            })
+            .unwrap(),
         ),
     };
 
     MsgExecuteContract {
         coins,
-        contract_address,
-        execute_msg: serde_json::to_vec(&msg).unwrap(),
+        contract_address: to,
+        execute_msg: msg,
         sender: sender.to_string(),
     }
 }
