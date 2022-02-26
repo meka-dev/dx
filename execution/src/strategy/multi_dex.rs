@@ -7,7 +7,10 @@ use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Decimal256 as StdDecimal256, Fraction, Uint256 as StdUint256};
 use itertools::Itertools;
 use tendermint::block;
-use terrars::{dex, AccountId, MsgExecuteContract};
+use terrars::{
+    dex::{self, Token},
+    AccountId, MsgExecuteContract,
+};
 
 use crate::{
     accounts,
@@ -180,7 +183,7 @@ impl Strategy for SinglePair {
         let start = dex::Token::ust();
 
         log::debug!("#{}", height);
-        for (token, pairs) in pools.index_by_token() {
+        for (token, pairs) in pools.index_by_token(&Token::ust()) {
             // We're only looking at cross dex two hop arbs, i.e. take all two pair
             // permutations for any token, eg ust -> luna on astroport and luna -> ust
             // on terraswap
