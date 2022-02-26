@@ -271,8 +271,6 @@ pub fn swap(
     use ::terraswap::{asset, pair};
 
     let normalized_amount = Uint256::from((amount / Decimal256::from_uint256(10u64.pow(12))).0);
-    let normalized_belief_price = belief_price * Decimal256::from_uint256(10u64.pow(6));
-    let normalized_max_spread = max_spread * Decimal256::from_uint256(10u64.pow(6));
 
     let (coins, msg) = match token {
         Token::Cw20 { contract_addr } => (
@@ -284,8 +282,8 @@ pub fn swap(
                     },
                     amount: normalized_amount.into(), // ????
                 },
-                belief_price: Some(normalized_belief_price.into()),
-                max_spread: Some(normalized_max_spread.into()),
+                belief_price: Some(belief_price.into()),
+                max_spread: Some(max_spread.into()),
                 to: None,
             },
         ),
@@ -301,8 +299,8 @@ pub fn swap(
                     },
                     amount: normalized_amount.into(),
                 },
-                belief_price: Some(normalized_belief_price.into()),
-                max_spread: None,
+                belief_price: Some(belief_price.into()),
+                max_spread: Some(max_spread.into()),
                 to: None,
             },
         ),
@@ -313,5 +311,44 @@ pub fn swap(
         contract_address,
         execute_msg: serde_json::to_vec(&msg).unwrap(),
         sender: sender.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Token;
+    use crate::{dex::swap, AccountId};
+    use std::str::FromStr;
+    use terraswap::pair::ExecuteMsg;
+
+    use cosmwasm_bignumber::Decimal256;
+    use cosmwasm_std::Addr;
+
+    #[test]
+    fn swap_number_integrity() {
+        let addr = Addr::unchecked("foobar");
+        let sender = AccountId::from_str("terra1eml7g3ll6jkyhtfv2g0gvqnzzpy6kjyd7qr302").unwrap();
+        let token = Token::Native {
+            denom: "umeka".to_owned(),
+        };
+        let amount = Decimal256::from_str("21.249999").unwrap();
+        let bp = Decimal256::from_str("1.234").unwrap();
+        let ms = Decimal256::from_str("0.005").unwrap();
+
+        let s = swap(addr, &sender, &token, amount, bp, ms);
+        assert_eq!(s.coins.first().unwrap().amount, amount);
+
+        let exec: ExecuteMsg = serde_json::from_slice(&s.execute_msg).unwrap();
+        if let ExecuteMsg::Swap {
+            belief_price,
+            max_spread,
+            ..
+        } = exec
+        {
+            assert_eq!(belief_price.unwrap().to_string(), bp.to_string());
+            assert_eq!(max_spread.unwrap().to_string(), ms.to_string());
+        } else {
+            assert!(false, "did not produce a swap");
+        }
     }
 }
