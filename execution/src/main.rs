@@ -207,7 +207,16 @@ async fn main() -> Result<(), Error> {
                         .await;
 
                         if !args.dry_run {
-                            let _check = client.broadcast_tx_sync(Transaction::from(tx)).await?;
+                            match client.broadcast_tx_sync(Transaction::from(tx)).await {
+                                Ok(check) => {
+                                    log::info!(
+                                        "msg=submit hash={} code={:?}",
+                                        check.hash,
+                                        check.code
+                                    )
+                                },
+                                Err(err) => log::error!("tx submit failed: {}", err),
+                            }
                             sequence += 1;
                         }
                     },
