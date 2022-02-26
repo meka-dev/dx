@@ -89,16 +89,16 @@ impl<S> Observed<S> {
 }
 
 #[async_trait::async_trait]
-impl<S, L> Strategy<L> for Observed<S>
+impl<S> Strategy for Observed<S>
 where
-    S: Strategy<L> + Labeled + Sync,
+    S: Strategy + Labeled + Sync,
 {
     async fn execute(
         &self,
         height: block::Height,
         sender: &terrars::AccountId,
         funds: &accounts::Balances,
-        pools: &dex::Pools<L>,
+        pools: &dex::Pools,
     ) -> Vec<Trade> {
         let start = Instant::now();
         let trades = self.next.execute(height, sender, funds, pools).await;

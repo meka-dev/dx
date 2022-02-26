@@ -1,98 +1,84 @@
-use std::{collections::HashMap, marker::PhantomData};
+use std::collections::HashSet;
 
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Uint128};
 
-use terrars::{dex::Pool, lcd::Lcd};
+use terrars::dex::Pool;
 
-pub struct RiskEngine<L, M>
+pub struct RiskEngine<M>
 where
-    M: RiskClassifier<L> + ?Sized,
+    M: RiskClassifier + ?Sized,
 {
     classifiers: Vec<Box<M>>,
-    _lcd: PhantomData<L>,
 }
 
-impl<L, M> RiskEngine<L, M>
+impl<M> RiskEngine<M>
 where
-    M: RiskClassifier<L> + ?Sized,
+    M: RiskClassifier + ?Sized,
 {
-    pub fn new(classifiers: Vec<Box<M>>) -> RiskEngine<L, M> {
-        RiskEngine {
-            classifiers,
-            _lcd: PhantomData,
-        }
+    pub fn new(classifiers: Vec<Box<M>>) -> RiskEngine<M> {
+        RiskEngine { classifiers }
     }
 
-    pub fn exclude(&self, pool: &dyn Pool<L>) -> bool {
+    pub fn exclude(&self, pool: &Pool) -> bool {
         self.classifiers.iter().any(|cls| cls.exclude(pool))
     }
 }
 
-pub trait RiskClassifier<L>: Send + Sync {
-    fn exclude(&self, item: &dyn Pool<L>) -> bool;
+pub trait RiskClassifier: Send + Sync {
+    fn exclude(&self, item: &Pool) -> bool;
 }
 
 #[derive(Default)]
-pub struct StaticPoolDenyList(pub HashMap<Addr, bool>);
+pub struct EmptyPoolDeny {}
 
-impl StaticPoolDenyList {
-    pub fn new() -> Box<Self> {
-        let h: HashMap<Addr, bool> = HashMap::from([
-            (
-                Addr::unchecked("terra1gs8pm90pllcz5t7hsqs2fnxjv6pxzf47gg3eua"),
-                true,
-            ),
-            (
-                Addr::unchecked("terra1rhk92dvz3tjayymy8pl08gpkmamnud7ttzc03h"),
-                true,
-            ),
-            (
-                Addr::unchecked("terra1jwl5rzg3xe0a3f8r26l0l3d957vlxm833srtcp"),
-                true,
-            ),
-            (
-                Addr::unchecked("terra1ng5xg5p63c3qvjpwqsmry2dz8mr9n39v8eztv9"),
-                true,
-            ),
-            (
-                Addr::unchecked("terra1z3u6mw3s20kt67ts9txrg2mjkzcwt7tgasp7gw"),
-                true,
-            ),
-            (
-                Addr::unchecked("terra1lnr6aacxfng34m69076s2mdfjzt8nev2p6z5q0"),
-                true,
-            ),
-            (
-                Addr::unchecked("terra1nf6wl37jxthskggvesngsp7y50s0jchmur57v3"),
-                true,
-            ),
-        ]);
-
-        Box::new(StaticPoolDenyList(h))
+impl RiskClassifier for EmptyPoolDeny {
+    fn exclude(&self, item: &Pool) -> bool {
+        item.total_share == Uint128::zero()
+            || item.assets[0].amount == Uint128::zero()
+            || item.assets[1].amount == Uint128::zero()
     }
 }
 
-impl<L: Lcd> RiskClassifier<L> for StaticPoolDenyList {
-    fn exclude(&self, item: &dyn Pool<L>) -> bool {
-        self.0.contains_key(&item.addr())
+#[derive(Default)]
+pub struct StaticPoolDenyList(pub HashSet<Addr>);
+
+impl StaticPoolDenyList {
+    pub fn new() -> Self {
+        let h: HashSet<Addr> = HashSet::from([
+            Addr::unchecked("terra1gs8pm90pllcz5t7hsqs2fnxjv6pxzf47gg3eua"),
+            Addr::unchecked("terra1rhk92dvz3tjayymy8pl08gpkmamnud7ttzc03h"),
+            Addr::unchecked("terra1jwl5rzg3xe0a3f8r26l0l3d957vlxm833srtcp"),
+            Addr::unchecked("terra1ng5xg5p63c3qvjpwqsmry2dz8mr9n39v8eztv9"),
+            Addr::unchecked("terra1z3u6mw3s20kt67ts9txrg2mjkzcwt7tgasp7gw"),
+            Addr::unchecked("terra1lnr6aacxfng34m69076s2mdfjzt8nev2p6z5q0"),
+            Addr::unchecked("terra1nf6wl37jxthskggvesngsp7y50s0jchmur57v3"),
+        ]);
+
+        Self(h)
+    }
+}
+
+impl RiskClassifier for StaticPoolDenyList {
+    fn exclude(&self, item: &Pool) -> bool {
+        self.0.contains(&item.contract_address)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, str::FromStr};
+    use std::{collections::HashSet, str::FromStr as _};
 
     use cosmwasm_bignumber::Decimal256;
     use cosmwasm_std::{Addr, Uint128};
     use terrars::{
-        dex::{terraswap::Pair, Asset, Token},
+        dex::{Asset, Pool, Token},
         lcd::{self, Lcd},
     };
 
     use super::*;
 
-    fn mkpool<L: Lcd>(addr: Addr) -> impl Pool<L> {
-        let coins = [
+    fn mkpool<L: Lcd>(addr: Addr) -> Pool {
+        let assets = [
             Asset {
                 token: Token::Native {
                     denom: "uluna".to_owned(),
@@ -110,25 +96,19 @@ mod tests {
                 decimals: 6,
             },
         ];
-        Pair {
-            contract_addr: addr,
-            coins,
-            liquidity_token: "foobar".to_owned(),
+        Pool {
+            contract_address: addr,
+            assets,
+            liquidity_token: Addr::unchecked("foobar"),
             total_share: Uint128::new(1u128),
         }
     }
 
     #[test]
     fn static_deny_list() {
-        let h = HashMap::from([
-            (
-                Addr::unchecked("terra1gs8pm90pllcz5t7hsqs2fnxjv6pxzf47gg3eua"),
-                true,
-            ),
-            (
-                Addr::unchecked("terra1rhk92dvz3tjayymy8pl08gpkmamnud7ttzc03h"),
-                true,
-            ),
+        let h = HashSet::from([
+            Addr::unchecked("terra1gs8pm90pllcz5t7hsqs2fnxjv6pxzf47gg3eua"),
+            Addr::unchecked("terra1rhk92dvz3tjayymy8pl08gpkmamnud7ttzc03h"),
         ]);
         let dl = StaticPoolDenyList(h);
         let pool = mkpool::<lcd::Http>(Addr::unchecked(

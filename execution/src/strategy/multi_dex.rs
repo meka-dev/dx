@@ -7,7 +7,7 @@ use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Decimal256 as StdDecimal256, Fraction, Uint256 as StdUint256};
 use itertools::Itertools;
 use tendermint::block;
-use terrars::{dex, lcd::Lcd, AccountId, MsgExecuteContract};
+use terrars::{dex, AccountId, MsgExecuteContract};
 
 use crate::{
     accounts,
@@ -20,15 +20,12 @@ pub struct SinglePair {}
 // Iterate through a bunch of pools and properly arrange them s.t.
 // asset0 is always bid and asset1 is the ask.
 // XXX: do we actually want to implement this here?
-fn trade_path<L>(
+fn trade_path(
     sender: &AccountId,
-    pools: &[&Box<dyn dex::Pool<L>>; 2],
+    pools: &[&dex::Pool; 2],
     start: &dex::Token,
     amount: Decimal256,
-) -> Option<(Decimal256, Vec<MsgExecuteContract>)>
-where
-    L: Lcd,
-{
+) -> Option<(Decimal256, Vec<MsgExecuteContract>)> {
     let mut msgs = vec![];
     let mut cb = amount;
     let mut bid_token = start.clone();
@@ -48,7 +45,7 @@ where
                 ask_token,
                 spread,
                 max_spread(swap_ret, spread),
-                p.addr(),
+                p.contract_address,
             );
             msgs.push(p.swap(
                 sender,
@@ -61,7 +58,7 @@ where
             cb = swap_ret;
             bid_token = ask_token;
         } else {
-            log::debug!("could not swap on {}", p.addr());
+            log::debug!("could not swap on {}", p.contract_address);
             return None;
         }
     }
@@ -87,28 +84,25 @@ fn max_spread(amount_out: Decimal256, spread: Decimal256) -> Decimal256 {
 
 // XXX: this might eventually go into a contract
 // XXX: we also need to be aware of our own balances
-fn compute_cycle_liq<L>(
+fn compute_cycle_liq(
     start: &dex::Token,
-    left: &Box<dyn dex::Pool<L>>,
-    right: &Box<dyn dex::Pool<L>>,
-) -> Option<Decimal256>
-where
-    L: Lcd,
-{
+    left: &dex::Pool,
+    right: &dex::Pool,
+) -> Option<Decimal256> {
     let r2 = Decimal256::from_str("0.997").unwrap();
 
-    let [p0_bid, p0_ask] = if left.coins()[0].token == *start {
-        left.coins()
+    let [p0_bid, p0_ask] = if left.assets[0].token == *start {
+        left.assets.clone()
     } else {
-        let mut ass = left.coins();
+        let mut ass = left.assets.clone();
         ass.reverse();
         ass
     };
 
-    let [p1_bid, p1_ask] = if right.coins()[0].token == p0_ask.token {
-        right.coins()
+    let [p1_bid, p1_ask] = if right.assets[0].token == p0_ask.token {
+        right.assets.clone()
     } else {
-        let mut ass = right.coins();
+        let mut ass = right.assets.clone();
         ass.reverse();
         ass
     };
@@ -172,16 +166,13 @@ impl metrics::Labeled for SinglePair {
 
 // XXX: make sure to properly calculate tax
 #[async_trait::async_trait]
-impl<L> Strategy<L> for SinglePair
-where
-    L: Lcd,
-{
+impl Strategy for SinglePair {
     async fn execute(
         &self,
         height: block::Height,
         sender: &terrars::AccountId,
         funds: &accounts::Balances,
-        pools: &dex::Pools<L>,
+        pools: &dex::Pools,
     ) -> Vec<Trade> {
         let mut trades = vec![];
 
@@ -205,16 +196,16 @@ where
                 let (left, right) = (&pools.0[*(indices[0])], &pools.0[*(indices[1])]);
                 log::debug!(
                     "compute liq for path left {:} right {:}",
-                    left.addr(),
-                    right.addr()
+                    left.contract_address,
+                    right.contract_address
                 );
 
                 if let Some(liq) = compute_cycle_liq(&start, left, right) {
                     log::debug!(
                         "got a good trade {} {} to {}",
                         liq,
-                        left.addr(),
-                        right.addr(),
+                        left.contract_address,
+                        right.contract_address,
                     );
                     // Check if we have sufficient funds available to execute the optimal trade.
                     // If not, then we just trade max and hope we can still pull enough of a

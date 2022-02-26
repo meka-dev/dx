@@ -7,11 +7,11 @@ pub const PREFIX: &str = "terra";
 
 pub type Balances = HashMap<dex::Token, Decimal256>;
 
-pub async fn fetch<L>(lcd: &L, account_id: &AccountId) -> anyhow::Result<Balances>
+pub async fn fetch<L>(lcd: L, account_id: AccountId) -> anyhow::Result<Balances>
 where
     L: Lcd,
 {
-    let coins = lcd.bank_balances(account_id).await?;
+    let coins = lcd.bank_balances(&account_id).await?;
 
     let mut balances = HashMap::new();
     for coin in coins {
