@@ -73,6 +73,11 @@ impl Pool {
 
         Some((out, spread))
     }
+
+    pub fn has_asset(&self, token: &Token) -> bool {
+        self.assets[0].token == *token || self.assets[1].token == *token
+    }
+
     pub fn swap(
         &self,
         sender: &AccountId,
@@ -105,10 +110,14 @@ impl From<Vec<Pool>> for Pools {
 }
 
 impl Pools {
-    pub fn index_by_token(&self) -> TokenIndex {
+    pub fn index_by_token(&self, filter: &Token) -> TokenIndex {
         let mut map = HashMap::new();
 
         for (index, pool) in self.0.iter().enumerate() {
+            if !pool.has_asset(filter) {
+                continue;
+            }
+
             for asset in &pool.assets {
                 let list = map.entry(asset.token.clone()).or_insert(vec![]);
                 list.push(index);
