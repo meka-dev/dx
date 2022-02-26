@@ -114,7 +114,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [ubuntu-latest]
         toolchain: [stable]
 
     name: Test
