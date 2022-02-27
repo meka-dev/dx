@@ -7,8 +7,9 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
 use terrars::{
+    base::Coin,
     lcd::{self, Lcd, Response},
-    tx, AccountId, BaseAccount, Coin,
+    tx, AccountId, BaseAccount,
 };
 
 use crate::metrics;

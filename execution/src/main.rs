@@ -7,11 +7,10 @@
 use std::{fs, sync::Arc};
 
 use anyhow::Result;
-use cosmwasm_bignumber::Decimal256;
 use futures::{FutureExt as _, StreamExt};
 use tendermint::{
     abci::Transaction,
-    block::{self, Height},
+    block::{self},
 };
 use tendermint_rpc::{
     event::EventData,
@@ -23,7 +22,7 @@ use tokio::sync::{mpsc, watch};
 use terrars::{
     dex,
     lcd::{self, Lcd},
-    mekapi, tx, BaseAccount, Coin, Message, Msg as _,
+    mekapi, BaseAccount, Message, Msg as _,
 };
 
 use execution::{
@@ -171,59 +170,66 @@ async fn main() -> Result<(), Error> {
                 },
             )) = broadcast_receiver.recv().await
             {
-                let messages_len = messages.len();
                 let msgs: Vec<Message> = messages
                     .into_iter()
                     .map(|msg| msg.to_any().unwrap())
                     .collect();
 
-                // TODO(xla): Fetch gas prices.
-                let tx = terrars::tx::sign(
+                let simulate_tx = terrars::tx::sign(
                     args.chain_id.clone(),
                     // FIXME(xla): Proper error handling.
                     &terrars::SigningKey::from_bytes(&secret_key_bytes).unwrap(),
                     account.account_number,
                     sequence,
-                    Coin {
-                        denom: "uusd".parse().unwrap(),
-                        amount: Decimal256::one(),
-                    },
-                    // XXX(xla): Based on the observation that txs with two swaps cost around 180k
-                    // and the typical gas price in uusd is 0.15.
-                    200000,
-                    Height::try_from(height.value() + 1).unwrap(),
-                    msgs,
+                    0,
+                    0,
+                    height.increment(),
+                    msgs.clone(),
                 )?;
 
-                match lcd.tx_simulate(&tx).await? {
-                    lcd::Response::Ok(tx::SimulateResponse { gas_info, .. }) => {
-                        broadcast::observe(
-                            Arc::clone(&metrics),
-                            messages_len,
-                            expected_profit,
-                            // TODO(xla): Use actual gas prices.
-                            Decimal256::from_uint256(gas_info.gas_used) * Decimal256::percent(15),
-                        )
-                        .await;
+                let expected_profit = (expected_profit.0 / 10u64.pow(12).into()).as_u64();
 
-                        if !args.dry_run {
-                            match client.broadcast_tx_sync(Transaction::from(tx)).await {
-                                Ok(check) => {
-                                    log::info!(
-                                        "msg=submit hash={} code={:?}",
-                                        check.hash,
-                                        check.code
-                                    )
-                                },
-                                Err(err) => log::error!("tx submit failed: {}", err),
-                            }
-                            sequence += 1;
+                if let Ok(gas_info) = broadcast::simulate(
+                    &lcd.clone(),
+                    Arc::clone(&metrics),
+                    &simulate_tx,
+                    msgs.len(),
+                    expected_profit,
+                )
+                .await
+                {
+                    let fee = (gas_info.gas_used as f64 * 0.18) as u64;
+                    if !args.dry_run && expected_profit > fee {
+                        let tx = terrars::tx::sign(
+                            args.chain_id.clone(),
+                            // FIXME(xla): Proper error handling.
+                            &terrars::SigningKey::from_bytes(&secret_key_bytes).unwrap(),
+                            account.account_number,
+                            sequence,
+                            // TODO(xla): Use actual gas prices.
+                            // XXX(xla): Based on the observation that txs with two swaps cost
+                            // around 180k and the typical gas price in
+                            // uusd is 0.15.
+                            fee,
+                            (gas_info.gas_used as f64 * 1.05) as u64,
+                            height.increment(),
+                            msgs,
+                        )?;
+                        match client.broadcast_tx_sync(Transaction::from(tx)).await {
+                            Ok(check) => {
+                                if check.code.is_ok() {
+                                    sequence += 1;
+                                }
+                                log::info!(
+                                    "msg=submit hash={} code={:?} log={}",
+                                    check.hash,
+                                    check.code,
+                                    check.log
+                                );
+                            },
+                            Err(err) => log::error!("tx submit failed: {}", err),
                         }
-                    },
-                    lcd::Response::Error(lcd::Error { message, .. }) => {
-                        // TODO(xla): Emit as metric.
-                        log::error!("tx simulation failed: {}", message);
-                    },
+                    }
                 }
             }
 

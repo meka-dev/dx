@@ -11,9 +11,8 @@ pub use cosmrs::{
 use cosmwasm_std::Addr;
 
 mod bank;
-mod base;
+pub mod base;
 pub mod dex;
-pub use base::Coin;
 pub mod lcd;
 pub mod mekapi;
 mod proto;
@@ -22,7 +21,7 @@ mod wasm;
 
 #[derive(Clone, Debug)]
 pub struct MsgExecuteContract {
-    pub coins: Vec<Coin>,
+    pub coins: Vec<base::Coin>,
     pub contract_address: Addr,
     pub execute_msg: Vec<u8>,
     pub sender: String,

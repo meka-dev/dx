@@ -7,7 +7,7 @@ use cosmwasm_std::Addr;
 use reqwest::{Client, ClientBuilder, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
-use crate::{bank::QueryAllBalancesResponse, tx, wasm::QueryContractStoreResponse, Coin};
+use crate::{bank::QueryAllBalancesResponse, base, tx, wasm::QueryContractStoreResponse};
 
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
@@ -27,9 +27,9 @@ pub enum Response<T> {
 pub trait Lcd: Send + Sync {
     async fn auth_account(&self, account_id: &AccountId) -> Result<Option<BaseAccount>>;
 
-    async fn bank_balances(&self, account_id: &AccountId) -> Result<Vec<Coin>>;
+    async fn bank_balances(&self, account_id: &AccountId) -> Result<Vec<base::Coin>>;
 
-    async fn tx_compute_tax(&self, tx: &[u8]) -> Result<Response<Vec<Coin>>>;
+    async fn tx_compute_tax(&self, tx: &[u8]) -> Result<Response<Vec<base::Coin>>>;
     async fn tx_simulate(&self, tx: &[u8]) -> Result<Response<tx::SimulateResponse>>;
 
     async fn wasm_contract_store<
@@ -74,7 +74,7 @@ impl Lcd for Http {
         Ok(res.account)
     }
 
-    async fn bank_balances(&self, account_id: &AccountId) -> Result<Vec<Coin>> {
+    async fn bank_balances(&self, account_id: &AccountId) -> Result<Vec<base::Coin>> {
         let res = self
             .client
             .get(
@@ -89,7 +89,7 @@ impl Lcd for Http {
         Ok(res.balances)
     }
 
-    async fn tx_compute_tax(&self, tx: &[u8]) -> Result<Response<Vec<Coin>>> {
+    async fn tx_compute_tax(&self, tx: &[u8]) -> Result<Response<Vec<base::Coin>>> {
         let raw = self
             .client
             .post(self.base_url.join("terra/tx/v1beta1/compute_tax")?)
@@ -173,7 +173,7 @@ mod tests {
         Mock, MockServer, ResponseTemplate,
     };
 
-    use crate::{tx, AccountId, BaseAccount, Coin, SigningKey};
+    use crate::{base::Coin, tx, AccountId, BaseAccount, SigningKey};
 
     use super::{Http, Lcd, Response};
 
@@ -332,10 +332,7 @@ mod tests {
                 &private_key,
                 bank_account.account_number,
                 bank_account.sequence,
-                Coin {
-                    denom: "uusd".parse().unwrap(),
-                    amount: cosmwasm_bignumber::Decimal256::one(),
-                },
+                1000,
                 1000,
                 Height::try_from(0u64)?,
                 vec![send.to_any()?],
