@@ -25,9 +25,9 @@ pub async fn observe(
     fee: Decimal256,
 ) {
     let outcome = if fee <= expected_profit {
-        Outcome::NotProfitable
-    } else {
         Outcome::Profitable
+    } else {
+        Outcome::NotProfitable
     };
     let metrics = metrics.lock().await;
     metrics
