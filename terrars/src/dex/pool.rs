@@ -8,8 +8,9 @@ use serde::Deserialize;
 use terraswap::pair::Cw20HookMsg;
 
 use crate::{
+    base::Coin,
     dex::{Asset, Token, TokenPair},
-    AccountId, Coin, MsgExecuteContract,
+    AccountId, MsgExecuteContract,
 };
 
 pub type TokenIndex = HashMap<Token, Vec<usize>>;

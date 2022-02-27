@@ -1,3 +1,5 @@
+use std::str::FromStr as _;
+
 use anyhow::Result;
 use cosmrs::{
     crypto::secp256k1::SigningKey,
@@ -37,14 +39,20 @@ pub fn sign(
     private_key: &SigningKey,
     account_number: u64,
     sequence: u64,
-    amount: Coin,
+    amount: u64,
     gas_limit: impl Into<Gas>,
     timeout_height: impl Into<block::Height>,
     msgs: Vec<Message>,
 ) -> Result<Vec<u8>> {
     let body = Body::new(msgs, "", timeout_height);
     let signer_info = SignerInfo::single_direct(Some(private_key.public_key()), sequence);
-    let auth_info = signer_info.auth_info(Fee::from_amount_and_gas(amount.into(), gas_limit));
+    let auth_info = signer_info.auth_info(Fee::from_amount_and_gas(
+        cosmrs::Coin {
+            amount: amount.into(),
+            denom: cosmrs::Denom::from_str("uusd").unwrap(),
+        },
+        gas_limit,
+    ));
     let doc = SignDoc::new(&body, &auth_info, &chain_id, account_number)
         .map_err(|err| anyhow::anyhow!("SignDoc creation failed: {}", err))?;
     let signed = doc

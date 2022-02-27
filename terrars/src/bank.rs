@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{base::query::PageResponse, Coin};
+use crate::base::{query::PageResponse, Coin};
 
 #[derive(Clone, PartialEq, Deserialize, Serialize)]
 pub struct QueryAllBalancesResponse {
