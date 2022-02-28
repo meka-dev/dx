@@ -49,12 +49,13 @@ impl Pool {
             _ => return None,
         };
 
-        let ask_reserve = ask_asset.amount_decimal;
-        let bid_reserve = bid_asset.amount_decimal;
+        let ask_reserve: Uint256 = ask_asset.amount.into();
+        let bid_reserve: Uint256 = bid_asset.amount.into();
+        let amt: Uint256 = (amount.0 / 10u64.pow(12).into()).into();
 
         log::debug!(
             "amount {} ask_reserve {} bid_reserve {}",
-            amount,
+            amt,
             ask_reserve,
             bid_reserve
         );
@@ -63,22 +64,27 @@ impl Pool {
             return None;
         }
 
-        if bid_reserve == Decimal256::zero() || ask_reserve == Decimal256::zero() {
+        if bid_reserve == Uint256::zero() || ask_reserve == Uint256::zero() {
             return None;
         }
 
         let cp = ask_reserve * bid_reserve;
         log::debug!("cp {}", cp);
-        let ret = ask_reserve - cp / (bid_reserve + amount);
+        let ret: Uint256 = (Decimal256::from_uint256(ask_reserve)
+            - Decimal256::from_ratio(cp, bid_reserve + amt))
+            * Uint256::one();
         log::debug!("ret {}", ret);
-        let spread = amount * ask_reserve / bid_reserve - ret;
+        let spread: Uint256 = (amt * Decimal256::from_ratio(ask_reserve, bid_reserve)) - ret;
         log::debug!("spread {}", spread);
         let fee = ret * Decimal256::permille(3); // XXX: get from chain
         log::debug!("fee {}", fee);
         let out = ret - fee;
         log::debug!("out {}", out);
 
-        Some((out, spread))
+        Some((
+            Decimal256(out.0 * 10u64.pow(18 - bid_asset.decimals as u32).into()),
+            Decimal256(spread.0 * 10u64.pow(18 - bid_asset.decimals as u32).into()),
+        ))
     }
 
     pub fn has_asset(&self, token: &Token) -> bool {
