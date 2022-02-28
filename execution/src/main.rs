@@ -10,7 +10,7 @@ use anyhow::Result;
 use futures::{FutureExt as _, StreamExt};
 use tendermint::{
     abci::Transaction,
-    block::{self},
+    block::{self, Height},
 };
 use tendermint_rpc::{
     event::EventData,
@@ -162,7 +162,7 @@ async fn main() -> Result<(), Error> {
             let mut sequence = account.sequence;
 
             while let Some((
-                height,
+                _height,
                 Trade {
                     expected_profit,
                     messages,
@@ -183,7 +183,7 @@ async fn main() -> Result<(), Error> {
                     sequence,
                     0,
                     0,
-                    height.increment(),
+                    Height::try_from(0 as u64).unwrap(),
                     msgs.clone(),
                 )?;
 
@@ -212,7 +212,7 @@ async fn main() -> Result<(), Error> {
                             // uusd is 0.15.
                             fee,
                             (gas_info.gas_used as f64 * 1.05) as u64,
-                            height.increment(),
+                            Height::try_from(0 as u64).unwrap(),
                             msgs,
                         )?;
                         match client.broadcast_tx_sync(Transaction::from(tx)).await {
