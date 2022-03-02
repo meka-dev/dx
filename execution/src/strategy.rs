@@ -8,6 +8,7 @@ pub mod fetcher;
 pub mod metrics;
 pub mod multi_dex;
 
+#[derive(Debug)]
 pub struct Trade {
     pub size: Decimal256,
     pub expected_profit: Decimal256,

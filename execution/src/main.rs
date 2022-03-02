@@ -31,28 +31,8 @@ use execution::{
     strategy::{self, fetcher::Fetcher as _, Trade},
 };
 
-#[derive(Debug, thiserror::Error)]
-enum Error {
-    #[error(transparent)]
-    Any(#[from] anyhow::Error),
-    #[error("Broadcast routine has vanished")]
-    BroadcasterGone,
-    #[error("Node is still catching up")]
-    NodeCatchingUp,
-    #[error(transparent)]
-    Hex(#[from] hex::FromHexError),
-    #[error(transparent)]
-    Hyper(#[from] hyper::Error),
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
-    #[error(transparent)]
-    Join(#[from] tokio::task::JoinError),
-    #[error(transparent)]
-    Rpc(#[from] tendermint_rpc::Error),
-}
-
 #[tokio::main]
-async fn main() -> Result<(), Error> {
+async fn main() -> Result<()> {
     // Set up logging.
     env_logger::init();
 
@@ -87,10 +67,9 @@ async fn main() -> Result<(), Error> {
     // Ensure the data source has caught up to the latest state.
     let status = client.status().await?;
     if status.sync_info.catching_up {
-        return Err(Error::NodeCatchingUp);
+        log::error!("Node status: {:?}", status);
+        return Err(anyhow::anyhow!("node still catching up"));
     }
-
-    log::info!("Node status: {:?}", status);
 
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.
@@ -130,7 +109,7 @@ async fn main() -> Result<(), Error> {
                 }
             }
 
-            Ok::<(), Error>(())
+            Ok::<(), anyhow::Error>(())
         })
         .fuse()
     };
@@ -183,7 +162,7 @@ async fn main() -> Result<(), Error> {
                     sequence,
                     0,
                     0,
-                    Height::try_from(0 as u64).unwrap(),
+                    Height::try_from(0_u64).unwrap(),
                     msgs.clone(),
                 )?;
 
@@ -212,7 +191,7 @@ async fn main() -> Result<(), Error> {
                             // uusd is 0.15.
                             fee,
                             (gas_info.gas_used as f64 * 1.05) as u64,
-                            Height::try_from(0 as u64).unwrap(),
+                            Height::try_from(0_u64).unwrap(),
                             msgs,
                         )?;
                         match client.broadcast_tx_sync(Transaction::from(tx)).await {
@@ -233,7 +212,7 @@ async fn main() -> Result<(), Error> {
                 }
             }
 
-            Ok::<(), Error>(())
+            Ok::<(), anyhow::Error>(())
         })
         .fuse()
     };
@@ -280,14 +259,13 @@ async fn main() -> Result<(), Error> {
                     for trade in trades {
                         broadcast_sender
                             .send((latest_block.header.height, trade))
-                            .await
-                            .map_err(|_| Error::BroadcasterGone)?;
+                            .await?;
                     }
                 }
             }
         }
 
-        Ok::<(), Error>(())
+        Ok::<(), anyhow::Error>(())
     })
     .fuse();
 
@@ -303,5 +281,5 @@ async fn main() -> Result<(), Error> {
         }
     }
 
-    client.close().map_err(Error::from)
+    Ok(client.close()?)
 }
