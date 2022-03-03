@@ -282,6 +282,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "axum-extra",
+ "hyper",
+ "lazy_static",
+ "prometheus-client",
+ "tokio",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -789,9 +802,8 @@ dependencies = [
  "anyhow",
  "argh",
  "async-trait",
- "axum",
- "axum-extra",
  "bigint",
+ "common",
  "cosmwasm-bignumber",
  "cosmwasm-std",
  "env_logger",
@@ -799,16 +811,13 @@ dependencies = [
  "hex",
  "hyper",
  "itertools",
- "lazy_static",
  "log",
- "num_cpus",
  "prometheus-client",
  "serde",
  "serde_json",
  "tendermint",
  "tendermint-rpc",
  "terrars",
- "thiserror",
  "tokio",
 ]
 

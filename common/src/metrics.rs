@@ -1,0 +1,165 @@
+use std::{fmt, future::Future, net::SocketAddr, sync::Arc};
+
+use axum::{
+    extract::{Extension, MatchedPath},
+    http::Request,
+    response::{Headers, IntoResponse},
+    routing::get,
+    AddExtensionLayer, Router, Server,
+};
+use axum_extra::{middleware, middleware::Next};
+use lazy_static::lazy_static;
+use prometheus_client::{
+    encoding::text::{encode, Encode, SendEncodeMetric},
+    metrics::{family::Family, histogram::Histogram},
+    registry::{self, Unit},
+};
+use tokio::{sync::Mutex, time::Instant};
+
+const HEADER_OPENMETRICS: &str = "application/openmetrics-text; version=1.0.0; charset=utf-8";
+const ORG_NAMESPACE: &str = "mekatek";
+
+lazy_static! {
+    pub static ref BUCKETS: Vec<f64> = vec![
+        0.000100, // 100us
+        0.000250, // 250us
+        0.000500, // 500us
+        0.001000, // 1ms
+        0.002500, // 2.5ms
+        0.005000, // 5ms
+        0.010000, // 10ms
+        0.025000, // 25ms
+        0.050000, // 50ms
+        0.100000, // 100ms
+        0.200000, // 200ms
+        0.300000, // 300ms
+        0.400000, // 400ms
+        0.500000, // 500ms
+        0.600000, // 600ms
+        0.700000, // 700ms
+        0.800000, // 800ms
+        0.900000, // 900ms
+        1.000000, // 1s
+        2.000000, // 2s
+        3.000000, // 3s
+    ];
+}
+
+#[derive(Clone, Hash, Encode, Eq, PartialEq)]
+pub struct HttpLabels {
+    method: String,
+    path: String,
+    status: String,
+}
+
+pub struct Registry {
+    binary: String,
+    registry: registry::Registry,
+}
+
+impl Registry {
+    pub fn new(binary: String) -> Self {
+        Self {
+            binary,
+            registry: <registry::Registry>::default(),
+        }
+    }
+
+    pub fn register<N, H>(&mut self, name: N, help: H, metric: Box<dyn SendEncodeMetric + 'static>)
+    where
+        N: Into<String>,
+        H: Into<String>,
+    {
+        self.registry
+            .register(prefix(self.binary.clone(), name), help, metric)
+    }
+
+    pub fn register_with_unit<N, H>(
+        &mut self,
+        name: N,
+        help: H,
+        unit: Unit,
+        metric: Box<dyn SendEncodeMetric + 'static>,
+    ) where
+        N: Into<String>,
+        H: Into<String>,
+    {
+        self.registry
+            .register_with_unit(prefix(self.binary.clone(), name), help, unit, metric)
+    }
+}
+
+pub fn bind<S: Into<String> + fmt::Display>(
+    addr: impl Into<SocketAddr>,
+    binary: S,
+    mut registry: Registry,
+) -> (
+    Arc<Mutex<Family<HttpLabels, Histogram>>>,
+    impl Future<Output = Result<(), hyper::Error>>,
+) {
+    let request_duration = Family::<HttpLabels, Histogram>::new_with_constructor(|| {
+        Histogram::new(BUCKETS.clone().into_iter())
+    });
+
+    registry.registry.register_with_unit(
+        prefix(binary, ""),
+        "HTTP request latencies",
+        Unit::Seconds,
+        Box::new(request_duration.clone()),
+    );
+
+    let registry = Arc::new(Mutex::new(registry));
+    let request_duration = Arc::new(Mutex::new(request_duration));
+
+    let router = Router::new()
+        .route("/metrics", get(handler))
+        .layer(AddExtensionLayer::new(registry))
+        .layer(middleware::from_fn({
+            let request_duration = Arc::clone(&request_duration);
+            move |req, next| middleware(req, next, Arc::clone(&request_duration))
+        }));
+
+    (
+        request_duration,
+        Server::bind(&addr.into()).serve(router.into_make_service()),
+    )
+}
+
+pub async fn middleware<B>(
+    req: Request<B>,
+    next: Next<B>,
+    request_duration: Arc<Mutex<Family<HttpLabels, Histogram>>>,
+) -> impl IntoResponse {
+    let start = Instant::now();
+    let path = if let Some(matched_path) = req.extensions().get::<MatchedPath>() {
+        matched_path.as_str().to_owned()
+    } else {
+        req.uri().path().to_owned()
+    };
+    let method = req.method().to_string();
+
+    let response = next.run(req).await;
+
+    request_duration
+        .lock()
+        .await
+        .get_or_create(&HttpLabels {
+            path,
+            method,
+            status: response.status().as_str().to_string(),
+        })
+        .observe(start.elapsed().as_secs_f64());
+
+    response
+}
+
+async fn handler(Extension(registry): Extension<Arc<Mutex<Registry>>>) -> impl IntoResponse {
+    let mut encoded = Vec::new();
+    encode(&mut encoded, &registry.lock().await.registry).unwrap();
+
+    (Headers(vec![("Content-Type", HEADER_OPENMETRICS)]), encoded)
+}
+
+fn prefix<B: Into<String> + fmt::Display, S: Into<String>>(binary: B, suffix: S) -> String {
+    format!("{}_{}_{}", ORG_NAMESPACE, binary, suffix.into())
+}

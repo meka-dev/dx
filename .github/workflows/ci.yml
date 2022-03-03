@@ -36,6 +36,7 @@ jobs:
 
       - name: Cache toolchain
         uses: actions/cache@v2
+        id: cache-toolchain
         with:
           path: |
             ~/.rustup/settings.toml
@@ -45,10 +46,11 @@ jobs:
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
         with:
           profile: minimal
           toolchain: ${{ matrix.toolchain }}
-          components: cargo, clippy, rustfmt
+          components: cargo, rustfmt
           override: true
 
       - name: Cache dependencies
@@ -78,6 +80,7 @@ jobs:
 
       - name: Cache toolchain
         uses: actions/cache@v2
+        id: cache-toolchain
         with:
           path: |
             ~/.rustup/settings.toml
@@ -87,6 +90,7 @@ jobs:
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
         with:
           profile: minimal
           toolchain: ${{ matrix.toolchain }}
@@ -99,7 +103,19 @@ jobs:
       - name: Run fmt check
         run: cargo fmt --all -- --check
 
-      - name: Run clippy
+      - name: Run clippy on common
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: clippy
+          # TODO(xla): Introduce other crates here once stabilised and cleaned
+          # up.
+          # FIXME(xla): We can't move the compatibility flag into RUSTFLAGS due
+          # to a regression in 1.58, in progress here:
+          # https://github.com/rust-lang/rust/pull/93449
+          args: -p common --no-deps --all-features --all-targets -- -Wrust-2021-compatibility
+
+      - name: Run clippy on execution
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -125,6 +141,7 @@ jobs:
 
       - name: Cache toolchain
         uses: actions/cache@v2
+        id: cache-toolchain
         with:
           path: |
             ~/.rustup/settings.toml
@@ -134,10 +151,11 @@ jobs:
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
         with:
           profile: minimal
           toolchain: ${{ matrix.toolchain }}
-          components: cargo, clippy, rustfmt
+          components: cargo, rustfmt
           override: true
 
       - name: Install nextest
