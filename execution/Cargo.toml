@@ -6,8 +6,6 @@ edition = "2021"
 [dependencies]
 anyhow              = { version = "1.0",  default-features = false }
 argh                = { version = "0.1",  default-features = false }
-axum                = { version = "0.4",  default-features = false, features = [ "headers", "http2", "tower-log" ] }
-axum-extra          = { version = "0.1",  default-features = false }
 async-trait         = { version = "0.1",  default-features = false }
 bigint              = { version = "4.4",  default-features = false }
 cosmwasm-std        = { version = "0.16", default-features = false }
@@ -17,15 +15,13 @@ futures             = { version = "0.3",  default-features = false, features = [
 hex                 = { version = "0.4",  default-features = false }
 hyper               = { version = "0.14", default-features = false }
 itertools           = { version = "0.10", default-features = false }
-lazy_static         = { version = "1.4",  default-features = false }
 log                 = { version = "0.4",  default-features = false }
-num_cpus            = { version = "1.0",  default-features = false }
 prometheus-client   = { version = "0.15", default-features = false }
 serde               = { version = "1.0",  default-features = false }
 serde_json          = { version = "1.0",  default-features = false }
 tendermint          = { version = "0.23", default-features = false }
 tendermint-rpc      = { version = "0.23", default-features = true,  features = [ "websocket-client" ] }
-thiserror           = { version = "1.0",  default-features = false }
 tokio               = { version = "1.0",  default-features = false, features = [ "macros", "rt-multi-thread", "sync", "time" ] }
 
+common              = { version = "0.1",  default-features = false, path = "../common" }
 terrars             = { version = "0.1",  default-features = false, path = "../terrars" }
