@@ -238,6 +238,7 @@ impl Strategy for SinglePair {
             }
         }
 
+        trades.sort_by(|a, b| b.expected_profit.cmp(&a.expected_profit));
         trades
     }
 }
