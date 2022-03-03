@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+  "backtest",
   "common",
   "execution",
   "terrars"

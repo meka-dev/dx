@@ -22,9 +22,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.55"
+version = "1.0.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "159bb86af3a200e19a068f4224eae4c8bb2d0fa054c7e5d1cacd5cef95e684cd"
+checksum = "4361135be9122e0870de935d7c439aef945b9f9ddd4199a553b5270b49c82a27"
 
 [[package]]
 name = "argh"
@@ -184,6 +184,26 @@ dependencies = [
  "tower-http",
  "tower-layer",
  "tower-service",
+]
+
+[[package]]
+name = "backtest"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argh",
+ "bytes",
+ "cosmwasm-std",
+ "env_logger",
+ "futures",
+ "futures-util",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tame-gcs",
+ "tame-oauth",
+ "tokio",
 ]
 
 [[package]]
@@ -376,9 +396,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "0.16.4"
+version = "0.16.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfee62162cc81a332ec61e9131d3515a557adadf512bfa607011b2d80e1c5494"
+checksum = "7cfd597c4b0ed23ea499841d25169f44ada11e7f10642582d1b1a5a4ebbdebcf"
 dependencies = [
  "digest 0.9.0",
  "ed25519-zebra",
@@ -389,18 +409,18 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "0.16.4"
+version = "0.16.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85e230bdfbef8e0339cceaffed92589a41b6d82ff53c0430dfa4fc8ec47fe4e1"
+checksum = "3a42e9f5fdb98c1e832fa5f976c14f8fd78063c745da7f62087dccbed46a5610"
 dependencies = [
  "syn",
 ]
 
 [[package]]
 name = "cosmwasm-std"
-version = "0.16.4"
+version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf76c428d7ca29ad72d78b7b93f4658d88b2ae91d850bc0060b434680fbbf7c0"
+checksum = "c80dbbb380c23a4f10ae6178dd411ed90c9f9931ddf4932156cc5e5ab78d1c19"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -414,9 +434,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-storage"
-version = "0.16.4"
+version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6be949c526a0332fe7f74dc5e83205afcdc8d699f8d2ffbe3a842b510dbb2502"
+checksum = "8b4cc64cb7104bcf64e935e074aa291466d7c714374f5ec5e3fd8e9d3f0e5ce5"
 dependencies = [
  "cosmwasm-std",
  "serde",
@@ -752,6 +772,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7896dc8abb250ffdda33912550faa54c88ec8b998dec0b2c55ab224921ce11df"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "env_logger"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b2cf0344971ee6c64c31be0d530793fba457d322dfec2810c453d0ef228f9c3"
+dependencies = [
+ "log",
 ]
 
 [[package]]
@@ -2740,9 +2769,9 @@ dependencies = [
 
 [[package]]
 name = "tower-http"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bb284cac1883d54083a0edbdc9cabf931dfed87455f8c7266c01ece6394a43a"
+checksum = "90c125fdea84614a4368fd35786b51d0682ab8d42705e061e92f0b955dea40fb"
 dependencies = [
  "bitflags",
  "bytes",
@@ -2849,9 +2878,9 @@ checksum = "dcf81ac59edc17cc8697ff311e8f5ef2d99fcbd9817b34cec66f90b6c3dfd987"
 
 [[package]]
 name = "uint"
-version = "0.9.1"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6470ab50f482bde894a037a57064480a246dbfdd5960bd65a44824693f08da5f"
+checksum = "12f03af7ccf01dd611cc450a0d10dbc9b745770d096473e2faf0ca6e2d66d1e0"
 dependencies = [
  "byteorder",
  "crunchy 0.2.2",

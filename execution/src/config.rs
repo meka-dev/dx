@@ -7,8 +7,8 @@ pub const LCD_URL: &str = "http://127.0.0.1:1317";
 pub const MEKAPI_URL: &str = "http://127.0.0.1:4401";
 pub const RPC_URL: &str = "ws://127.0.0.1:26657/websocket";
 
-#[derive(argh::FromArgs, Debug)]
 /// Execution environemnt for Mekatek strategies.
+#[derive(argh::FromArgs, Debug)]
 pub struct Args {
     /// terra chain identifier, should be static except on hard fork (Mainnet: columbus-5, Testnet:
     /// bombay-12)
