@@ -81,8 +81,9 @@ fn belief_price(amount_in: Decimal256, amount_out: Decimal256) -> Decimal256 {
 }
 
 // XXX: astroport has an upper limit on max_spread of 0.5
-fn max_spread(amount_out: Decimal256, spread: Decimal256) -> Decimal256 {
-    spread / amount_out
+fn max_spread(_amount_out: Decimal256, _spread: Decimal256) -> Decimal256 {
+    // spread / amount_out
+    Decimal256::zero()
 }
 
 // XXX: this might eventually go into a contract
