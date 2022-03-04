@@ -175,6 +175,7 @@ where
                  size,
                  expected_profit,
                  messages,
+                 ..
              }| {
                 metrics.strategy_trades.get_or_create(&trade_labels).inc();
                 metrics

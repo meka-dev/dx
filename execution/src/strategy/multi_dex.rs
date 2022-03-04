@@ -14,7 +14,7 @@ use terrars::{
 
 use crate::{
     accounts,
-    strategy::{metrics, Strategy, Trade},
+    strategy::{metrics, Route, Strategy, Trade},
 };
 
 #[derive(Default)]
@@ -28,10 +28,11 @@ fn trade_path(
     pools: &[&dex::Pool; 2],
     start: &dex::Token,
     amount: Decimal256,
-) -> Option<(Decimal256, Vec<MsgExecuteContract>)> {
+) -> Option<(Decimal256, Vec<MsgExecuteContract>, Route)> {
     let mut msgs = vec![];
     let mut cb = amount;
     let mut bid_token = start.clone();
+    let mut route = vec![];
 
     for p in pools {
         let ask_token = p.ask_token(&bid_token);
@@ -57,6 +58,7 @@ fn trade_path(
                 belief_price(cb, swap_ret),
                 max_spread(swap_ret, spread),
             ));
+            route.push(p.contract_address.clone());
 
             cb = swap_ret;
             bid_token = ask_token;
@@ -72,7 +74,7 @@ fn trade_path(
     }
     log::debug!("positive delta {}", cb - amount);
 
-    Some((cb - amount, msgs))
+    Some((cb - amount, msgs, route))
 }
 
 // only need this for the actual msg
@@ -220,7 +222,7 @@ impl Strategy for SinglePair {
                     let _size = if liq > bal { bal } else { liq };
                     let size = liq;
                     // XXX: the mismatch between size and our balance should be captured in metrics
-                    if let Some((expected_profit, messages)) =
+                    if let Some((expected_profit, messages, route)) =
                         trade_path(sender, &[left, right], &start, size)
                     {
                         log::debug!("{:?}", messages);
@@ -228,6 +230,7 @@ impl Strategy for SinglePair {
                             size,
                             expected_profit,
                             messages,
+                            route,
                         });
                     } else {
                         log::debug!(
