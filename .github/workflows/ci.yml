@@ -34,6 +34,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        id: toolchain
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          components: cargo, clippy, rustfmt
+          override: true
+
       - name: Cache toolchain
         uses: actions/cache@v2
         id: cache-toolchain
@@ -42,16 +52,7 @@ jobs:
             ~/.rustup/settings.toml
             ~/.rustup/toolchains/${{ matrix.toolchain }}-*
             ~/.rustup/update-hashes/${{ matrix.toolchain }}-*
-          key: rust-toolchain_${{ matrix.os }}-${{ matrix.toolchain }}
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        if: steps.cache-toolchain.outputs.cache-hit != 'true'
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.toolchain }}
-          components: cargo, rustfmt
-          override: true
+          key: rust-toolchain_${{ matrix.os }}-${{ steps.toolchain.outputs.rustc_hash }}
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
@@ -74,9 +75,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - id: version
-        shell: bash
-        run: 'echo ::set-output "name=VERSION::$(git rev-parse --short HEAD)"'
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        id: toolchain
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          components: cargo, clippy, rustfmt
+          override: true
 
       - name: Cache toolchain
         uses: actions/cache@v2
@@ -86,16 +93,7 @@ jobs:
             ~/.rustup/settings.toml
             ~/.rustup/toolchains/${{ matrix.toolchain }}-*
             ~/.rustup/update-hashes/${{ matrix.toolchain }}-*
-          key: rust-toolchain_${{ matrix.os }}-${{ matrix.toolchain }}
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        if: steps.cache-toolchain.outputs.cache-hit != 'true'
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.toolchain }}
-          components: cargo, clippy, rustfmt
-          override: true
+          key: rust-toolchain_${{ matrix.os }}-${{ steps.toolchain.outputs.rustc_hash }}
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
@@ -139,6 +137,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        id: toolchain
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          components: cargo, clippy, rustfmt
+          override: true
+
       - name: Cache toolchain
         uses: actions/cache@v2
         id: cache-toolchain
@@ -147,16 +155,7 @@ jobs:
             ~/.rustup/settings.toml
             ~/.rustup/toolchains/${{ matrix.toolchain }}-*
             ~/.rustup/update-hashes/${{ matrix.toolchain }}-*
-          key: rust-toolchain_${{ matrix.os }}-${{ matrix.toolchain }}
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        if: steps.cache-toolchain.outputs.cache-hit != 'true'
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.toolchain }}
-          components: cargo, rustfmt
-          override: true
+          key: rust-toolchain_${{ matrix.os }}-${{ steps.toolchain.outputs.rustc_hash }}
 
       - name: Install nextest
         uses: actions-rs/install@v0.1
@@ -193,22 +192,25 @@ jobs:
         shell: bash
         run: 'echo ::set-output "name=VERSION::$(git rev-parse --short HEAD)"'
 
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        id: toolchain
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.toolchain }}
+          components: cargo, rustfmt
+          override: true
+
       - name: Cache toolchain
         uses: actions/cache@v2
+        id: cache-toolchain
         with:
           path: |
             ~/.rustup/settings.toml
             ~/.rustup/toolchains/${{ matrix.toolchain }}-*
             ~/.rustup/update-hashes/${{ matrix.toolchain }}-*
-          key: rust-toolchain_${{ matrix.os }}-${{ matrix.toolchain }}
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.toolchain }}
-          components: cargo, clippy, rustfmt
-          override: true
+          key: rust-toolchain_${{ matrix.os }}-${{ steps.toolchain.outputs.rustc_hash }}
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
