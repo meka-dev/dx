@@ -246,7 +246,10 @@ async fn main() -> Result<()> {
             let height = latest_block.header().height;
 
             // Ensure the lock is dropped to avoid halting the machinery.
-            pending_trades.lock().await.observe(latest_block);
+            if let Err(err) = pending_trades.lock().await.observe(latest_block) {
+                // TODO(xla): Move this to tracker observation impl.
+                log::error!("failed to tracker::observe: {}", err);
+            };
 
             if let Ok((funds, pairs)) = fetcher
                 .fetch(lcd.clone(), mekapi.clone(), &account_id.clone(), height)
