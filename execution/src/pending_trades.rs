@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use anyhow::{Context as _, Result};
 use cosmwasm_std::Addr;
 use tendermint::{abci::transaction::Hash, block::Height, Block};
 
@@ -9,7 +10,9 @@ const TIMEOUT_HEIGHT: u64 = 10;
 
 pub trait Tracker {
     fn is_tracked(&self, route: &Route) -> Option<Addr>;
-    fn observe(&mut self, block: Block);
+    // TODO(xla): Communicate through the result how many txs have been observed, of those how many
+    // where in the cache and further how many have been evicted.
+    fn observe(&mut self, block: Block) -> Result<()>;
     fn track(&mut self, hash: Hash, route: Route) -> Option<Route>;
 }
 
@@ -44,9 +47,11 @@ impl Tracker for InMemory {
         None
     }
 
-    fn observe(&mut self, block: Block) {
+    fn observe(&mut self, block: Block) -> Result<()> {
         for raw in block.data.iter() {
-            let hash = Hash::new(<[u8; 32]>::try_from(raw.as_bytes()).unwrap());
+            let hash = Hash::new(
+                <[u8; 32]>::try_from(raw.as_bytes()).context("failed to hash transaction")?,
+            );
             self.untrack(hash);
         }
 
@@ -56,6 +61,8 @@ impl Tracker for InMemory {
         // Evict all transactions which have been around for longer than the configured timeout.
         self.tx_index
             .retain(|_, entry| self.latest_height.value() - entry.height.value() < TIMEOUT_HEIGHT);
+
+        Ok(())
     }
 
     fn track(&mut self, hash: Hash, route: Route) -> Option<Route> {
