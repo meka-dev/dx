@@ -17,7 +17,7 @@ use tendermint_rpc::{
     query::{EventType, Query},
     Client as _, SubscriptionClient, WebSocketClient,
 };
-use tokio::sync::{mpsc, watch};
+use tokio::sync::{mpsc, watch, Mutex};
 
 use terrars::{
     dex,
@@ -27,6 +27,7 @@ use terrars::{
 
 use execution::{
     accounts, broadcast, config, metrics,
+    pending_trades::{self, Tracker},
     risk_engine::{EmptyPoolDeny, RiskClassifier, RiskEngine, StaticPoolDenyList},
     strategy::{self, fetcher::Fetcher as _, Trade},
 };
@@ -114,6 +115,7 @@ async fn main() -> Result<()> {
         .fuse()
     };
 
+    let pending_trades = Arc::new(Mutex::new(pending_trades::InMemory::default()));
     let (broadcast_sender, mut broadcast_receiver) = mpsc::channel::<(block::Height, Trade)>(100);
 
     // Subroutine which compiles, signs and broadcasts message bundles into transactions.
@@ -122,6 +124,7 @@ async fn main() -> Result<()> {
         let client = client.clone();
         let lcd = lcd.clone();
         let metrics = Arc::clone(&metrics);
+        let pending_trades = Arc::clone(&pending_trades);
 
         tokio::spawn(async move {
             log::debug!("Init broadcaster");
@@ -140,16 +143,15 @@ async fn main() -> Result<()> {
             });
             let mut sequence = account.sequence;
 
-            while let Some((
-                _height,
-                Trade {
-                    expected_profit,
-                    messages,
-                    ..
-                },
-            )) = broadcast_receiver.recv().await
-            {
-                let msgs: Vec<Message> = messages
+            while let Some((_height, trade)) = broadcast_receiver.recv().await {
+                let route = trade.route;
+                if let Some(addr) = (*pending_trades.lock().await).is_tracked(&route) {
+                    log::debug!("pool {} in route  ", addr);
+                    continue;
+                }
+
+                let msgs: Vec<Message> = trade
+                    .messages
                     .into_iter()
                     .map(|msg| msg.to_any().unwrap())
                     .collect();
@@ -166,7 +168,7 @@ async fn main() -> Result<()> {
                     msgs.clone(),
                 )?;
 
-                let expected_profit = (expected_profit.0 / 10u64.pow(12).into()).as_u64();
+                let expected_profit = (trade.expected_profit.0 / 10u64.pow(12).into()).as_u64();
 
                 if let Ok(gas_info) = broadcast::simulate(
                     &lcd.clone(),
@@ -198,6 +200,8 @@ async fn main() -> Result<()> {
                             Ok(check) => {
                                 if check.code.is_ok() {
                                     sequence += 1;
+
+                                    let _ = (*pending_trades.lock().await).track(check.hash, route);
                                 }
                                 log::info!(
                                     "msg=submit hash={} code={:?} log={}",
@@ -241,6 +245,9 @@ async fn main() -> Result<()> {
             let latest_block = latest_block_receiver.borrow().clone();
             let height = latest_block.header().height;
 
+            // Ensure the lock is dropped to avoid halting the machinery.
+            pending_trades.lock().await.observe(latest_block);
+
             if let Ok((funds, pairs)) = fetcher
                 .fetch(lcd.clone(), mekapi.clone(), &account_id.clone(), height)
                 .await
@@ -252,14 +259,10 @@ async fn main() -> Result<()> {
                         .collect::<Vec<_>>(),
                 );
                 for strategy in &strategies {
-                    let trades = strategy
-                        .execute(latest_block.header.height, &account_id, &funds, &pools)
-                        .await;
+                    let trades = strategy.execute(height, &account_id, &funds, &pools).await;
 
                     for trade in trades {
-                        broadcast_sender
-                            .send((latest_block.header.height, trade))
-                            .await?;
+                        broadcast_sender.send((height, trade)).await?;
                     }
                 }
             }
