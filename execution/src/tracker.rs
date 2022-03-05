@@ -10,13 +10,15 @@ use tendermint::{abci::transaction::Hash, block::Height, Block};
 
 use crate::strategy::Route;
 
+pub mod metrics;
+
 const TIMEOUT_HEIGHT: u64 = 10;
 
 pub trait Tracker {
     fn is_tracked(&self, route: &Route) -> Option<Addr>;
     // TODO(xla): Communicate through the result how many txs have been observed, of those how many
     // where in the cache and further how many have been evicted.
-    fn observe(&mut self, block: Block) -> Result<()>;
+    fn observe_block(&mut self, block: Block) -> Result<()>;
     fn track(&mut self, hash: Hash, route: Route) -> Option<Route>;
 }
 
@@ -51,7 +53,7 @@ impl Tracker for InMemory {
         None
     }
 
-    fn observe(&mut self, block: Block) -> Result<()> {
+    fn observe_block(&mut self, block: Block) -> Result<()> {
         for tx in block.data.iter() {
             let hash = Hash::new(
                 <[u8; 32]>::try_from(Sha256::digest(&tx).deref())

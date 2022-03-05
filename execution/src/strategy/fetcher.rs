@@ -1,14 +1,19 @@
-use std::{fmt, sync::Arc};
+use std::fmt;
 
 use anyhow::Result;
 use cosmwasm_std::Addr;
-use prometheus_client::encoding::text::Encode;
+use prometheus_client::{
+    encoding::text::Encode,
+    metrics::{family::Family, histogram::Histogram},
+    registry::Unit,
+};
 use tendermint::block::Height;
-use tokio::{sync::Mutex, task::JoinHandle, time::Instant};
+use tokio::{task::JoinHandle, time::Instant};
 
+use common::metrics::{Registry, ResultLabel, BUCKETS};
 use terrars::{dex, lcd::Lcd, mekapi, AccountId};
 
-use crate::{accounts, metrics};
+use crate::accounts;
 
 #[async_trait::async_trait]
 pub trait Fetcher<L, M>
@@ -94,7 +99,7 @@ async fn flatten<T>(handle: JoinHandle<Result<T>>) -> Result<T> {
 }
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
-pub enum Name {
+enum Name {
     Mekapi,
 }
 
@@ -106,7 +111,7 @@ impl fmt::Display for Name {
     }
 }
 
-pub trait Labeled {
+trait Labeled {
     const NAME: Name;
 
     fn name(&self) -> Name {
@@ -117,17 +122,31 @@ pub trait Labeled {
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
 pub struct Labels {
     name: Name,
-    result: metrics::ResultLabel,
+    result: ResultLabel,
 }
 
 pub struct Observed<F> {
+    call_duration: Family<Labels, Histogram>,
     next: F,
-    metrics: Arc<Mutex<metrics::Metrics>>,
 }
 
 impl<F> Observed<F> {
-    pub fn new(metrics: Arc<Mutex<metrics::Metrics>>, next: F) -> Self {
-        Self { metrics, next }
+    pub fn new(registry: &mut Registry, next: F) -> Self {
+        let call_duration = Family::<Labels, Histogram>::new_with_constructor(|| {
+            Histogram::new(BUCKETS.clone().into_iter())
+        });
+
+        registry.register_with_unit(
+            "pool_fetcher_call_duration",
+            "Fetcher pools retrieval durations",
+            Unit::Seconds,
+            Box::new(call_duration.clone()),
+        );
+
+        Self {
+            call_duration,
+            next,
+        }
     }
 }
 
@@ -149,16 +168,13 @@ where
         let res = self.next.fetch(lcd, mekapi, account_id, height).await;
         let elapsed = start.elapsed().as_secs_f64();
 
-        let metrics = self.metrics.lock().await;
-
-        metrics
-            .fetcher_pools_duration
+        self.call_duration
             .get_or_create(&Labels {
                 name: self.next.name(),
                 result: if res.is_err() {
-                    metrics::ResultLabel::Error
+                    ResultLabel::Error
                 } else {
-                    metrics::ResultLabel::Success
+                    ResultLabel::Success
                 },
             })
             .observe(elapsed);
