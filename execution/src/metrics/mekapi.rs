@@ -1,37 +1,52 @@
-use std::{sync::Arc, time::Instant};
+use std::time::Instant;
 
 use anyhow::Result;
 use cosmwasm_std::Addr;
-use prometheus_client::encoding::text::Encode;
+use prometheus_client::{
+    encoding::text::Encode,
+    metrics::{family::Family, histogram::Histogram},
+    registry::Unit,
+};
 use tendermint::block;
 use terrars::mekapi::Mekapi;
-use tokio::sync::Mutex;
 
+use common::metrics::{Registry, ResultLabel, BUCKETS};
 use terrars::dex;
 
-use crate::metrics;
-
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
-pub enum Method {
+enum Method {
     V1PoolResponses,
 }
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
-pub struct Labels {
+struct Labels {
     factory: String,
     method: Method,
-    result: metrics::ResultLabel,
+    result: ResultLabel,
 }
 
 #[derive(Clone)]
 pub struct Observed<L> {
+    call_duration: Family<Labels, Histogram>,
     next: L,
-    metrics: Arc<Mutex<metrics::Metrics>>,
 }
 
 impl<L> Observed<L> {
-    pub fn new(metrics: Arc<Mutex<metrics::Metrics>>, next: L) -> Self {
-        Self { metrics, next }
+    pub fn new(registry: &mut Registry, next: L) -> Self {
+        let call_duration = Family::<Labels, Histogram>::new_with_constructor(|| {
+            Histogram::new(BUCKETS.clone().into_iter())
+        });
+        registry.register_with_unit(
+            "mekapi_call_duration",
+            "Mekapi call latency",
+            Unit::Seconds,
+            Box::new(call_duration.clone()),
+        );
+
+        Self {
+            call_duration,
+            next,
+        }
     }
 }
 
@@ -49,17 +64,14 @@ where
         let res = self.next.v1_pool_responses(factory.clone(), height).await;
         let elapsed = start.elapsed();
 
-        self.metrics
-            .lock()
-            .await
-            .mekapi_call_duration
+        self.call_duration
             .get_or_create(&Labels {
                 factory: factory.to_string(),
                 method: Method::V1PoolResponses,
                 result: if res.is_err() {
-                    metrics::ResultLabel::Error
+                    ResultLabel::Error
                 } else {
-                    metrics::ResultLabel::Success
+                    ResultLabel::Success
                 },
             })
             .observe(elapsed.as_secs_f64());

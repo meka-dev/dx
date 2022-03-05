@@ -1,21 +1,23 @@
-use std::{sync::Arc, time::Instant};
+use std::time::Instant;
 
 use anyhow::Result;
 use cosmwasm_std::Addr;
-use prometheus_client::encoding::text::Encode;
+use prometheus_client::{
+    encoding::text::Encode,
+    metrics::{family::Family, histogram::Histogram},
+    registry::Unit,
+};
 use serde::{Deserialize, Serialize};
-use tokio::sync::Mutex;
 
+use common::metrics::{Registry, ResultLabel, BUCKETS};
 use terrars::{
     base::Coin,
     lcd::{self, Lcd, Response},
     tx, AccountId, BaseAccount,
 };
 
-use crate::metrics;
-
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
-pub enum Method {
+enum Method {
     AuthAccount,
     BankBalances,
     TxComputeTax,
@@ -24,9 +26,9 @@ pub enum Method {
 }
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
-pub struct Labels {
+struct Labels {
     method: Method,
-    result: metrics::ResultLabel,
+    result: ResultLabel,
 }
 
 #[derive(Clone)]
@@ -34,24 +36,41 @@ pub struct Observed<L>
 where
     L: Clone,
 {
+    call_duration: Family<Labels, Histogram>,
     next: L,
-    metrics: Arc<Mutex<metrics::Metrics>>,
 }
 
 impl<L> Observed<L>
 where
     L: Clone,
 {
-    pub fn new(metrics: Arc<Mutex<metrics::Metrics>>, next: L) -> Self {
-        Self { metrics, next }
+    pub fn new(registry: &mut Registry, next: L) -> Self {
+        let call_duration = Family::<Labels, Histogram>::new_with_constructor(|| {
+            Histogram::new(BUCKETS.clone().into_iter())
+        });
+        registry.register_with_unit(
+            "lcd_call_duration",
+            "LCD call latency",
+            Unit::Seconds,
+            Box::new(call_duration.clone()),
+        );
+
+        Self {
+            call_duration,
+            next,
+        }
     }
 
-    async fn observe(&self, start: Instant, method: Method, result: metrics::ResultLabel) {
-        self.metrics
-            .lock()
-            .await
-            .lcd_call_duration
-            .get_or_create(&Labels { method, result })
+    async fn observe(&self, start: Instant, method: Method, is_err: bool) {
+        self.call_duration
+            .get_or_create(&Labels {
+                method,
+                result: if is_err {
+                    ResultLabel::Error
+                } else {
+                    ResultLabel::Success
+                },
+            })
             .observe(start.elapsed().as_secs_f64());
     }
 }
@@ -64,16 +83,7 @@ where
     async fn auth_account(&self, account_id: &AccountId) -> Result<Option<BaseAccount>> {
         let start = Instant::now();
         let res = self.next.auth_account(account_id).await;
-        self.observe(
-            start,
-            Method::AuthAccount,
-            if res.is_err() {
-                metrics::ResultLabel::Error
-            } else {
-                metrics::ResultLabel::Success
-            },
-        )
-        .await;
+        self.observe(start, Method::AuthAccount, res.is_err()).await;
 
         res
     }
@@ -81,16 +91,8 @@ where
     async fn bank_balances(&self, account_id: &AccountId) -> Result<Vec<Coin>> {
         let start = Instant::now();
         let res = self.next.bank_balances(account_id).await;
-        self.observe(
-            start,
-            Method::BankBalances,
-            if res.is_err() {
-                metrics::ResultLabel::Error
-            } else {
-                metrics::ResultLabel::Success
-            },
-        )
-        .await;
+        self.observe(start, Method::BankBalances, res.is_err())
+            .await;
 
         res
     }
@@ -98,16 +100,8 @@ where
     async fn tx_compute_tax(&self, tx: &[u8]) -> Result<lcd::Response<Vec<Coin>>> {
         let start = Instant::now();
         let res = self.next.tx_compute_tax(tx).await;
-        self.observe(
-            start,
-            Method::TxComputeTax,
-            if res.is_err() {
-                metrics::ResultLabel::Error
-            } else {
-                metrics::ResultLabel::Success
-            },
-        )
-        .await;
+        self.observe(start, Method::TxComputeTax, res.is_err())
+            .await;
 
         res
     }
@@ -115,16 +109,7 @@ where
     async fn tx_simulate(&self, tx: &[u8]) -> Result<Response<tx::SimulateResponse>> {
         let start = Instant::now();
         let res = self.next.tx_simulate(tx).await;
-        self.observe(
-            start,
-            Method::TxSimulate,
-            if res.is_err() {
-                metrics::ResultLabel::Error
-            } else {
-                metrics::ResultLabel::Success
-            },
-        )
-        .await;
+        self.observe(start, Method::TxSimulate, res.is_err()).await;
 
         res
     }
@@ -142,16 +127,8 @@ where
             .next
             .wasm_contract_store(contract_addr, query_msg)
             .await;
-        self.observe(
-            start,
-            Method::WasmQuery,
-            if res.is_err() {
-                metrics::ResultLabel::Error
-            } else {
-                metrics::ResultLabel::Success
-            },
-        )
-        .await;
+        let is_err = res.is_err();
+        self.observe(start, Method::WasmQuery, is_err).await;
 
         res
     }

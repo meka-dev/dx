@@ -13,12 +13,12 @@ use tendermint::{
     block::{self, Height},
 };
 use tendermint_rpc::{
-    event::EventData,
     query::{EventType, Query},
     Client as _, SubscriptionClient, WebSocketClient,
 };
 use tokio::sync::{mpsc, watch, Mutex};
 
+use common::metrics;
 use terrars::{
     dex,
     lcd::{self, Lcd},
@@ -26,22 +26,22 @@ use terrars::{
 };
 
 use execution::{
-    accounts, broadcast, config, metrics,
+    accounts,
+    block_emitter::{self, Emitter as _},
+    config,
     risk_engine::{EmptyPoolDeny, RiskClassifier, RiskEngine, StaticPoolDenyList},
+    simulation::{self, Simulator as _},
     strategy::{self, fetcher::Fetcher as _, Trade},
-    tracker::{self, Tracker},
+    tracker::{self, Tracker as _},
 };
+
+const BINARY_NAMESPACE: &str = "execution";
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Set up logging.
     env_logger::init();
 
     let args: config::Args = argh::from_env();
-
-    // Set up metrics endpoint.
-    let (metrics, metrics_server) = metrics::Metrics::new(args.metrics_addr);
-    let mut metrics_server_handle = tokio::spawn(metrics_server).fuse();
 
     let secret_key = {
         let raw = fs::read(args.secret_key_file.clone())?;
@@ -54,12 +54,6 @@ async fn main() -> Result<()> {
         .public_key()
         .account_id(accounts::PREFIX)
         .unwrap();
-
-    // Set up lcd client for state retrieval. This is a naïve and slow way.
-    let lcd = metrics::lcd::Observed::new(Arc::clone(&metrics), lcd::Http::new(args.lcd_url)?);
-    let mekapi =
-        metrics::mekapi::Observed::new(Arc::clone(&metrics), mekapi::Http::new(args.mekapi_url)?);
-
     // Set up RPC client.
     let (client, driver) = WebSocketClient::new(args.rpc_url.as_str()).await?;
     // Advance the internal machinery of the RPC client.
@@ -78,11 +72,32 @@ async fn main() -> Result<()> {
         let res = client.latest_block().await?;
         watch::channel(res.block)
     };
+    let (trade_sender, mut trade_receiver) = mpsc::channel::<(block::Height, Trade)>(100);
+
+    let mut registry = metrics::Registry::new(BINARY_NAMESPACE);
+
+    let emitter =
+        block_emitter::Observed::new(&mut registry, block_emitter::Rpc::new(latest_block_sender));
+    let lcd = execution::metrics::lcd::Observed::new(&mut registry, lcd::Http::new(args.lcd_url)?);
+    let mekapi = execution::metrics::mekapi::Observed::new(
+        &mut registry,
+        mekapi::Http::new(args.mekapi_url)?,
+    );
+    let pool_fetcher =
+        strategy::fetcher::Observed::new(&mut registry, strategy::fetcher::Mekapi {});
+    let simulator = simulation::Observed::new(&mut registry, simulation::Rpc::new(lcd.clone()));
+    // TODO(xla): Load configured strategies.
+    let strategies: Vec<Box<dyn strategy::Strategy + Sync>> = vec![Box::new(
+        strategy::metrics::Observed::new(&mut registry, strategy::multi_dex::SinglePair::default()),
+    )];
+    let tx_tracker = tracker::metrics::Observed::new(&mut registry, tracker::InMemory::default());
+
+    let metrics_server = metrics::bind(args.metrics_addr, BINARY_NAMESPACE, registry);
+    let mut metrics_server_handle = tokio::spawn(metrics_server).fuse();
 
     // Subroutine to keep lastest block up-to-date.
     let mut latest_block_handle = {
         let client = client.clone();
-        let metrics = Arc::clone(&metrics);
         tokio::spawn(async move {
             log::debug!("Init block subscription");
 
@@ -90,23 +105,8 @@ async fn main() -> Result<()> {
             let mut events = client.subscribe(query).await?;
 
             while let Some(res) = events.next().await {
-                let event = res.unwrap();
-
-                if let EventData::NewBlock {
-                    block: Some(block), ..
-                } = event.data
-                {
-                    let height = block.header().height.value();
-                    latest_block_sender.send(block).unwrap();
-
-                    metrics
-                        .lock()
-                        .await
-                        .latest_block_height
-                        .get_or_create(&metrics::LatestHeightLabels {
-                            version: config::VERSION.to_string(),
-                        })
-                        .set(height);
+                if let Err(err) = emitter.emit(res) {
+                    log::error!("failed to emit latest block: {}", err);
                 }
             }
 
@@ -115,15 +115,12 @@ async fn main() -> Result<()> {
         .fuse()
     };
 
-    let tx_tracker = Arc::new(Mutex::new(tracker::InMemory::default()));
-    let (broadcast_sender, mut broadcast_receiver) = mpsc::channel::<(block::Height, Trade)>(100);
-
+    let tx_tracker = Arc::new(Mutex::new(tx_tracker));
     // Subroutine which compiles, signs and broadcasts message bundles into transactions.
     let mut broadcast_handle = {
         let account_id = account_id.clone();
         let client = client.clone();
         let lcd = lcd.clone();
-        let metrics = Arc::clone(&metrics);
         let tx_tracker = Arc::clone(&tx_tracker);
 
         tokio::spawn(async move {
@@ -143,7 +140,7 @@ async fn main() -> Result<()> {
             });
             let mut sequence = account.sequence;
 
-            while let Some((_height, trade)) = broadcast_receiver.recv().await {
+            while let Some((_height, trade)) = trade_receiver.recv().await {
                 let route = trade.route;
                 if let Some(addr) = (*tx_tracker.lock().await).is_tracked(&route) {
                     log::debug!("pool {} in route  ", addr);
@@ -156,30 +153,19 @@ async fn main() -> Result<()> {
                     .map(|msg| msg.to_any().unwrap())
                     .collect();
 
-                let simulate_tx = terrars::tx::sign(
-                    args.chain_id.clone(),
-                    // FIXME(xla): Proper error handling.
-                    &terrars::SigningKey::from_bytes(&secret_key_bytes).unwrap(),
-                    account.account_number,
-                    sequence,
-                    0,
-                    0,
-                    Height::try_from(0_u64).unwrap(),
-                    msgs.clone(),
-                )?;
-
                 let expected_profit = (trade.expected_profit.0 / 10u64.pow(12).into()).as_u64();
 
-                if let Ok(gas_info) = broadcast::simulate(
-                    &lcd.clone(),
-                    Arc::clone(&metrics),
-                    &simulate_tx,
-                    msgs.len(),
-                    expected_profit,
-                )
-                .await
+                if let Ok((fee, gas_info)) = simulator
+                    .simulate(
+                        &secret_key_bytes,
+                        args.chain_id.clone(),
+                        account.account_number,
+                        sequence,
+                        msgs.clone(),
+                        expected_profit,
+                    )
+                    .await
                 {
-                    let fee = (gas_info.gas_used as f64 * 0.18) as u64;
                     if !args.dry_run && expected_profit > fee {
                         let tx = terrars::tx::sign(
                             args.chain_id.clone(),
@@ -231,27 +217,17 @@ async fn main() -> Result<()> {
             Box::new(StaticPoolDenyList::new()),
         ]);
 
-        let fetcher =
-            strategy::fetcher::Observed::new(Arc::clone(&metrics), strategy::fetcher::Mekapi {});
-
-        // TODO(xla): Load configured strategies.
-        let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
-            vec![Box::new(strategy::metrics::Observed::new(
-                Arc::clone(&metrics),
-                strategy::multi_dex::SinglePair::default(),
-            ))];
-
         while let Ok(()) = latest_block_receiver.changed().await {
             let latest_block = latest_block_receiver.borrow().clone();
             let height = latest_block.header().height;
 
             // Ensure the lock is dropped to avoid halting the machinery.
-            if let Err(err) = tx_tracker.lock().await.observe(latest_block) {
+            if let Err(err) = tx_tracker.lock().await.observe_block(latest_block) {
                 // TODO(xla): Move this to tracker observation impl.
                 log::error!("failed to tracker::observe: {}", err);
             };
 
-            if let Ok((funds, pairs)) = fetcher
+            if let Ok((funds, pairs)) = pool_fetcher
                 .fetch(lcd.clone(), mekapi.clone(), &account_id.clone(), height)
                 .await
             {
@@ -265,7 +241,7 @@ async fn main() -> Result<()> {
                     let trades = strategy.execute(height, &account_id, &funds, &pools).await;
 
                     for trade in trades {
-                        broadcast_sender.send((height, trade)).await?;
+                        trade_sender.send((height, trade)).await?;
                     }
                 }
             }

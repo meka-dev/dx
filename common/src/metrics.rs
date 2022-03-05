@@ -5,7 +5,7 @@ use axum::{
     http::Request,
     response::{Headers, IntoResponse},
     routing::get,
-    AddExtensionLayer, Router, Server,
+    Router, Server,
 };
 use axum_extra::{middleware, middleware::Next};
 use lazy_static::lazy_static;
@@ -46,19 +46,33 @@ lazy_static! {
 }
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
-pub struct HttpLabels {
+pub struct RequestLabels {
     method: String,
     path: String,
     status: String,
 }
 
 pub struct Registry {
-    binary: String,
+    binary: &'static str,
     registry: registry::Registry,
 }
 
+pub type RequestDuration = Family<RequestLabels, Histogram>;
+
+pub fn new_request_duration() -> RequestDuration {
+    Family::<RequestLabels, Histogram>::new_with_constructor(|| {
+        Histogram::new(BUCKETS.clone().into_iter())
+    })
+}
+
+#[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
+pub enum ResultLabel {
+    Success,
+    Error,
+}
+
 impl Registry {
-    pub fn new(binary: String) -> Self {
+    pub fn new(binary: &'static str) -> Self {
         Self {
             binary,
             registry: <registry::Registry>::default(),
@@ -71,7 +85,7 @@ impl Registry {
         H: Into<String>,
     {
         self.registry
-            .register(prefix(self.binary.clone(), name), help, metric)
+            .register(prefix(self.binary, name), help, metric)
     }
 
     pub fn register_with_unit<N, H>(
@@ -85,7 +99,7 @@ impl Registry {
         H: Into<String>,
     {
         self.registry
-            .register_with_unit(prefix(self.binary.clone(), name), help, unit, metric)
+            .register_with_unit(prefix(self.binary, name), help, unit, metric)
     }
 }
 
@@ -93,42 +107,36 @@ pub fn bind<S: Into<String> + fmt::Display>(
     addr: impl Into<SocketAddr>,
     binary: S,
     mut registry: Registry,
-) -> (
-    Arc<Mutex<Family<HttpLabels, Histogram>>>,
-    impl Future<Output = Result<(), hyper::Error>>,
-) {
-    let request_duration = Family::<HttpLabels, Histogram>::new_with_constructor(|| {
+) -> impl Future<Output = Result<(), hyper::Error>> {
+    let request_duration = Family::<RequestLabels, Histogram>::new_with_constructor(|| {
         Histogram::new(BUCKETS.clone().into_iter())
     });
 
     registry.registry.register_with_unit(
-        prefix(binary, ""),
-        "HTTP request latencies",
+        prefix(binary, "metrics_http_duration"),
+        "metrics endpoint HTTP request latencies",
         Unit::Seconds,
         Box::new(request_duration.clone()),
     );
 
-    let registry = Arc::new(Mutex::new(registry));
     let request_duration = Arc::new(Mutex::new(request_duration));
+    let registry = Arc::new(Mutex::new(registry));
 
     let router = Router::new()
         .route("/metrics", get(handler))
-        .layer(AddExtensionLayer::new(registry))
+        .layer(Extension(registry))
         .layer(middleware::from_fn({
             let request_duration = Arc::clone(&request_duration);
             move |req, next| middleware(req, next, Arc::clone(&request_duration))
         }));
 
-    (
-        request_duration,
-        Server::bind(&addr.into()).serve(router.into_make_service()),
-    )
+    Server::bind(&addr.into()).serve(router.into_make_service())
 }
 
 pub async fn middleware<B>(
     req: Request<B>,
     next: Next<B>,
-    request_duration: Arc<Mutex<Family<HttpLabels, Histogram>>>,
+    request_duration: Arc<Mutex<RequestDuration>>,
 ) -> impl IntoResponse {
     let start = Instant::now();
     let path = if let Some(matched_path) = req.extensions().get::<MatchedPath>() {
@@ -143,7 +151,7 @@ pub async fn middleware<B>(
     request_duration
         .lock()
         .await
-        .get_or_create(&HttpLabels {
+        .get_or_create(&RequestLabels {
             path,
             method,
             status: response.status().as_str().to_string(),
