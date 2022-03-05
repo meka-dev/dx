@@ -27,9 +27,9 @@ use terrars::{
 
 use execution::{
     accounts, broadcast, config, metrics,
-    pending_trades::{self, Tracker},
     risk_engine::{EmptyPoolDeny, RiskClassifier, RiskEngine, StaticPoolDenyList},
     strategy::{self, fetcher::Fetcher as _, Trade},
+    tracker::{self, Tracker},
 };
 
 #[tokio::main]
@@ -115,7 +115,7 @@ async fn main() -> Result<()> {
         .fuse()
     };
 
-    let pending_trades = Arc::new(Mutex::new(pending_trades::InMemory::default()));
+    let tx_tracker = Arc::new(Mutex::new(tracker::InMemory::default()));
     let (broadcast_sender, mut broadcast_receiver) = mpsc::channel::<(block::Height, Trade)>(100);
 
     // Subroutine which compiles, signs and broadcasts message bundles into transactions.
@@ -124,7 +124,7 @@ async fn main() -> Result<()> {
         let client = client.clone();
         let lcd = lcd.clone();
         let metrics = Arc::clone(&metrics);
-        let pending_trades = Arc::clone(&pending_trades);
+        let tx_tracker = Arc::clone(&tx_tracker);
 
         tokio::spawn(async move {
             log::debug!("Init broadcaster");
@@ -145,7 +145,7 @@ async fn main() -> Result<()> {
 
             while let Some((_height, trade)) = broadcast_receiver.recv().await {
                 let route = trade.route;
-                if let Some(addr) = (*pending_trades.lock().await).is_tracked(&route) {
+                if let Some(addr) = (*tx_tracker.lock().await).is_tracked(&route) {
                     log::debug!("pool {} in route  ", addr);
                     continue;
                 }
@@ -201,7 +201,7 @@ async fn main() -> Result<()> {
                                 if check.code.is_ok() {
                                     sequence += 1;
 
-                                    let _ = (*pending_trades.lock().await).track(check.hash, route);
+                                    let _ = (*tx_tracker.lock().await).track(check.hash, route);
                                 }
                                 log::info!(
                                     "msg=submit hash={} code={:?} log={}",
@@ -246,7 +246,7 @@ async fn main() -> Result<()> {
             let height = latest_block.header().height;
 
             // Ensure the lock is dropped to avoid halting the machinery.
-            if let Err(err) = pending_trades.lock().await.observe(latest_block) {
+            if let Err(err) = tx_tracker.lock().await.observe(latest_block) {
                 // TODO(xla): Move this to tracker observation impl.
                 log::error!("failed to tracker::observe: {}", err);
             };
