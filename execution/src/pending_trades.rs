@@ -1,7 +1,11 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Deref,
+};
 
 use anyhow::{Context as _, Result};
 use cosmwasm_std::Addr;
+use sha2::{Digest as _, Sha256};
 use tendermint::{abci::transaction::Hash, block::Height, Block};
 
 use crate::strategy::Route;
@@ -48,9 +52,10 @@ impl Tracker for InMemory {
     }
 
     fn observe(&mut self, block: Block) -> Result<()> {
-        for raw in block.data.iter() {
+        for tx in block.data.iter() {
             let hash = Hash::new(
-                <[u8; 32]>::try_from(raw.as_bytes()).context("failed to hash transaction")?,
+                <[u8; 32]>::try_from(Sha256::digest(&tx).deref())
+                    .context("failed to hash transaction")?,
             );
             self.untrack(hash);
         }
