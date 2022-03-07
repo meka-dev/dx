@@ -5,8 +5,11 @@ use async_trait::async_trait;
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{family::Family, histogram::Histogram},
+    registry::Unit,
 };
 use tokio::time::Instant;
+
+use crate::metrics::{Registry, BUCKETS};
 
 #[async_trait]
 pub trait Bucket {
@@ -55,6 +58,25 @@ struct Labels {
 pub struct Observed<N> {
     call_duration: Family<Labels, Histogram>,
     next: N,
+}
+
+impl<N> Observed<N> {
+    pub fn new(registry: &mut Registry, next: N) -> Self {
+        let call_duration = Family::<Labels, Histogram>::new_with_constructor(|| {
+            Histogram::new(BUCKETS.clone().into_iter())
+        });
+        registry.register_with_unit(
+            "storage_bucket_call_duration",
+            "Storage bucket call durations",
+            Unit::Seconds,
+            Box::new(call_duration.clone()),
+        );
+
+        Self {
+            call_duration,
+            next,
+        }
+    }
 }
 
 #[async_trait]
