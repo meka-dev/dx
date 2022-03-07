@@ -18,7 +18,10 @@ use tendermint_rpc::{
 };
 use tokio::sync::{mpsc, watch, Mutex};
 
-use common::metrics;
+use common::{
+    metrics,
+    tracing::{self, debug, error, info},
+};
 use terrars::{
     dex,
     lcd::{self, Lcd},
@@ -39,7 +42,7 @@ const BINARY_NAMESPACE: &str = "execution";
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    env_logger::init();
+    tracing::init();
 
     let args: config::Args = argh::from_env();
 
@@ -62,7 +65,7 @@ async fn main() -> Result<()> {
     // Ensure the data source has caught up to the latest state.
     let status = client.status().await?;
     if status.sync_info.catching_up {
-        log::error!("Node status: {:?}", status);
+        error!("Node status: {:?}", status);
         return Err(anyhow::anyhow!("node still catching up"));
     }
 
@@ -99,14 +102,14 @@ async fn main() -> Result<()> {
     let mut latest_block_handle = {
         let client = client.clone();
         tokio::spawn(async move {
-            log::debug!("Init block subscription");
+            debug!("Init block subscription");
 
             let query = Query::from(EventType::NewBlock);
             let mut events = client.subscribe(query).await?;
 
             while let Some(res) = events.next().await {
                 if let Err(err) = emitter.emit(res) {
-                    log::error!("failed to emit latest block: {}", err);
+                    error!("failed to emit latest block: {}", err);
                 }
             }
 
@@ -124,7 +127,7 @@ async fn main() -> Result<()> {
         let tx_tracker = Arc::clone(&tx_tracker);
 
         tokio::spawn(async move {
-            log::debug!("Init broadcaster");
+            debug!("Init broadcaster");
 
             let secret_key_bytes = {
                 let raw = fs::read(args.secret_key_file.clone())?;
@@ -143,7 +146,7 @@ async fn main() -> Result<()> {
             while let Some((_height, trade)) = trade_receiver.recv().await {
                 let route = trade.route;
                 if let Some(addr) = (*tx_tracker.lock().await).is_tracked(&route) {
-                    log::debug!("pool {} in route  ", addr);
+                    debug!("pool {} in route  ", addr);
                     continue;
                 }
 
@@ -189,14 +192,12 @@ async fn main() -> Result<()> {
 
                                     let _ = (*tx_tracker.lock().await).track(check.hash, route);
                                 }
-                                log::info!(
+                                info!(
                                     "msg=submit hash={} code={:?} log={}",
-                                    check.hash,
-                                    check.code,
-                                    check.log
+                                    check.hash, check.code, check.log
                                 );
                             },
-                            Err(err) => log::error!("tx submit failed: {}", err),
+                            Err(err) => error!("tx submit failed: {}", err),
                         }
                     }
                 }
@@ -210,7 +211,7 @@ async fn main() -> Result<()> {
     // Subroutine to keep the dependent information for strategies up-to-date and execute
     // strategies.
     let mut execution_handle = tokio::spawn(async move {
-        log::debug!("Init strategy executor");
+        debug!("Init strategy executor");
 
         let risk: RiskEngine<dyn RiskClassifier> = RiskEngine::new(vec![
             Box::new(EmptyPoolDeny {}),
@@ -224,7 +225,7 @@ async fn main() -> Result<()> {
             // Ensure the lock is dropped to avoid halting the machinery.
             if let Err(err) = tx_tracker.lock().await.observe_block(latest_block) {
                 // TODO(xla): Move this to tracker observation impl.
-                log::error!("failed to tracker::observe: {}", err);
+                error!("failed to tracker::observe: {}", err);
             };
 
             if let Ok((funds, pairs)) = pool_fetcher

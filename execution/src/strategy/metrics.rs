@@ -9,7 +9,10 @@ use prometheus_client::{
 use tendermint::block;
 use tokio::time::Instant;
 
-use common::metrics::{Registry, BUCKETS};
+use common::{
+    metrics::{Registry, BUCKETS},
+    tracing::debug,
+};
 use terrars::dex;
 
 use crate::{accounts, strategy::Strategy};
@@ -205,7 +208,7 @@ where
             _ => Output::FoundTrades,
         };
 
-        log::debug!(
+        debug!(
             "module={} name={} height={} output={} size={} expected_profit={} trades={} duration={}",
             self.next.module(),
             self.next.name(),

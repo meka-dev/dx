@@ -10,7 +10,10 @@ use prometheus_client::{
 use tendermint::block::Height;
 use tokio::{task::JoinHandle, time::Instant};
 
-use common::metrics::{Registry, ResultLabel, BUCKETS};
+use common::{
+    metrics::{Registry, ResultLabel, BUCKETS},
+    tracing::{debug, error},
+};
 use terrars::{dex, lcd::Lcd, mekapi, AccountId};
 
 use crate::accounts;
@@ -180,13 +183,13 @@ where
             .observe(elapsed);
 
         match res {
-            Ok(_) => log::debug!(
+            Ok(_) => debug!(
                 target: "fetcher",
                 "fetcher={} elapsed={}",
                 self.next.name(),
                 elapsed,
             ),
-            Err(ref err) => log::error!(
+            Err(ref err) => error!(
                 target: "fetcher",
                 "fetcher={} elapsed={} err={}",
                 self.next.name(),

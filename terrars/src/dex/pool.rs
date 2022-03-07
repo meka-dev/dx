@@ -6,6 +6,7 @@ use cosmwasm_std::{to_binary, Addr, Uint128};
 use cw20::Cw20ExecuteMsg;
 use serde::Deserialize;
 use terraswap::pair::Cw20HookMsg;
+use tracing::debug;
 
 use crate::{
     base::Coin,
@@ -53,11 +54,9 @@ impl Pool {
         let bid_reserve: Uint256 = bid_asset.amount.into();
         let amt: Uint256 = (amount.0 / 10u64.pow(12).into()).into();
 
-        log::debug!(
+        debug!(
             "amount {} ask_reserve {} bid_reserve {}",
-            amt,
-            ask_reserve,
-            bid_reserve
+            amt, ask_reserve, bid_reserve
         );
 
         if amount < bid_asset.min_val() {
@@ -69,17 +68,17 @@ impl Pool {
         }
 
         let cp = ask_reserve * bid_reserve;
-        log::debug!("cp {}", cp);
+        debug!("cp {}", cp);
         let ret: Uint256 = (Decimal256::from_uint256(ask_reserve)
             - Decimal256::from_ratio(cp, bid_reserve + amt))
             * Uint256::one();
-        log::debug!("ret {}", ret);
+        debug!("ret {}", ret);
         let spread: Uint256 = (amt * Decimal256::from_ratio(ask_reserve, bid_reserve)) - ret;
-        log::debug!("spread {}", spread);
+        debug!("spread {}", spread);
         let fee = ret * Decimal256::permille(3); // XXX: get from chain
-        log::debug!("fee {}", fee);
+        debug!("fee {}", fee);
         let out = ret - fee;
-        log::debug!("out {}", out);
+        debug!("out {}", out);
 
         Some((
             Decimal256(out.0 * 10u64.pow(18 - bid_asset.decimals as u32).into()),

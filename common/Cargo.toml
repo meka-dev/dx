@@ -17,3 +17,5 @@ reqwest             = { version = "0.11", default-features = false, features = [
 tame-gcs            = { version = "0.11", default-features = false, features = [ "async-multipart", "signing", "v1" ] }
 tame-oauth          = { version = "0.7",  default-features = false, features = [ "gcp" ] }
 tokio               = { version = "1.0",  default-features = false, features = [ "sync", "time" ] }
+tracing             = { version = "0.1",  default-features = false }
+tracing-subscriber  = { version = "0.2",  default-features = false, features = [ "env-filter", "fmt" ] }
