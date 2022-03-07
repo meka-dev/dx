@@ -7,8 +7,6 @@ pub const LCD_URL: &str = "http://127.0.0.1:1317";
 pub const MEKAPI_URL: &str = "http://127.0.0.1:4401";
 pub const RPC_URL: &str = "ws://127.0.0.1:26657/websocket";
 
-pub const VERSION: &str = env!("HASH");
-
 #[derive(argh::FromArgs, Debug)]
 /// Execution environemnt for Mekatek strategies.
 pub struct Args {

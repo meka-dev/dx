@@ -7,9 +7,7 @@ use tendermint::{block::Height, Block};
 use tendermint_rpc::event::{Event, EventData};
 use tokio::sync::watch;
 
-use common::metrics::Registry;
-
-use crate::config;
+use common::{metrics::Registry, VERSION};
 
 pub trait Emitter {
     fn emit(
@@ -90,7 +88,7 @@ where
         if let Ok(Some(height)) = res {
             self.latest_block_height
                 .get_or_create(&LatestHeightLabels {
-                    version: config::VERSION.to_string(),
+                    version: VERSION.to_string(),
                 })
                 .set(height.value());
         }
