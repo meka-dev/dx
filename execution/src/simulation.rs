@@ -5,7 +5,10 @@ use prometheus_client::{
 };
 use tendermint::{block::Height, chain};
 
-use common::metrics::Registry;
+use common::{
+    metrics::Registry,
+    tracing::{error, info},
+};
 use terrars::{base::abci::GasInfo, lcd, tx, Message};
 
 #[async_trait::async_trait]
@@ -183,12 +186,9 @@ where
                         .inc_by(expected_profit - fee);
                 }
 
-                log::info!(
+                info!(
                     "messages={} expected_profit={} estimated_fee={} outcome={:?}",
-                    messages_len,
-                    expected_profit,
-                    fee,
-                    outcome,
+                    messages_len, expected_profit, fee, outcome,
                 );
 
                 Ok((fee, gas_info))
@@ -199,7 +199,7 @@ where
                         name: self.next.name(),
                     })
                     .inc();
-                log::error!("failed to simulate tx: {}", err);
+                error!("failed to simulate tx: {}", err);
                 Err(err)
             },
         }

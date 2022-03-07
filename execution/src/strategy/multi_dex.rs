@@ -7,6 +7,8 @@ use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Decimal256 as StdDecimal256, Fraction, Uint256 as StdUint256};
 use itertools::Itertools;
 use tendermint::block;
+
+use common::tracing::debug;
 use terrars::{
     dex::{self, Token},
     AccountId, MsgExecuteContract,
@@ -41,7 +43,7 @@ fn trade_path(
                 return None;
             }
 
-            log::debug!(
+            debug!(
                 "swap {} {:?} for {} {:?} with a spread of {} using max_spread {} on {}",
                 cb,
                 bid_token,
@@ -63,16 +65,16 @@ fn trade_path(
             cb = swap_ret;
             bid_token = ask_token;
         } else {
-            log::debug!("could not swap on {}", p.contract_address);
+            debug!("could not swap on {}", p.contract_address);
             return None;
         }
     }
 
-    log::debug!("started with {}, ended with {}", amount, cb);
+    debug!("started with {}, ended with {}", amount, cb);
     if cb <= amount {
         return None;
     }
-    log::debug!("positive delta {}", cb - amount);
+    debug!("positive delta {}", cb - amount);
 
     Some((cb - amount, msgs, route))
 }
@@ -113,12 +115,9 @@ fn compute_cycle_liq(
         ass
     };
 
-    log::debug!(
+    debug!(
         "p0 bid amt {:}, p0_ask amt {:}, p1_bid amt {:}, p1_ask amt {:}",
-        p0_bid.amount_decimal,
-        p0_ask.amount_decimal,
-        p1_bid.amount_decimal,
-        p1_ask.amount_decimal
+        p0_bid.amount_decimal, p0_ask.amount_decimal, p1_bid.amount_decimal, p1_ask.amount_decimal
     );
 
     let a = (p0_bid.amount_decimal * p1_bid.amount_decimal)
@@ -129,9 +128,9 @@ fn compute_cycle_liq(
     let op_std: StdDecimal256 = d256_to_sd256(r2 * a * a_p).sqrt();
     let op = sd256_to_d256(op_std);
 
-    log::debug!("op {:}", op);
-    log::debug!("a {:}", a);
-    log::debug!("a_p {:}", a_p);
+    debug!("op {:}", op);
+    debug!("a {:}", a);
+    debug!("a_p {:}", a_p);
     if op < a {
         return None;
     }
@@ -141,9 +140,9 @@ fn compute_cycle_liq(
         Uint256::one(),
         Into::<Uint256>::into(10u128.pow(p0_bid.decimals as u32)),
     );
-    log::debug!("delta {:}", delta);
+    debug!("delta {:}", delta);
     if delta < t {
-        log::debug!("compute_swap below threshold");
+        debug!("compute_swap below threshold");
         // If we are getting out less than the precision of the token then we just
         // return None
         return None;
@@ -185,7 +184,7 @@ impl Strategy for SinglePair {
         // crazy arbs go here
         let start = dex::Token::ust();
 
-        log::debug!("#{}", height);
+        debug!("#{}", height);
         for (token, pairs) in pools.index_by_token(&Token::ust()) {
             // We're only looking at cross dex two hop arbs, i.e. take all two pair
             // permutations for any token, eg ust -> luna on astroport and luna -> ust
@@ -200,18 +199,15 @@ impl Strategy for SinglePair {
                 }
 
                 let (left, right) = (&pools.0[*(indices[0])], &pools.0[*(indices[1])]);
-                log::debug!(
+                debug!(
                     "compute liq for path left {:} right {:}",
-                    left.contract_address,
-                    right.contract_address
+                    left.contract_address, right.contract_address
                 );
 
                 if let Some(liq) = compute_cycle_liq(&start, left, right) {
-                    log::debug!(
+                    debug!(
                         "got a good trade {} {} to {}",
-                        liq,
-                        left.contract_address,
-                        right.contract_address,
+                        liq, left.contract_address, right.contract_address,
                     );
                     // Check if we have sufficient funds available to execute the optimal trade.
                     // If not, then we just trade max and hope we can still pull enough of a
@@ -225,7 +221,7 @@ impl Strategy for SinglePair {
                     if let Some((expected_profit, messages, route)) =
                         trade_path(sender, &[left, right], &start, size)
                     {
-                        log::debug!("{:?}", messages);
+                        debug!("{:?}", messages);
                         trades.push(Trade {
                             size,
                             expected_profit,
@@ -233,7 +229,7 @@ impl Strategy for SinglePair {
                             route,
                         });
                     } else {
-                        log::debug!(
+                        debug!(
                             "but could not seize the opportunity with my balance {:}",
                             bal
                         );

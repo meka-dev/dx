@@ -2,6 +2,7 @@ use anyhow::Result;
 use cosmrs::tendermint::block;
 use cosmwasm_std::Addr;
 use reqwest::{header::HeaderValue, Client, ClientBuilder, StatusCode, Url};
+use tracing::debug;
 
 use crate::dex::Pool;
 
@@ -57,7 +58,7 @@ impl Mekapi for Http {
                     .collect::<Vec<_>>();
 
                 if pools.len() < expected_len {
-                    log::debug!(target: "mekapi", "decoded less pools than sent: {} < {}",
+                    debug!(target: "mekapi", "decoded less pools than sent: {} < {}",
                         pools.len(),
                         expected_len
                     );

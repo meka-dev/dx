@@ -10,7 +10,10 @@ use prometheus_client::{
 use tendermint::block;
 use terrars::mekapi::Mekapi;
 
-use common::metrics::{Registry, ResultLabel, BUCKETS};
+use common::{
+    metrics::{Registry, ResultLabel, BUCKETS},
+    tracing::debug,
+};
 use terrars::dex;
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
@@ -76,7 +79,7 @@ where
             })
             .observe(elapsed.as_secs_f64());
 
-        log::debug!(
+        debug!(
             "method=v1_pool_resposes contract={} height={} elapsed={:?} err={:?}",
             factory.to_string(),
             height.to_string(),

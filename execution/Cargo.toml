@@ -10,12 +10,10 @@ async-trait         = { version = "0.1",  default-features = false }
 bigint              = { version = "4.4",  default-features = false }
 cosmwasm-std        = { version = "0.16", default-features = false }
 cosmwasm-bignumber  = { version = "2.2",  default-features = false }
-env_logger          = { version = "0.9",  default-features = false }
 futures             = { version = "0.3",  default-features = false, features = [ "async-await", "std" ] }
 hex                 = { version = "0.4",  default-features = false }
 hyper               = { version = "0.14", default-features = false }
 itertools           = { version = "0.10", default-features = false }
-log                 = { version = "0.4",  default-features = false }
 prometheus-client   = { version = "0.15", default-features = false }
 serde               = { version = "1.0",  default-features = false }
 serde_json          = { version = "1.0",  default-features = false }
