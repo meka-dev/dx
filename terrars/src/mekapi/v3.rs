@@ -1,9 +1,12 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use cosmrs::{tendermint::block, Denom};
 use cosmwasm_std::{Addr, Uint128};
 use serde::{de::Error as _, Deserialize, Deserializer};
 
-#[async_trait::async_trait]
+use crate::dex;
+
+#[async_trait]
 pub trait Api: Send + Sync {
     async fn v3_pools(&self, factory: Addr, height: block::Height) -> Result<Vec<Pool>>;
 }
@@ -16,14 +19,28 @@ pub struct Pool {
     pub assets: [Asset; 2],
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
+impl From<Pool> for dex::Pool {
+    fn from(input: Pool) -> Self {
+        Self {
+            assets: [
+                dex::Asset::from(input.assets[0].clone()),
+                dex::Asset::from(input.assets[1].clone()),
+            ],
+            contract_address: input.contract_address,
+            liquidity_token: input.liquidity_token,
+            total_share: input.total_share,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Asset {
     Cw20 {
         contract_addr: Addr,
         name: String,
         symbol: String,
-        decimals: u64,
+        decimals: u8,
         amount: Uint128,
         total_supply: Uint128,
     },
@@ -33,6 +50,32 @@ pub enum Asset {
         amount: Uint128,
         total_supply: Uint128,
     },
+}
+
+impl From<Asset> for dex::Asset {
+    fn from(input: Asset) -> Self {
+        match input {
+            Asset::Cw20 {
+                contract_addr,
+                decimals,
+                amount,
+                ..
+            } => Self {
+                amount,
+                amount_decimal: dex::Asset::to_scaled_decimal256(amount.u128(), decimals as u32),
+                decimals,
+                token: dex::Token::Cw20 { contract_addr },
+            },
+            Asset::Native { denom, amount, .. } => Self {
+                amount,
+                amount_decimal: dex::Asset::to_scaled_decimal256(amount.u128(), 6),
+                decimals: 6,
+                token: dex::Token::Native {
+                    denom: denom.to_string(),
+                },
+            },
+        }
+    }
 }
 
 #[derive(Deserialize)]
