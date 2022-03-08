@@ -1,6 +1,7 @@
 use std::time::Instant;
 
-use anyhow::Result;
+use anyhow::{Error, Result};
+use async_trait::async_trait;
 use cosmwasm_std::Addr;
 use prometheus_client::{
     encoding::text::Encode,
@@ -8,17 +9,20 @@ use prometheus_client::{
     registry::Unit,
 };
 use tendermint::block;
-use terrars::mekapi::Mekapi;
 
 use common::{
     metrics::{Registry, ResultLabel, BUCKETS},
-    tracing::debug,
+    tracing::{debug, error},
 };
-use terrars::dex;
+use terrars::{
+    dex,
+    mekapi::{v3, Mekapi},
+};
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 enum Method {
     V1PoolResponses,
+    V3Pools,
 }
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
@@ -51,12 +55,52 @@ impl<L> Observed<L> {
             next,
         }
     }
+
+    fn observe(
+        &self,
+        start: Instant,
+        factory: Addr,
+        height: block::Height,
+        method: Method,
+        err: Option<&Error>,
+    ) {
+        let elapsed = start.elapsed();
+        self.call_duration
+            .get_or_create(&Labels {
+                factory: factory.to_string(),
+                method: method.clone(),
+                result: if err.is_some() {
+                    ResultLabel::Error
+                } else {
+                    ResultLabel::Success
+                },
+            })
+            .observe(elapsed.as_secs_f64());
+
+        match err {
+            None => debug!(
+                "method={:?} factory={} height={} elapsed={:?}",
+                method,
+                factory.to_string(),
+                height.to_string(),
+                elapsed,
+            ),
+            Some(err) => error!(
+                "method={:?} factory={} height={} elapsed={:?} error={}",
+                method,
+                factory.to_string(),
+                height.to_string(),
+                elapsed,
+                err,
+            ),
+        }
+    }
 }
 
-#[async_trait::async_trait]
-impl<L> Mekapi for Observed<L>
+#[async_trait]
+impl<M> Mekapi for Observed<M>
 where
-    L: Mekapi,
+    M: Mekapi,
 {
     async fn v1_pool_responses(
         &self,
@@ -65,27 +109,29 @@ where
     ) -> Result<Vec<dex::Pool>> {
         let start = Instant::now();
         let res = self.next.v1_pool_responses(factory.clone(), height).await;
-        let elapsed = start.elapsed();
 
-        self.call_duration
-            .get_or_create(&Labels {
-                factory: factory.to_string(),
-                method: Method::V1PoolResponses,
-                result: if res.is_err() {
-                    ResultLabel::Error
-                } else {
-                    ResultLabel::Success
-                },
-            })
-            .observe(elapsed.as_secs_f64());
-
-        debug!(
-            "method=v1_pool_resposes contract={} height={} elapsed={:?} err={:?}",
-            factory.to_string(),
-            height.to_string(),
-            elapsed,
-            res.as_ref().err()
+        self.observe(
+            start,
+            factory,
+            height,
+            Method::V1PoolResponses,
+            res.as_ref().err(),
         );
+
+        res
+    }
+}
+
+#[async_trait]
+impl<M> v3::Api for Observed<M>
+where
+    M: v3::Api,
+{
+    async fn v3_pools(&self, factory: Addr, height: block::Height) -> Result<Vec<v3::Pool>> {
+        let start = Instant::now();
+        let res = self.next.v3_pools(factory.clone(), height).await;
+
+        self.observe(start, factory, height, Method::V3Pools, res.as_ref().err());
 
         res
     }

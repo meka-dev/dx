@@ -22,7 +22,7 @@ use crate::accounts;
 pub trait Fetcher<L, M>
 where
     L: Lcd,
-    M: mekapi::Mekapi,
+    M: mekapi::v3::Api,
 {
     async fn fetch(
         &self,
@@ -43,7 +43,7 @@ impl Labeled for Mekapi {
 impl<L, M> Fetcher<L, M> for Mekapi
 where
     L: Lcd + 'static,
-    M: mekapi::Mekapi + Clone + 'static,
+    M: mekapi::v3::Api + Clone + 'static,
 {
     async fn fetch(
         &self,
@@ -58,7 +58,7 @@ where
             let mekapi = mekapi.clone();
             tokio::spawn(async move {
                 mekapi
-                    .v1_pool_responses(Addr::unchecked(terrars::dex::astroport::ADDRESS), height)
+                    .v3_pools(Addr::unchecked(terrars::dex::astroport::ADDRESS), height)
                     .await
             })
         };
@@ -66,7 +66,7 @@ where
             let mekapi = mekapi.clone();
             tokio::spawn(async move {
                 mekapi
-                    .v1_pool_responses(Addr::unchecked(terrars::dex::loopmarkets::ADDRESS), height)
+                    .v3_pools(Addr::unchecked(terrars::dex::loopmarkets::ADDRESS), height)
                     .await
             })
         };
@@ -74,7 +74,7 @@ where
             let mekapi = mekapi.clone();
             tokio::spawn(async move {
                 mekapi
-                    .v1_pool_responses(Addr::unchecked(terrars::dex::terraswap::ADDRESS), height)
+                    .v3_pools(Addr::unchecked(terrars::dex::terraswap::ADDRESS), height)
                     .await
             })
         };
@@ -89,7 +89,10 @@ where
         pools.append(&mut loopmarkets);
         pools.append(&mut terraswap);
 
-        Ok((funds, pools))
+        Ok((
+            funds,
+            pools.into_iter().map(dex::Pool::from).collect::<Vec<_>>(),
+        ))
     }
 }
 
@@ -157,7 +160,7 @@ impl<F> Observed<F> {
 impl<L, M, F> Fetcher<L, M> for Observed<F>
 where
     L: Lcd + 'static,
-    M: mekapi::Mekapi + Clone + 'static,
+    M: mekapi::v3::Api + Clone + 'static,
     F: Fetcher<L, M> + Labeled + Send + Sync,
 {
     async fn fetch(

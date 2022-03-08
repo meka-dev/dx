@@ -21,6 +21,10 @@ impl Asset {
             Into::<Uint256>::into(10u128.pow(self.decimals as u32)),
         )
     }
+
+    pub fn to_scaled_decimal256<T: Into<Uint256>>(n: T, decimals: u32) -> Decimal256 {
+        Decimal256::from_uint256(n) / Decimal256::from_uint256(10u128.pow(decimals))
+    }
 }
 
 impl Eq for Asset {}
@@ -45,7 +49,7 @@ impl PartialOrd for Asset {
 
 impl From<(Token, Uint128, u8)> for Asset {
     fn from((token, amount, decimals): (Token, Uint128, u8)) -> Self {
-        let amount_decimal = to_scaled_decimal256(amount.u128(), decimals as u32);
+        let amount_decimal = Asset::to_scaled_decimal256(amount.u128(), decimals as u32);
 
         Self {
             token,
@@ -54,10 +58,6 @@ impl From<(Token, Uint128, u8)> for Asset {
             decimals,
         }
     }
-}
-
-fn to_scaled_decimal256<T: Into<Uint256>>(n: T, decimals: u32) -> Decimal256 {
-    Decimal256::from_uint256(n) / Decimal256::from_uint256(10u128.pow(decimals))
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -82,7 +82,7 @@ impl TryFrom<&AssetJson> for Asset {
         let decimals = 6;
         Ok(Self {
             amount: input.amount,
-            amount_decimal: to_scaled_decimal256(input.amount.u128(), decimals as u32),
+            amount_decimal: Asset::to_scaled_decimal256(input.amount.u128(), decimals as u32),
             token: input.info.clone(),
             decimals,
         })
