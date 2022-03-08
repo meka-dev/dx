@@ -6,6 +6,8 @@ use tracing::debug;
 
 use crate::dex::Pool;
 
+pub mod v3;
+
 const HEADER_COUNT: &str = "Mekatek-Count";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
@@ -73,12 +75,51 @@ impl Mekapi for Http {
     }
 }
 
+#[async_trait::async_trait]
+impl v3::Api for Http {
+    async fn v3_pools(&self, factory: Addr, height: block::Height) -> Result<Vec<v3::Pool>> {
+        let mut url = self.base_url.join("v3/pools")?;
+        url.query_pairs_mut()
+            .clear()
+            .append_pair("factory", factory.as_ref())
+            .append_pair("height", &height.to_string());
+
+        let res = self.client.get(url).send().await?;
+        if res.status() != StatusCode::OK {
+            return Err(anyhow::anyhow!(
+                "unexpected response status code: {}",
+                res.status()
+            ));
+        }
+
+        let res = res.json::<v3::PoolsResponse>().await?;
+
+        if res.factory != factory {
+            return Err(anyhow::anyhow!(
+                "returned factory doesn't match input: {} != {}",
+                res.factory,
+                factory
+            ));
+        }
+
+        if res.height != height {
+            return Err(anyhow::anyhow!(
+                "returned height doesn't match input: {} != {}",
+                res.height,
+                height
+            ));
+        }
+
+        Ok(res.pools)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
     use anyhow::Result;
-    use cosmrs::tendermint::block;
+    use cosmrs::{tendermint::block, Denom};
     use cosmwasm_bignumber::Decimal256;
     use cosmwasm_std::{Addr, Uint128};
     use pretty_assertions::assert_eq;
@@ -89,7 +130,10 @@ mod tests {
 
     use crate::dex::{self, Token};
 
-    use super::{Http, Mekapi as _};
+    use super::{
+        v3::{self, Api as _},
+        Http, Mekapi as _,
+    };
 
     #[tokio::test]
     async fn v1_pool_responses_astroport() -> Result<()> {
@@ -254,6 +298,181 @@ mod tests {
         let pools = http.v1_pool_responses(factory, height).await?;
 
         assert_eq!(pools.len(), 3);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn v3_pools_astroport() -> Result<()> {
+        let factory = Addr::unchecked(dex::astroport::ADDRESS);
+        let height = "6750103".parse::<block::Height>()?;
+        let response = ResponseTemplate::new(200)
+            .set_body_bytes(include_bytes!("../fixtures/mekapi/v3-pools_astroport.json").to_vec());
+
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("v3/pools"))
+            .and(query_param("factory", &factory.to_string()))
+            .and(query_param("height", &height.to_string()))
+            .respond_with(response)
+            .mount(&server)
+            .await;
+
+        let http = Http::new(server.uri())?;
+        let pools = http.v3_pools(factory, height).await?;
+
+        assert_eq!(pools.len(), 114);
+
+        let anc_ust_addr = Addr::unchecked("terra1qr2k6yjjd5p2kaewqvg93ag74k6gyjr7re37fs");
+        let anc_ust_pool = pools
+            .iter()
+            .filter(|pool| pool.contract_address == anc_ust_addr)
+            .nth(0)
+            .unwrap();
+
+        assert_eq!(anc_ust_pool.contract_address, anc_ust_addr);
+        assert_eq!(
+            anc_ust_pool.liquidity_token,
+            Addr::unchecked("terra1wmaty65yt7mjw6fjfymkd9zsm6atsq82d9arcd")
+        );
+        assert_eq!(
+            anc_ust_pool.total_share,
+            Uint128::try_from(71152489166742u64)?
+        );
+        assert_eq!(
+            anc_ust_pool.assets[0],
+            v3::Asset::Cw20 {
+                contract_addr: Addr::unchecked("terra14z56l0fp2lsf86zy3hty2z47ezkhnthtr9yq76"),
+                amount: Uint128::try_from(35440438044246u64)?,
+                decimals: 6,
+                name: "Anchor Token".to_string(),
+                symbol: "ANC".to_string(),
+                total_supply: Uint128::try_from(1000000000000000u64)?,
+            },
+        );
+        assert_eq!(
+            anc_ust_pool.assets[1],
+            v3::Asset::Native {
+                denom: "uusd".parse::<Denom>().unwrap(),
+                amount: Uint128::try_from(145965720506419u64)?,
+                total_supply: Uint128::try_from(13750071736083280u64)?,
+            },
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn v3_pools_loopmarkets() -> Result<()> {
+        let factory = Addr::unchecked(dex::loopmarkets::ADDRESS);
+        let height = "6751891".parse::<block::Height>()?;
+        let response = ResponseTemplate::new(200).set_body_bytes(
+            include_bytes!("../fixtures/mekapi/v3-pools_loopmarkets.json").to_vec(),
+        );
+
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("v3/pools"))
+            .and(query_param("factory", &factory.to_string()))
+            .and(query_param("height", &height.to_string()))
+            .respond_with(response)
+            .mount(&server)
+            .await;
+
+        let http = Http::new(server.uri())?;
+        let pools = http.v3_pools(factory, height).await?;
+
+        assert_eq!(pools.len(), 43);
+
+        let star_ust_addr = Addr::unchecked("terra1lgazu0ltsxm3ayellqa2mhnhlvgx3hevkqeqy2");
+        let star_ust_pool = pools
+            .iter()
+            .filter(|pool| pool.contract_address == star_ust_addr)
+            .nth(0)
+            .unwrap();
+
+        assert_eq!(star_ust_pool.contract_address, star_ust_addr);
+        assert_eq!(
+            star_ust_pool.liquidity_token,
+            Addr::unchecked("terra16j3v7gkczclh46p6uwymrtufnq5ca4psdl04sj")
+        );
+        assert_eq!(star_ust_pool.total_share, Uint128::try_from(3679236962u64)?);
+        assert_eq!(
+            star_ust_pool.assets[0],
+            v3::Asset::Cw20 {
+                contract_addr: Addr::unchecked("terra13xujxcrc9dqft4p9a8ls0w3j0xnzm6y2uvve8n"),
+                amount: Uint128::try_from(3489691134u64)?,
+                decimals: 6,
+                name: "StarTerra Token".to_string(),
+                symbol: "STT".to_string(),
+                total_supply: Uint128::try_from(75866627572859u64)?,
+            },
+        );
+        assert_eq!(
+            star_ust_pool.assets[1],
+            v3::Asset::Native {
+                amount: Uint128::try_from(4086746967u64)?,
+                denom: "uusd".parse::<Denom>().unwrap(),
+                total_supply: Uint128::try_from(13764802755811511u64)?,
+            },
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn v3_pools_terraswap() -> Result<()> {
+        let factory = Addr::unchecked(dex::terraswap::ADDRESS);
+        let height = "6759772".parse::<block::Height>()?;
+        let response = ResponseTemplate::new(200)
+            .set_body_bytes(include_bytes!("../fixtures/mekapi/v3-pools_terraswap.json").to_vec());
+
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("v3/pools"))
+            .and(query_param("factory", &factory.to_string()))
+            .and(query_param("height", &height.to_string()))
+            .respond_with(response)
+            .mount(&server)
+            .await;
+
+        let http = Http::new(server.uri())?;
+        let pools = http.v3_pools(factory, height).await?;
+
+        assert_eq!(pools.len(), 978);
+
+        let luna_ust_addr = Addr::unchecked("terra1tndcaqxkpc5ce9qee5ggqf430mr2z3pefe5wj6");
+        let luna_ust_pool = pools
+            .iter()
+            .filter(|pool| pool.contract_address == luna_ust_addr)
+            .nth(0)
+            .unwrap();
+
+        assert_eq!(luna_ust_pool.contract_address, luna_ust_addr);
+        assert_eq!(
+            luna_ust_pool.liquidity_token,
+            Addr::unchecked("terra17dkr9rnmtmu7x4azrpupukvur2crnptyfvsrvr")
+        );
+        assert_eq!(
+            luna_ust_pool.total_share,
+            Uint128::try_from(1140364070981u64)?
+        );
+        assert_eq!(
+            luna_ust_pool.assets[0],
+            v3::Asset::Native {
+                denom: "uusd".parse::<Denom>().unwrap(),
+                amount: Uint128::try_from(24750209424590u64)?,
+                total_supply: Uint128::try_from(13846972254844578u64)?,
+            },
+        );
+        assert_eq!(
+            luna_ust_pool.assets[1],
+            v3::Asset::Native {
+                denom: "uluna".parse::<Denom>().unwrap(),
+                amount: Uint128::try_from(312056511288u64)?,
+                total_supply: Uint128::try_from(779103799509128u64)?,
+            },
+        );
 
         Ok(())
     }
