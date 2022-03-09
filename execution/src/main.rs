@@ -181,7 +181,7 @@ async fn main() -> Result<()> {
                             // around 180k and the typical gas price in
                             // uusd is 0.15.
                             fee,
-                            (gas_info.gas_used as f64 * 1.05) as u64,
+                            (gas_info.gas_used as f64 * 1.10) as u64,
                             Height::try_from(0_u64).unwrap(),
                             msgs,
                         )?;
