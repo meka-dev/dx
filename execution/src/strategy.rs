@@ -24,7 +24,7 @@ pub trait Strategy: Send {
     /// Given the current prices of dex pairs a strategy should produce an ordered list of messages
     /// (most likely swaps) to be bundled into one atomic transaction.
     async fn execute(
-        &self,
+        &mut self,
         height: block::Height,
         sender: &terrars::AccountId,
         funds: &accounts::Balances,

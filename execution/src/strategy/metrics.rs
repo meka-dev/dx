@@ -166,7 +166,7 @@ where
     S: Strategy + Labeled + Sync,
 {
     async fn execute(
-        &self,
+        &mut self,
         height: block::Height,
         sender: &terrars::AccountId,
         funds: &accounts::Balances,

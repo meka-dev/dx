@@ -173,7 +173,7 @@ impl metrics::Labeled for SinglePair {
 #[async_trait::async_trait]
 impl Strategy for SinglePair {
     async fn execute(
-        &self,
+        &mut self,
         height: block::Height,
         sender: &terrars::AccountId,
         funds: &accounts::Balances,

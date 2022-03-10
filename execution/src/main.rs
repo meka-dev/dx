@@ -90,7 +90,7 @@ async fn main() -> Result<()> {
         strategy::fetcher::Observed::new(&mut registry, strategy::fetcher::Mekapi {});
     let simulator = simulation::Observed::new(&mut registry, simulation::Rpc::new(lcd.clone()));
     // TODO(xla): Load configured strategies.
-    let strategies: Vec<Box<dyn strategy::Strategy + Sync>> = vec![Box::new(
+    let mut strategies: Vec<Box<dyn strategy::Strategy + Sync>> = vec![Box::new(
         strategy::metrics::Observed::new(&mut registry, strategy::multi_dex::SinglePair::default()),
     )];
     let tx_tracker = tracker::metrics::Observed::new(&mut registry, tracker::InMemory::default());
@@ -238,7 +238,7 @@ async fn main() -> Result<()> {
                         .filter(|pool| !risk.exclude(pool))
                         .collect::<Vec<_>>(),
                 );
-                for strategy in &strategies {
+                for strategy in strategies.iter_mut() {
                     let trades = strategy.execute(height, &account_id, &funds, &pools).await;
 
                     for trade in trades {
