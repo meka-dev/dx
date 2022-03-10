@@ -52,6 +52,8 @@ impl StaticPoolDenyList {
             Addr::unchecked("terra1z3u6mw3s20kt67ts9txrg2mjkzcwt7tgasp7gw"),
             Addr::unchecked("terra1lnr6aacxfng34m69076s2mdfjzt8nev2p6z5q0"),
             Addr::unchecked("terra1nf6wl37jxthskggvesngsp7y50s0jchmur57v3"),
+            Addr::unchecked("terra1m9hm6cxlf0907yy7lsssyfpzswlu54r99k9dxf"), /* LUART token has a transfer fee */
+            Addr::unchecked("terra143az0w2e504n56q7k43qyh2fu69fh3rhup32n3"),
         ]);
 
         Self(h)
