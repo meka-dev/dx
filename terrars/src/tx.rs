@@ -34,6 +34,7 @@ pub struct SimulateResponse {
     pub result: base::abci::Result,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn sign(
     chain_id: chain::Id,
     private_key: &SigningKey,
@@ -56,9 +57,9 @@ pub fn sign(
     let doc = SignDoc::new(&body, &auth_info, &chain_id, account_number)
         .map_err(|err| anyhow::anyhow!("SignDoc creation failed: {}", err))?;
     let signed = doc
-        .sign(&private_key)
+        .sign(private_key)
         .map_err(|err| anyhow::anyhow!("signign failed: {}", err))?;
-    Ok(signed
+    signed
         .to_bytes()
-        .map_err(|err| anyhow::anyhow!("conversion to bytes failed: {}", err))?)
+        .map_err(|err| anyhow::anyhow!("conversion to bytes failed: {}", err))
 }

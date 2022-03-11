@@ -78,11 +78,11 @@ impl<L> Labeled for Rpc<L> {
 }
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
-enum Name {
+pub enum Name {
     Rpc,
 }
 
-trait Labeled {
+pub trait Labeled {
     const NAME: Name;
 
     fn name(&self) -> Name {

@@ -105,7 +105,7 @@ async fn flatten<T>(handle: JoinHandle<Result<T>>) -> Result<T> {
 }
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
-enum Name {
+pub enum Name {
     Mekapi,
 }
 
@@ -117,7 +117,7 @@ impl fmt::Display for Name {
     }
 }
 
-trait Labeled {
+pub trait Labeled {
     const NAME: Name;
 
     fn name(&self) -> Name {
