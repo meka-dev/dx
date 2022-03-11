@@ -91,63 +91,84 @@ fn max_spread(_amount_out: Decimal256, _spread: Decimal256) -> Decimal256 {
 }
 
 // XXX: this might eventually go into a contract
-// XXX: we also need to be aware of our own balances
-fn compute_cycle_liq(
+fn compute_cycle_liq<'a, T: Iterator<Item = &'a dex::Pool>>(
     start: &dex::Token,
-    left: &dex::Pool,
-    right: &dex::Pool,
+    mut pools: T,
 ) -> Option<Decimal256> {
-    let r2 = Decimal256::from_str("0.997").unwrap();
+    let r2 = Decimal256::from_str("0.997").unwrap(); // XXX: get fee from chain
 
-    let [p0_bid, p0_ask] = if left.assets[0].token == *start {
-        left.assets.clone()
-    } else {
-        let mut ass = left.assets.clone();
-        ass.reverse();
-        ass
+    let (mut a, mut a_p, mut next_bid_token, decimals) = match pools.next() {
+        Some(dex::Pool {
+            assets: [left, right],
+            ..
+        }) if left.token == *start => (
+            left.amount_decimal,
+            right.amount_decimal,
+            right.token.clone(),
+            left.decimals,
+        ),
+        Some(dex::Pool {
+            assets: [left, right],
+            ..
+        }) if right.token == *start => (
+            right.amount_decimal,
+            left.amount_decimal,
+            left.token.clone(),
+            right.decimals,
+        ),
+        _ => return None,
     };
 
-    let [p1_bid, p1_ask] = if right.assets[0].token == p0_ask.token {
-        right.assets.clone()
-    } else {
-        let mut ass = right.assets.clone();
-        ass.reverse();
-        ass
-    };
+    // We accumulate (in a and a_p) the liquidity along the given path, taking fees
+    // (r1, r2) into account.
+    for pool in pools {
+        let [p1_bid, p1_ask] = if pool.assets[0].token == next_bid_token {
+            pool.assets.clone()
+        } else {
+            let mut ass = pool.assets.clone();
+            ass.reverse();
+            ass
+        };
 
-    debug!(
-        "p0 bid amt {:}, p0_ask amt {:}, p1_bid amt {:}, p1_ask amt {:}",
-        p0_bid.amount_decimal, p0_ask.amount_decimal, p1_bid.amount_decimal, p1_ask.amount_decimal
-    );
+        // XXX: test with different decimal values
+        if p1_ask.decimals != decimals {
+            return None;
+        }
 
-    let a = (p0_bid.amount_decimal * p1_bid.amount_decimal)
-        / (p1_bid.amount_decimal + r2 * p0_ask.amount_decimal);
-    let a_p = (p0_ask.amount_decimal * p1_ask.amount_decimal * r2)
-        / (p1_bid.amount_decimal + r2 * p0_ask.amount_decimal);
+        debug!(
+            "p0 bid amt {:}, p0_ask amt {:}, p1_bid amt {:}, p1_ask amt {:}",
+            a, a_p, p1_bid.amount_decimal, p1_ask.amount_decimal
+        );
 
-    let op_std: StdDecimal256 = d256_to_sd256(r2 * a * a_p).sqrt();
-    let op = sd256_to_d256(op_std);
+        a = (a * p1_bid.amount_decimal) / (p1_bid.amount_decimal + r2 * a_p);
+        a_p = (a_p * p1_ask.amount_decimal * r2) / (p1_bid.amount_decimal + r2 * a_p);
 
-    debug!("op {:}", op);
+        next_bid_token = p1_ask.token.clone();
+    }
+
+    // And then compute the optimal swap amount
+    let mut optimal = sd256_to_d256(d256_to_sd256(r2 * a * a_p).sqrt());
+
+    debug!("op {:}", optimal);
     debug!("a {:}", a);
     debug!("a_p {:}", a_p);
-    if op < a {
+    if optimal < a {
         return None;
     }
 
-    let delta = op - a;
+    optimal = optimal - a;
     let t: Decimal256 = Decimal256::from_ratio(
         Uint256::one(),
-        Into::<Uint256>::into(10u128.pow(p0_bid.decimals as u32)),
+        Into::<Uint256>::into(10u128.pow(decimals as u32)),
     );
-    debug!("delta {:}", delta);
-    if delta < t {
+    debug!("optimal {:}", optimal);
+    if optimal < t {
         debug!("compute_swap below threshold");
         // If we are getting out less than the precision of the token then we just
         // return None
         return None;
     }
-    Some(delta)
+    Some(optimal)
 }
 
 fn d256_to_sd256(d: Decimal256) -> StdDecimal256 {
@@ -204,7 +225,7 @@ impl Strategy for SinglePair {
                     left.contract_address, right.contract_address
                 );
 
-                if let Some(liq) = compute_cycle_liq(&start, left, right) {
+                if let Some(liq) = compute_cycle_liq(&start, [left, right].into_iter()) {
                     debug!(
                         "got a good trade {} {} to {}",
                         liq, left.contract_address, right.contract_address,
