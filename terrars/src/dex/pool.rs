@@ -131,7 +131,7 @@ impl Pools {
             }
 
             for asset in &pool.assets {
-                let list = map.entry(asset.token.clone()).or_insert(vec![]);
+                let list = map.entry(asset.token.clone()).or_insert_with(Vec::new);
                 list.push(index);
             }
         }
@@ -143,7 +143,7 @@ impl Pools {
 
         for (index, pool) in self.0.iter().enumerate() {
             let pair = pool.token_pair();
-            let list = map.entry(pair).or_insert(vec![]);
+            let list = map.entry(pair).or_insert_with(Vec::new);
             list.push(index);
         }
         map
@@ -244,7 +244,7 @@ mod tests {
             assert_eq!(belief_price.unwrap().to_string(), bp.to_string());
             assert_eq!(max_spread.unwrap().to_string(), ms.to_string());
         } else {
-            assert!(false, "did not produce a swap");
+            panic!("did not produce a swap");
         }
     }
 }
