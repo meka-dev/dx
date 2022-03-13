@@ -3,5 +3,6 @@
 members = [
   "common",
   "execution",
+  "params-derive",
   "terrars"
 ]
