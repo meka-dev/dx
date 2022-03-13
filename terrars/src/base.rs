@@ -112,9 +112,9 @@ impl From<Coin> for CoinJson {
 
 impl From<&Coin> for CoinJson {
     fn from(coin: &Coin) -> Self {
+        // XXX: as_u64 can panic
         CoinJson {
-            // amount: (coin.amount.0 / 10u64.pow(12).into()).as_u64().to_string(),
-            amount: coin.amount.to_string(),
+            amount: (coin.amount.0 / 10u64.pow(12).into()).as_u64().to_string(),
             denom: coin.denom.to_string(),
         }
     }
@@ -133,7 +133,7 @@ impl TryFrom<&CoinJson> for Coin {
 
     fn try_from(json: &CoinJson) -> Result<Self, Self::Error> {
         Ok(Coin {
-            amount: Decimal256::from_str(&json.amount)?,
+            amount: Decimal256::from_ratio(u64::from_str(&json.amount)?, 10u64.pow(6)),
             denom: Denom::from_str(&json.denom)
                 .map_err(|err| anyhow::anyhow!("unable to parse Denom: {}", err))?,
         })
@@ -177,6 +177,18 @@ mod tests {
         let example_json = example_value.to_string();
         let coin: Coin = serde_json::from_value(example_value).unwrap();
         assert_eq!(example_json, coin.to_string());
+    }
+
+    #[test]
+    fn coin_json() {
+        assert_eq!(Coin::TYPE_URL, "/cosmos.base.v1beta1.Coin");
+
+        let example_value = json!({
+            "amount": "2622376",
+            "denom": "uusd"
+        });
+        let coin: Coin = serde_json::from_value(example_value).unwrap();
+        assert_eq!(coin.amount, Decimal256::from_str("2.622376").unwrap());
     }
 
     #[test]
