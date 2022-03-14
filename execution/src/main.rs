@@ -32,7 +32,9 @@ use execution::{
     accounts,
     block_emitter::{self, Emitter as _},
     config,
-    risk_engine::{EmptyPoolDeny, RiskClassifier, RiskEngine, StaticPoolDenyList},
+    risk_engine::{
+        EmptyPoolDeny, RiskClassifier, RiskEngine, StaticPoolDenyList, UnsupportedPoolList,
+    },
     simulation::{self, Simulator as _},
     strategy::{self, fetcher::Fetcher as _, Trade},
     tracker::{self, Tracker as _},
@@ -90,9 +92,11 @@ async fn main() -> Result<()> {
         strategy::fetcher::Observed::new(&mut registry, strategy::fetcher::Mekapi {});
     let simulator = simulation::Observed::new(&mut registry, simulation::Rpc::new(lcd.clone()));
     // TODO(xla): Load configured strategies.
-    let mut strategies: Vec<Box<dyn strategy::Strategy + Sync>> = vec![Box::new(
-        strategy::metrics::Observed::new(&mut registry, strategy::multi_dex::SinglePair::default()),
-    )];
+    let mut strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
+        vec![Box::new(strategy::metrics::Observed::new(
+            &mut registry,
+            strategy::multi_dex::multi_hop::MultiHop::default(),
+        ))];
     let tx_tracker = tracker::metrics::Observed::new(&mut registry, tracker::InMemory::default());
 
     let metrics_server = metrics::bind(args.metrics_addr, BINARY_NAMESPACE, registry);
@@ -216,6 +220,7 @@ async fn main() -> Result<()> {
         let risk: RiskEngine<dyn RiskClassifier> = RiskEngine::new(vec![
             Box::new(EmptyPoolDeny {}),
             Box::new(StaticPoolDenyList::new()),
+            Box::new(UnsupportedPoolList::new()),
         ]);
 
         while let Ok(()) = latest_block_receiver.changed().await {

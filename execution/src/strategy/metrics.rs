@@ -35,12 +35,14 @@ impl Display for Module {
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 pub enum Name {
     SinglePair,
+    MultiHop,
 }
 
 impl Display for Name {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             Self::SinglePair => write!(f, "SinglePair"),
+            Self::MultiHop => write!(f, "MultiHop"),
         }
     }
 }

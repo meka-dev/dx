@@ -38,8 +38,18 @@ impl Token {
     }
 }
 
-#[derive(Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Pair(pub [Token; 2]);
+
+impl Pair {
+    pub fn other(&self, t: &Token) -> Option<&Token> {
+        match &self.0 {
+            [target, other] if t == target => Some(&other),
+            [other, target] if t == target => Some(&other),
+            _ => None,
+        }
+    }
+}
 
 impl From<[Token; 2]> for Pair {
     fn from(input: [Token; 2]) -> Self {

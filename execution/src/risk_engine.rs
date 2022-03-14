@@ -54,6 +54,19 @@ impl StaticPoolDenyList {
             Addr::unchecked("terra1nf6wl37jxthskggvesngsp7y50s0jchmur57v3"),
             Addr::unchecked("terra1m9hm6cxlf0907yy7lsssyfpzswlu54r99k9dxf"), /* LUART token has a transfer fee */
             Addr::unchecked("terra143az0w2e504n56q7k43qyh2fu69fh3rhup32n3"),
+            Addr::unchecked("terra1ht8f0pnym9tcnt5srxmlnyndsfl84nntphqfsl"), // ???
+            Addr::unchecked("terra136vrkx8kq7x5w0kgklzh9vxmn2x93q0edqe3nf"), // ???
+            Addr::unchecked("terra1uyvksaz9xpgxpqnq8vz9vzg59up8mlhx3463tf"), // transfer fee
+            Addr::unchecked("terra1ffjjxeu5l9f027qtkwseulgz6ddx5f04czyf0w"), // transfer fee
+            Addr::unchecked("terra1t0pd5uqsqp85cgly5cvggm698asez55ked2ftu"), /* ALTE-MIR low liq, constant rounding errors? */
+            Addr::unchecked("terra15asyerx0su2j3urlsn2xea0klrr5dpd75jamwj"), /* ALTE-SPEC low liq, constant rounding errors? */
+            Addr::unchecked("terra1r0288hx3mjgx0zrpmpc8rulm6ca8jheqtwhwq5"), /* ALTE-STT low liq, constant rounding errors? */
+            Addr::unchecked("terra1p2462m98je6pk3n03fwrnmngkm05mcr9pn6cmt"), /* ALTE-EUR low liq, constant rounding errors? */
+            Addr::unchecked("terra1hkp4hulmttwzagzphr6vczvjm46e6ryxv99nan"), /* ALTE-MINE low liq, constant rounding errors? */
+            Addr::unchecked("terra16eecm8exp3p82ld5eh5feweup0qvfv8468np6j"), /* ALTE-TWD low liq, constant rounding errors? */
+            Addr::unchecked("terra1kh2g4fnhvqtnwwpqa84eywn72ve9vdkp5chhlx"), /* ALTE-LUNA low liq, constant rounding errors? */
+            Addr::unchecked("terra1alaaant5ykususyuv0x6k298sh8kl8qkpkuu8e"), /* ALTE-aUST low liq, constant rounding errors? */
+            Addr::unchecked("terra10dtff8drpwtfx4976m7cxwpptfy87l5p264xgy"), /* ALTE-ANC low liq, constant rounding errors? */
         ]);
 
         Self(h)
@@ -61,6 +74,41 @@ impl StaticPoolDenyList {
 }
 
 impl RiskClassifier for StaticPoolDenyList {
+    fn exclude(&self, item: &Pool) -> bool {
+        self.0.contains(&item.contract_address)
+    }
+}
+
+#[derive(Default)]
+pub struct UnsupportedPoolList(pub HashSet<Addr>);
+
+impl UnsupportedPoolList {
+    pub fn new() -> Self {
+        let h: HashSet<Addr> = HashSet::from([
+            // Stableswap pools
+            Addr::unchecked("terra1wgdjvp388mlvhad8u7ly5d34ga4zyyfvf3e5j8"),
+            Addr::unchecked("terra1r5m5h9nvnw0hhzwn4gzz9p2wzg78q2jsq0alvp"),
+            Addr::unchecked("terra17umn0xctu4qj8w6psqfjfp20nx454csspuvdur"),
+            Addr::unchecked("terra1h2g2mldq2fskq0sqdhupnzpfj396d03ds2yfkd"),
+            Addr::unchecked("terra1qswfc7hmmsnwf7f2nyyx843sug60urnqgz75zu"),
+            Addr::unchecked("terra1gxjjrer8mywt4020xdl5e5x7n6ncn6w38gjzae"),
+            Addr::unchecked("terra1cevdyd0gvta3h79uh5t47kk235rvn42gzf0450"),
+            Addr::unchecked("terra1szt6cq52akhmzcqw5jhkw3tvdjtl4kvyk3zkhx"),
+            Addr::unchecked("terra1qmxkqcgcgq8ch72k6kwu3ztz6fh8tx2xd76ws7"),
+            Addr::unchecked("terra1cc6kqk0yl25hdpr5llxmx62mlyfdl7n0rwl3hq"),
+            Addr::unchecked("terra1x0ulpvp6m46c5j7t40nj24mjp900954ys2jsnu"),
+            Addr::unchecked("terra1t59ywlkkmvy7rmkdmdpy0z7wdqez5tne9mrd0r"),
+            Addr::unchecked("terra1j66jatn3k50hjtg2xemnjm8s7y8dws9xqa5y8w"),
+            // ibc assets
+            Addr::unchecked("terra1tq4mammgkqrxrmcfhwdz59mwvwf4qgy6rdrt46"),
+            Addr::unchecked("terra194j4rhezku4dmfz2vsnpzqv0actlg3xepg7l3t"),
+        ]);
+
+        Self(h)
+    }
+}
+
+impl RiskClassifier for UnsupportedPoolList {
     fn exclude(&self, item: &Pool) -> bool {
         self.0.contains(&item.contract_address)
     }
