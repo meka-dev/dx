@@ -19,7 +19,7 @@ pub trait Tracker {
     // TODO(xla): Communicate through the result how many txs have been observed, of those how many
     // where in the cache and further how many have been evicted.
     fn observe_block(&mut self, block: Block) -> Result<()>;
-    fn track(&mut self, hash: Hash, route: Route) -> Option<Route>;
+    fn track(&mut self, hash: Hash, route: &Route) -> Option<Route>;
 }
 
 /// Record to hold the route of the trade and the height when the tx entered the [`Tracker`]. The
@@ -72,8 +72,8 @@ impl Tracker for InMemory {
         Ok(())
     }
 
-    fn track(&mut self, hash: Hash, route: Route) -> Option<Route> {
-        for addr in &route {
+    fn track(&mut self, hash: Hash, route: &Route) -> Option<Route> {
+        for addr in route {
             let txs = self
                 .addr_index
                 .entry(addr.clone())
@@ -86,7 +86,7 @@ impl Tracker for InMemory {
                 hash,
                 TxEntry {
                     height: self.latest_height,
-                    route,
+                    route: route.to_vec(),
                 },
             )
             .map(|e| e.route)
