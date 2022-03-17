@@ -1,4 +1,8 @@
-use std::{collections::HashMap, str::FromStr as _};
+use std::{
+    collections::HashMap,
+    hash::{Hash, Hasher},
+    str::FromStr as _,
+};
 
 use cosmrs::Denom;
 use cosmwasm_bignumber::{Decimal256, Uint256};
@@ -6,7 +10,7 @@ use cosmwasm_std::{to_binary, Addr, Uint128};
 use cw20::Cw20ExecuteMsg;
 use serde::Deserialize;
 use terraswap::pair::Cw20HookMsg;
-use tracing::debug;
+use tracing::trace;
 
 use crate::{
     base::Coin,
@@ -23,6 +27,12 @@ pub struct Pool {
     pub contract_address: Addr,
     pub liquidity_token: Addr,
     pub total_share: Uint128,
+}
+
+impl Hash for Pool {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.contract_address.hash(state);
+    }
 }
 
 impl Pool {
@@ -52,42 +62,32 @@ impl Pool {
 
         let ask_reserve: Uint256 = ask_asset.amount.into();
         let bid_reserve: Uint256 = bid_asset.amount.into();
-        let amt: Uint256 = (amount.0 / 10u64.pow(12).into()).into();
+        let amt: Uint256 = (amount.0 / 10u64.pow(12).into()).into(); // XXX: decimals
 
-        debug!(
-            "amount {} ask_reserve {} bid_reserve {}",
-            amt, ask_reserve, bid_reserve
-        );
-
-        if amount < bid_asset.min_val() {
-            return None;
-        }
-
-        if bid_reserve == Uint256::zero() || ask_reserve == Uint256::zero() {
+        if amount < bid_asset.min_val()
+            || bid_reserve == Uint256::zero()
+            || ask_reserve == Uint256::zero()
+        {
             return None;
         }
 
         let cp = ask_reserve * bid_reserve;
-        debug!("cp {}", cp);
+        trace!("cp {:?}", cp);
         let ret: Uint256 = (Decimal256::from_uint256(ask_reserve)
             - Decimal256::from_ratio(cp, bid_reserve + amt))
             * Uint256::one();
-        debug!("ret {}", ret);
+        trace!("ret {:?}", ret);
         let spread: Uint256 = (amt * Decimal256::from_ratio(ask_reserve, bid_reserve)) - ret;
-        debug!("spread {}", spread);
+        trace!("spread {:?}", spread);
         let fee = ret * Decimal256::permille(3); // XXX: get from chain
-        debug!("fee {}", fee);
+        trace!("fee {:?}", fee);
         let out = ret - fee;
-        debug!("out {}", out);
+        trace!("out {:?}", out);
 
         Some((
             Decimal256(out.0 * 10u64.pow(18 - bid_asset.decimals as u32).into()),
             Decimal256(spread.0 * 10u64.pow(18 - bid_asset.decimals as u32).into()),
         ))
-    }
-
-    pub fn has_asset(&self, token: &Token) -> bool {
-        self.assets[0].token == *token || self.assets[1].token == *token
     }
 
     pub fn swap(
@@ -109,7 +109,7 @@ impl Pool {
     }
 
     pub fn token_pair(&self) -> TokenPair {
-        todo!()
+        [self.assets[0].token.clone(), self.assets[1].token.clone()].into()
     }
 }
 
@@ -126,7 +126,7 @@ impl Pools {
         let mut map = HashMap::new();
 
         for (index, pool) in self.0.iter().enumerate() {
-            if !pool.has_asset(filter) {
+            if !pool.has_token(filter) {
                 continue;
             }
 
@@ -208,6 +208,17 @@ pub fn swap(
         execute_msg: msg,
         sender: sender.to_string(),
     }
+}
+
+// only need this for the actual msg
+pub fn belief_price(amount_in: Decimal256, amount_out: Decimal256) -> Decimal256 {
+    amount_in / amount_out
+}
+
+// XXX: astroport has an upper limit on max_spread of 0.5
+pub fn max_spread(_amount_out: Decimal256, _spread: Decimal256) -> Decimal256 {
+    // spread / amount_out
+    Decimal256::zero()
 }
 
 #[cfg(test)]

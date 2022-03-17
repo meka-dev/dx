@@ -774,6 +774,7 @@ dependencies = [
  "futures",
  "hex",
  "hyper",
+ "indexmap",
  "itertools",
  "prometheus-client",
  "serde",
@@ -783,6 +784,7 @@ dependencies = [
  "tendermint-rpc",
  "terrars",
  "tokio",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -3159,6 +3161,12 @@ dependencies = [
  "serde_json",
  "tokio",
 ]
+
+[[package]]
+name = "xxhash-rust"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "886f21441c6731b9e06a9fdacbc5e29319c17a4069c2a511d80349874864702d"
 
 [[package]]
 name = "zeroize"

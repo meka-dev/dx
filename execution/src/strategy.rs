@@ -11,7 +11,7 @@ pub mod multi_dex;
 
 pub type Route = Vec<Addr>;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Trade {
     pub size: Decimal256,
     pub expected_profit: Decimal256,
