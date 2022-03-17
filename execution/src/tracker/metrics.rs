@@ -75,7 +75,7 @@ where
         res
     }
 
-    fn track(&mut self, hash: Hash, route: Route) -> Option<Route> {
+    fn track(&mut self, hash: Hash, route: &Route) -> Option<Route> {
         let start = Instant::now();
         let res = self.next.track(hash, route);
         self.observe(start, Method::Track);
