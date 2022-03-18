@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use cosmwasm_bignumber::Decimal256;
+use cosmwasm_bignumber::Uint256;
 use cosmwasm_std::Addr;
 use indexmap::IndexSet;
 use itertools::Itertools;
@@ -207,7 +207,7 @@ impl Strategy for MultiHop {
                 .into_iter();
             if let Some(liq) = compute_cycle_liq(&start, ppath.clone()) {
                 // debug!("got a good trade {} on {:?}", liq, path);
-                let bal: Decimal256 = *funds.get(&start).unwrap_or(&Decimal256::zero());
+                let bal: Uint256 = *funds.get(&start).unwrap_or(&Uint256::zero());
                 let size = if liq > bal { bal } else { liq };
 
                 // let size = liq;

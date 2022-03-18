@@ -164,7 +164,7 @@ mod tests {
         tendermint::{block::Height, chain},
         tx::Msg as _,
     };
-    use cosmwasm_bignumber::Decimal256;
+    use cosmwasm_bignumber::Uint256;
     use cosmwasm_std::Addr;
     use serde::{Deserialize, Serialize};
     use serde_json::json;
@@ -319,7 +319,7 @@ mod tests {
         let tx = {
             let send = cosmrs::bank::MsgSend {
                 amount: vec![Coin {
-                    amount: Decimal256::one(),
+                    amount: Uint256::one(),
                     denom: cosmrs::Denom::from_str("uusd")?,
                 }
                 .into()],

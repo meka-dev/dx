@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use cosmwasm_bignumber::Decimal256;
+use cosmwasm_bignumber::Uint256;
 use terrars::{dex, lcd::Lcd, AccountId};
 
 pub const PREFIX: &str = "terra";
 
-pub type Balances = HashMap<dex::Token, Decimal256>;
+pub type Balances = HashMap<dex::Token, Uint256>;
 
 pub async fn fetch<L>(lcd: L, account_id: AccountId) -> anyhow::Result<Balances>
 where

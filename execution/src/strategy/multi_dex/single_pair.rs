@@ -1,6 +1,6 @@
 #![allow(clippy::borrowed_box)]
 
-use cosmwasm_bignumber::Decimal256;
+use cosmwasm_bignumber::Uint256;
 use itertools::Itertools;
 use tendermint::block;
 
@@ -64,10 +64,8 @@ impl Strategy for SinglePair {
                     // If not, then we just trade max and hope we can still pull enough of a
                     // profit.
                     // We could also consider adding logic to spread the arb across multiple tx.
-                    // XXX: this still does not take gas fees into account
-                    let bal: Decimal256 = *funds.get(&start).unwrap_or(&Decimal256::zero());
-                    let _size = if liq > bal { bal } else { liq };
-                    let size = liq;
+                    let bal: Uint256 = *funds.get(&start).unwrap_or(&Uint256::zero());
+                    let size = if liq > bal { bal } else { liq };
                     // XXX: the mismatch between size and our balance should be captured in metrics
                     if let Some((expected_profit, messages, route)) =
                         trade_path(sender, [left, right].into_iter(), &start, size)

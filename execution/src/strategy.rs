@@ -1,4 +1,4 @@
-use cosmwasm_bignumber::Decimal256;
+use cosmwasm_bignumber::Uint256;
 use cosmwasm_std::Addr;
 use tendermint::block::{self};
 use terrars::{dex::Pools, MsgExecuteContract};
@@ -13,8 +13,8 @@ pub type Route = Vec<Addr>;
 
 #[derive(Clone, Debug)]
 pub struct Trade {
-    pub size: Decimal256,
-    pub expected_profit: Decimal256,
+    pub size: Uint256,
+    pub expected_profit: Uint256,
     pub messages: Vec<MsgExecuteContract>,
     pub route: Route,
 }

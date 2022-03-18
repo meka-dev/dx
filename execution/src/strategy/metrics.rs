@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use cosmwasm_bignumber::{Decimal256, Uint256};
+use cosmwasm_bignumber::Uint256;
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{counter::Counter, family::Family, gauge::Gauge, histogram::Histogram},
@@ -179,20 +179,14 @@ where
 
         let elapsed = start.elapsed().as_secs_f64();
         let (size_total, size_max) = trades.iter().fold(
-            (
-                Decimal256::from_uint256(Uint256::zero()),
-                Decimal256::from_uint256(Uint256::zero()),
-            ),
+            (Uint256::zero(), Uint256::zero()),
             |(total, max), Trade { size, .. }| {
                 let max = if *size > max { *size } else { max };
                 (total + *size, max)
             },
         );
         let (expected_profit_total, expected_profit_max) = trades.iter().fold(
-            (
-                Decimal256::from_uint256(Uint256::zero()),
-                Decimal256::from_uint256(Uint256::zero()),
-            ),
+            (Uint256::zero(), Uint256::zero()),
             |(total, max),
              Trade {
                  expected_profit, ..

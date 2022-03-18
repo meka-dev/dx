@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
 use async_trait::async_trait;
-use cosmwasm_bignumber::Decimal256;
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{counter::Counter, family::Family, histogram::Histogram},
@@ -160,7 +159,7 @@ where
     }
 
     async fn simulate(&self, trade: &Trade) -> Result<Simulation> {
-        let expected_profit = convert_expected_profit(trade.expected_profit);
+        let expected_profit = trade.expected_profit.0.as_u64();
         let messages = trade
             .messages
             .clone()
@@ -307,7 +306,7 @@ where
         gas_info: GasInfo,
         trade: &Trade,
     ) -> Result<broadcast::tx_sync::Response> {
-        let expected_profit = convert_expected_profit(trade.expected_profit);
+        let expected_profit = trade.expected_profit.0.as_u64();
         let method = Method::Broadcast;
         let start = Instant::now();
         let res = self.next.broadcast(fee, gas_info, trade).await;
@@ -355,7 +354,7 @@ where
                 info!(
                     "messages={} expected_profit={} estimated_fee={} outcome={:?}",
                     trade.messages.len(),
-                    convert_expected_profit(trade.expected_profit),
+                    trade.expected_profit,
                     simulation.fee,
                     simulation.outcome,
                 );
@@ -368,8 +367,4 @@ where
             },
         }
     }
-}
-
-fn convert_expected_profit(expected: Decimal256) -> u64 {
-    (expected.0 / 10u64.pow(12).into()).as_u64()
 }
