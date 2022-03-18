@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use anyhow::{Context as _, Result};
 use async_trait::async_trait;
@@ -41,7 +41,7 @@ pub async fn run<B, T>(
     mut trades: mpsc::Receiver<Trade>,
     mut broadcaster: B,
     tx_tracker: Arc<Mutex<T>>,
-    execute_trades: bool,
+    execute_trades: Arc<RwLock<bool>>,
 ) -> Result<()>
 where
     B: Broadcaster,
@@ -56,6 +56,10 @@ where
         }
 
         if let Ok(simulation) = broadcaster.simulate(&trade).await {
+            let execute_trades = *execute_trades
+                .read()
+                .expect("failed to acquire poisoned lock");
+
             if execute_trades && simulation.outcome == Outcome::Profitable {
                 if let Ok(check) = broadcaster
                     .broadcast(simulation.fee, simulation.gas_info, &trade)

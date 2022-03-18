@@ -26,10 +26,10 @@ pub fn codegen(model: Model) -> TokenStream {
         }
 
         use serde::ser::SerializeStruct as _;
-        impl #impl_generics serde::Serialize for #ident #ty_generics #where_clause {
+        impl #impl_generics ::serde::ser::Serialize for #ident #ty_generics #where_clause {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
-                S: serde::ser::Serializer,
+                S: ::serde::ser::Serializer,
             {
                 #[derive(serde::Serialize)]
                 struct SerializeField<T> {

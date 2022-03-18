@@ -21,7 +21,7 @@ use terrars::{
 use execution::{
     accounts,
     block_emitter::{self, Emitter as _},
-    broadcast, config,
+    broadcast, config, params,
     risk_engine::{
         EmptyPoolDeny, RiskClassifier, RiskEngine, StaticPoolDenyList, UnsupportedPoolList,
     },
@@ -35,7 +35,7 @@ const BINARY_NAMESPACE: &str = "execution";
 async fn main() -> Result<()> {
     tracing::init();
 
-    let args: config::Args = argh::from_env();
+    let (args, args_router) = argh::from_env::<config::Args>().router();
 
     // Set up RPC client.
     let (client, driver) = WebSocketClient::new(args.rpc_url.as_str()).await?;
@@ -106,6 +106,9 @@ async fn main() -> Result<()> {
             strategy::multi_dex::multi_hop::MultiHop::default(),
         ))];
 
+    let params_server = params::bind(&mut registry, args.params_addr, args_router);
+    let mut params_server_handle = tokio::spawn(params_server).fuse();
+
     let metrics_server = metrics::bind(args.metrics_addr, BINARY_NAMESPACE, registry);
     let mut metrics_server_handle = tokio::spawn(metrics_server).fuse();
 
@@ -134,7 +137,7 @@ async fn main() -> Result<()> {
         trade_receiver,
         broadcaster,
         Arc::clone(&tx_tracker),
-        !args.dry_run,
+        args.execute_trades,
     ))
     .fuse();
 
@@ -186,6 +189,7 @@ async fn main() -> Result<()> {
     // TODO(xla): Handle signals.
     loop {
         futures::select! {
+            join = params_server_handle => join??,
             join = metrics_server_handle => join??,
             join = driver_handle => join??,
             join = latest_block_handle => join??,

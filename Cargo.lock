@@ -767,6 +767,8 @@ dependencies = [
  "anyhow",
  "argh",
  "async-trait",
+ "axum",
+ "axum-extra",
  "bigint",
  "common",
  "cosmwasm-bignumber",
@@ -776,6 +778,7 @@ dependencies = [
  "hyper",
  "indexmap",
  "itertools",
+ "params-derive",
  "prometheus-client",
  "serde",
  "serde_json",
@@ -784,6 +787,7 @@ dependencies = [
  "tendermint-rpc",
  "terrars",
  "tokio",
+ "tower-http",
  "xxhash-rust",
 ]
 
@@ -2812,6 +2816,7 @@ dependencies = [
  "tower",
  "tower-layer",
  "tower-service",
+ "tracing",
 ]
 
 [[package]]
