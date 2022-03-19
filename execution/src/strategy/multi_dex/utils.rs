@@ -98,12 +98,10 @@ pub fn compute_cycle_liq<'a, T: Iterator<Item = &'a Pool>>(
     // We accumulate (in a and a_p) the liquidity along the given path, taking fees
     // (r1, r2) into account.
     for pool in pools {
-        let [p1_bid, p1_ask] = if pool.assets[0].token == next_bid_token {
-            pool.assets.clone()
-        } else {
-            let mut ass = pool.assets.clone();
-            ass.reverse();
-            ass
+        let (p1_bid, p1_ask) = match &pool.assets {
+            [left, right] if left.token == next_bid_token => (left, right),
+            [left, right] if right.token == next_bid_token => (right, left),
+            _ => return None,
         };
 
         // XXX: test with different decimal values

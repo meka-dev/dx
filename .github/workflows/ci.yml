@@ -171,7 +171,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: nextest
-          args: run --workspace --all-features --all-targets
+          args: run --workspace --tests --all-features
 
   release-execution:
     if: "github.ref == 'refs/heads/main'"
