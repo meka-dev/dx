@@ -6,3 +6,6 @@ members = [
   "params-derive",
   "terrars"
 ]
+
+[profile.release]
+lto = "fat"
