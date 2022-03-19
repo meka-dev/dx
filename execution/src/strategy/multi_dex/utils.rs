@@ -16,8 +16,8 @@ pub fn trade_path<'a, T: Iterator<Item = &'a Pool>>(
     sender: &AccountId,
     pools: T,
     start: &Token,
-    amount: Decimal256,
-) -> Option<(Decimal256, Vec<MsgExecuteContract>, Route)> {
+    amount: Uint256,
+) -> Option<(Uint256, Vec<MsgExecuteContract>, Route)> {
     let mut msgs = vec![];
     let mut cb = amount;
     let mut bid_token = start.clone();
@@ -26,7 +26,7 @@ pub fn trade_path<'a, T: Iterator<Item = &'a Pool>>(
     for p in pools {
         let ask_token = p.ask_token(&bid_token);
         if let Some((swap_ret, spread)) = p.compute_swap(&bid_token, &ask_token, cb) {
-            if swap_ret == Decimal256::zero() || spread == Decimal256::zero() {
+            if swap_ret.is_zero() || spread.is_zero() {
                 return None;
             }
 
@@ -70,7 +70,7 @@ pub fn trade_path<'a, T: Iterator<Item = &'a Pool>>(
 pub fn compute_cycle_liq<'a, T: Iterator<Item = &'a Pool>>(
     start: &Token,
     mut pools: T,
-) -> Option<Decimal256> {
+) -> Option<Uint256> {
     let r2 = Decimal256::permille(997); // XXX: get fee from chain
 
     let (mut a, mut a_p, mut next_bid_token, decimals) = match pools.next() {
@@ -144,7 +144,7 @@ pub fn compute_cycle_liq<'a, T: Iterator<Item = &'a Pool>>(
         // return None
         return None;
     }
-    Some(optimal)
+    Some((optimal.0 / 10u64.pow(18 - decimals as u32).into()).into())
 }
 
 fn d256_to_sd256(d: Decimal256) -> StdDecimal256 {

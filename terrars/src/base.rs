@@ -2,7 +2,7 @@ use std::str::FromStr as _;
 
 use anyhow::{Error, Result};
 use cosmrs::Denom;
-use cosmwasm_bignumber::Decimal256;
+use cosmwasm_bignumber::Uint256;
 use serde::{Deserialize, Serialize};
 
 use crate::proto;
@@ -17,7 +17,7 @@ pub struct Coin {
     pub denom: Denom,
 
     /// Amount
-    pub amount: Decimal256,
+    pub amount: Uint256,
 }
 
 impl Coin {
@@ -44,7 +44,7 @@ impl From<&Coin> for cosmrs::Coin {
     fn from(input: &Coin) -> Self {
         Self {
             denom: input.denom.clone(),
-            amount: cosmrs::Decimal::from((input.amount.0 / 10u64.pow(12).into()).as_u64()),
+            amount: cosmrs::Decimal::from(input.amount.0.as_u64()),
         }
     }
 }
@@ -58,7 +58,7 @@ impl From<cosmrs::Coin> for Coin {
 impl From<&cosmrs::Coin> for Coin {
     fn from(input: &cosmrs::Coin) -> Self {
         Self {
-            amount: Decimal256::from_uint256(input.amount.0 / 10u64.pow(6)),
+            amount: input.amount.0.into(),
             denom: input.denom.clone(),
         }
     }
@@ -77,7 +77,7 @@ impl TryFrom<&proto::cosmos::base::v1beta1::Coin> for Coin {
 
     fn try_from(input: &proto::cosmos::base::v1beta1::Coin) -> cosmrs::Result<Self> {
         Ok(Self {
-            amount: Decimal256::from_uint256(u64::from_str(&input.amount)? / 10u64.pow(6)),
+            amount: u128::from_str(&input.amount)?.into(),
             denom: input.denom.parse()?,
         })
     }
@@ -93,7 +93,7 @@ impl From<&Coin> for proto::cosmos::base::v1beta1::Coin {
     fn from(coin: &Coin) -> proto::cosmos::base::v1beta1::Coin {
         proto::cosmos::base::v1beta1::Coin {
             denom: coin.denom.to_string(),
-            amount: (coin.amount.0 / 10u64.pow(12).into()).as_u64().to_string(),
+            amount: coin.amount.0.to_string(),
         }
     }
 }
@@ -114,7 +114,7 @@ impl From<&Coin> for CoinJson {
     fn from(coin: &Coin) -> Self {
         // XXX: as_u64 can panic
         CoinJson {
-            amount: (coin.amount.0 / 10u64.pow(12).into()).as_u64().to_string(),
+            amount: coin.amount.0.to_string(),
             denom: coin.denom.to_string(),
         }
     }
@@ -133,7 +133,7 @@ impl TryFrom<&CoinJson> for Coin {
 
     fn try_from(json: &CoinJson) -> Result<Self, Self::Error> {
         Ok(Coin {
-            amount: Decimal256::from_ratio(u64::from_str(&json.amount)?, 10u64.pow(6)),
+            amount: u128::from_str(&json.amount)?.into(),
             denom: Denom::from_str(&json.denom)
                 .map_err(|err| anyhow::anyhow!("unable to parse Denom: {}", err))?,
         })
@@ -145,7 +145,7 @@ mod tests {
     use std::str::FromStr as _;
 
     use cosmrs::Denom;
-    use cosmwasm_bignumber::Decimal256;
+    use cosmwasm_bignumber::Uint256;
     use prost::Message as _;
     use serde_json::json;
 
@@ -156,7 +156,7 @@ mod tests {
     #[test]
     fn coin_cosmrs_round_trip() {
         let want = Coin {
-            amount: Decimal256::from_uint256(2622376u64),
+            amount: Uint256::from(2622376u128),
             denom: Denom::from_str("uusd").unwrap(),
         };
 
@@ -188,7 +188,7 @@ mod tests {
             "denom": "uusd"
         });
         let coin: Coin = serde_json::from_value(example_value).unwrap();
-        assert_eq!(coin.amount, Decimal256::from_str("2.622376").unwrap());
+        assert_eq!(coin.amount, Uint256::from(2622376u128));
     }
 
     #[test]
@@ -196,7 +196,7 @@ mod tests {
         assert_eq!(Coin::TYPE_URL, "/cosmos.base.v1beta1.Coin");
 
         let want = Coin {
-            amount: Decimal256::from_uint256(2622376u64),
+            amount: Uint256::from(2622376u128),
             denom: Denom::from_str("uusd").unwrap(),
         };
         let proto_msg = proto::cosmos::base::v1beta1::Coin::from(&want);

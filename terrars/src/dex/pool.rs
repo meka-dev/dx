@@ -52,8 +52,8 @@ impl Pool {
         &self,
         bid_token: &Token,
         ask_token: &Token,
-        amount: Decimal256,
-    ) -> Option<(Decimal256, Decimal256)> {
+        amount: Uint256,
+    ) -> Option<(Uint256, Uint256)> {
         let (bid_asset, ask_asset) = match &self.assets {
             [bid, ask] if bid.token == *bid_token && ask.token == *ask_token => (bid, ask),
             [ask, bid] if bid.token == *bid_token && ask.token == *ask_token => (bid, ask),
@@ -62,39 +62,32 @@ impl Pool {
 
         let ask_reserve: Uint256 = ask_asset.amount.into();
         let bid_reserve: Uint256 = bid_asset.amount.into();
-        let amt: Uint256 = (amount.0 / 10u64.pow(12).into()).into(); // XXX: decimals
 
-        if amount < bid_asset.min_val()
-            || bid_reserve == Uint256::zero()
-            || ask_reserve == Uint256::zero()
-        {
+        if amount.is_zero() || bid_reserve.is_zero() || ask_reserve.is_zero() {
             return None;
         }
 
         let cp = ask_reserve * bid_reserve;
         trace!("cp {:?}", cp);
         let ret: Uint256 = (Decimal256::from_uint256(ask_reserve)
-            - Decimal256::from_ratio(cp, bid_reserve + amt))
+            - Decimal256::from_ratio(cp, bid_reserve + amount))
             * Uint256::one();
         trace!("ret {:?}", ret);
-        let spread: Uint256 = (amt * Decimal256::from_ratio(ask_reserve, bid_reserve)) - ret;
+        let spread: Uint256 = (amount * Decimal256::from_ratio(ask_reserve, bid_reserve)) - ret;
         trace!("spread {:?}", spread);
         let fee = ret * Decimal256::permille(3); // XXX: get from chain
         trace!("fee {:?}", fee);
         let out = ret - fee;
         trace!("out {:?}", out);
 
-        Some((
-            Decimal256(out.0 * 10u64.pow(18 - bid_asset.decimals as u32).into()),
-            Decimal256(spread.0 * 10u64.pow(18 - bid_asset.decimals as u32).into()),
-        ))
+        Some((out, spread))
     }
 
     pub fn swap(
         &self,
         sender: &AccountId,
         token: &Token,
-        amount: Decimal256,
+        amount: Uint256,
         belief_price: Decimal256,
         max_spread: Decimal256,
     ) -> MsgExecuteContract {
@@ -154,13 +147,11 @@ pub fn swap(
     contract_address: Addr,
     sender: &AccountId,
     token: &Token,
-    amount: Decimal256,
+    amount: Uint256,
     belief_price: Decimal256,
     max_spread: Decimal256,
 ) -> MsgExecuteContract {
     use terraswap::{asset, pair};
-
-    let normalized_amount = Uint256::from((amount / Decimal256::from_uint256(10u64.pow(12))).0);
 
     let (to, coins, msg) = match token {
         Token::Cw20 { contract_addr } => {
@@ -171,7 +162,7 @@ pub fn swap(
                 to: None,
             };
             let snd = Cw20ExecuteMsg::Send {
-                amount: normalized_amount.into(),
+                amount: amount.into(),
                 msg: to_binary(&swp).unwrap(),
                 contract: contract_address.to_string(),
             };
@@ -192,7 +183,7 @@ pub fn swap(
                     info: asset::AssetInfo::NativeToken {
                         denom: denom.clone(),
                     },
-                    amount: normalized_amount.into(),
+                    amount: amount.into(),
                 },
                 belief_price: Some(belief_price.into()),
                 max_spread: Some(max_spread.into()),
@@ -211,12 +202,12 @@ pub fn swap(
 }
 
 // only need this for the actual msg
-pub fn belief_price(amount_in: Decimal256, amount_out: Decimal256) -> Decimal256 {
-    amount_in / amount_out
+pub fn belief_price(amount_in: Uint256, amount_out: Uint256) -> Decimal256 {
+    Decimal256::from_ratio(amount_in, amount_out)
 }
 
 // XXX: astroport has an upper limit on max_spread of 0.5
-pub fn max_spread(_amount_out: Decimal256, _spread: Decimal256) -> Decimal256 {
+pub fn max_spread(_amount_out: Uint256, _spread: Uint256) -> Decimal256 {
     // spread / amount_out
     Decimal256::zero()
 }
@@ -228,7 +219,7 @@ mod tests {
     use std::str::FromStr;
     use terraswap::pair::ExecuteMsg;
 
-    use cosmwasm_bignumber::Decimal256;
+    use cosmwasm_bignumber::{Decimal256, Uint256};
     use cosmwasm_std::Addr;
 
     #[test]
@@ -238,7 +229,7 @@ mod tests {
         let token = Token::Native {
             denom: "umeka".to_owned(),
         };
-        let amount = Decimal256::from_str("21.249999").unwrap();
+        let amount = Uint256::from(21249999u128);
         let bp = Decimal256::from_str("1.234").unwrap();
         let ms = Decimal256::from_str("0.005").unwrap();
 
