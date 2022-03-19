@@ -31,3 +31,10 @@ xxhash-rust         = { version = "0.8",  default-features = false, features = [
 common              = { version = "0.1",  default-features = false, path = "../common" }
 params-derive       = { version = "0.1",  default-features = false, path = "../params-derive" }
 terrars             = { version = "0.1",  default-features = false, path = "../terrars" }
+
+[dev-dependencies]
+criterion = { version = "0.3", default-features = false, features = [ "cargo_bench_support", "html_reports" ] }
+
+[[bench]]
+name = "cycle_liq"
+harness = false
