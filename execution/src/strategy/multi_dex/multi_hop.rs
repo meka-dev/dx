@@ -6,6 +6,7 @@ use cosmwasm_bignumber::Uint256;
 use cosmwasm_std::Addr;
 use indexmap::IndexSet;
 use itertools::Itertools;
+use rayon::prelude::*;
 use tendermint::block;
 use xxhash_rust::xxh3::Xxh3Builder;
 
@@ -184,8 +185,6 @@ impl Strategy for MultiHop {
         funds: &accounts::Balances,
         pools: &dex::Pools,
     ) -> Vec<Trade> {
-        let mut trades = vec![];
-
         let start = dex::Token::ust();
 
         let pool_map;
@@ -198,32 +197,37 @@ impl Strategy for MultiHop {
             pool_map = self.prepare_paths(start.clone(), pools);
         }
 
-        for path in &self.paths {
-            // debug!("path: {:#?}", path);
-            let ppath = path
-                .iter()
-                .map(|a| *pool_map.get(a).unwrap())
-                .collect_vec()
-                .into_iter();
-            if let Some(liq) = compute_cycle_liq(&start, ppath.clone()) {
-                // debug!("got a good trade {} on {:?}", liq, path);
-                let bal: Uint256 = *funds.get(&start).unwrap_or(&Uint256::zero());
-                let size = if liq > bal { bal } else { liq };
+        let mut trades = self
+            .paths
+            .par_iter()
+            .filter_map(|path| {
+                // debug!("path: {:#?}", path);
+                let ppath = path
+                    .iter()
+                    .map(|a| *pool_map.get(a).unwrap())
+                    .collect_vec()
+                    .into_iter();
+                if let Some(liq) = compute_cycle_liq(&start, ppath.clone()) {
+                    // debug!("got a good trade {} on {:?}", liq, path);
+                    let bal: Uint256 = *funds.get(&start).unwrap_or(&Uint256::zero());
+                    let size = if liq > bal { bal } else { liq };
 
-                // let size = liq;
-                // XXX: the mismatch between size and our balance should be captured in metrics
-                if let Some((expected_profit, messages, route)) =
-                    trade_path(sender, ppath.clone(), &start, size)
-                {
-                    trades.push(Trade {
-                        size,
-                        expected_profit,
-                        messages,
-                        route,
-                    });
+                    // let size = liq;
+                    // XXX: the mismatch between size and our balance should be captured in metrics
+                    if let Some((expected_profit, messages, route)) =
+                        trade_path(sender, ppath.clone(), &start, size)
+                    {
+                        return Some(Trade {
+                            size,
+                            expected_profit,
+                            messages,
+                            route,
+                        });
+                    }
                 }
-            }
-        }
+                None
+            })
+            .collect::<Vec<_>>();
 
         trades.sort_by(|a, b| b.expected_profit.cmp(&a.expected_profit));
         let (mut filter, mut out) = if !trades.is_empty() {
