@@ -7,12 +7,12 @@ use futures_lite::stream::StreamExt as _;
 use reqwest::{Client, ClientBuilder};
 use tame_gcs::{
     http,
-    objects::{InsertObjectOptional, InsertResponse, Metadata, Object},
+    objects::{self, InsertObjectOptional, InsertResponse, Object},
     ApiResponse, BucketName,
 };
 use tame_oauth::gcp::{self as oauth, TokenProvider as _};
 
-use crate::storage::bucket::{Backend, Bucket, Id, Labeled};
+use crate::storage::bucket::{Backend, Bucket, Id, Labeled, Metadata};
 
 pub struct Gcs<'bucket> {
     auth: oauth::TokenProviderWrapper,
@@ -28,7 +28,7 @@ impl<'bucket> Bucket for Gcs<'bucket> {
         content_length: u64,
         content_type: Option<String>,
         body: B,
-    ) -> Result<Option<Id>>
+    ) -> Result<Metadata>
     where
         B: io::Read + Send + 'body,
     {
@@ -36,7 +36,7 @@ impl<'bucket> Bucket for Gcs<'bucket> {
             &self.bucket_name,
             body,
             content_length,
-            &Metadata {
+            &objects::Metadata {
                 name: Some(name),
                 content_encoding: Some("identity".to_owned()),
                 ..Default::default()
@@ -49,7 +49,10 @@ impl<'bucket> Bucket for Gcs<'bucket> {
         .context("failed to construct insert request")?;
         let res: InsertResponse = self.execute(req).await?;
 
-        Ok(res.metadata.id.map(Id::from))
+        Ok(Metadata {
+            id: res.metadata.id.map(Id::from),
+            size: res.metadata.size.unwrap_or(content_length),
+        })
     }
 }
 

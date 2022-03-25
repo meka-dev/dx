@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+  "collector",
   "common",
   "execution",
   "params-derive",

@@ -111,7 +111,19 @@ jobs:
           # FIXME(xla): We can't move the compatibility flag into RUSTFLAGS due
           # to a regression in 1.58, in progress here:
           # https://github.com/rust-lang/rust/pull/93449
-          args: -p common --no-deps --all-features --all-targets -- -Wrust-2021-compatibility
+          args: -p common --no-deps --all-features --all-targets -- -Drust-2021-compatibility
+
+      - name: Run clippy on collector
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: clippy
+          # TODO(xla): Introduce other crates here once stabilised and cleaned
+          # up.
+          # FIXME(xla): We can't move the compatibility flag into RUSTFLAGS due
+          # to a regression in 1.58, in progress here:
+          # https://github.com/rust-lang/rust/pull/93449
+          args: -p common --no-deps --all-features --all-targets -- -Drust-2021-compatibility
 
       - name: Run clippy on execution
         uses: actions-rs/clippy-check@v1
@@ -123,7 +135,7 @@ jobs:
           # FIXME(xla): We can't move the compatibility flag into RUSTFLAGS due
           # to a regression in 1.58, in progress here:
           # https://github.com/rust-lang/rust/pull/93449
-          args: -p execution --no-deps --all-features --all-targets -- -Wrust-2021-compatibility
+          args: -p execution --no-deps --all-features --all-targets -- -Drust-2021-compatibility
 
   test:
     strategy:
@@ -178,7 +190,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        crate: [execution]
         os: [ubuntu-latest]
         toolchain: [stable]
 
@@ -215,7 +226,25 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
 
-      - name: Compile ${{ matrix.crate }}
+      - name: Compile collector
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release -p collector
+
+      - shell: bash
+        run: "mv ./target/release/collector ./target/release/collector-${{ steps.version.outputs.VERSION }}"
+
+      - name: Upload collector binary
+        uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.SPACE_ACCESS_KEY }}
+          secret_key: ${{ secrets.SPACE_SECRET_KEY }}
+          space_name: ${{ secrets.SPACE_NAME }}
+          space_region: ${{ secrets.SPACE_REGION }}
+          source: "./target/release/collector-${{ steps.version.outputs.VERSION }}"
+
+      - name: Compile execution
         uses: actions-rs/cargo@v1
         with:
           command: build
@@ -224,7 +253,7 @@ jobs:
       - shell: bash
         run: "mv ./target/release/execution ./target/release/execution-${{ steps.version.outputs.VERSION }}"
 
-      - name: Upload ${{ matrix.crate }} binary
+      - name: Upload execution binary
         uses: BetaHuhn/do-spaces-action@v2
         with:
           access_key: ${{ secrets.SPACE_ACCESS_KEY }}
