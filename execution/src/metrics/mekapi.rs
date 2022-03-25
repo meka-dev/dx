@@ -3,6 +3,7 @@ use std::time::Instant;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use cosmwasm_std::Addr;
+use futures::stream::BoxStream;
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{family::Family, histogram::Histogram},
@@ -16,12 +17,13 @@ use common::{
 };
 use terrars::{
     dex,
-    mekapi::{v3, Mekapi},
+    mekapi::{v1, v3},
 };
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 enum Method {
     V1PoolResponses,
+    V1EventsMemprolTx,
     V3Pools,
 }
 
@@ -33,13 +35,13 @@ struct Labels {
 }
 
 #[derive(Clone)]
-pub struct Observed<L> {
+pub struct Observed<N> {
     call_duration: Family<Labels, Histogram>,
-    next: L,
+    next: N,
 }
 
-impl<L> Observed<L> {
-    pub fn new(registry: &mut Registry, next: L) -> Self {
+impl<N> Observed<N> {
+    pub fn new(registry: &mut Registry, next: N) -> Self {
         let call_duration = Family::<Labels, Histogram>::new_with_constructor(|| {
             Histogram::new(BUCKETS.clone().into_iter())
         });
@@ -59,12 +61,13 @@ impl<L> Observed<L> {
     fn observe(
         &self,
         start: Instant,
-        factory: Addr,
+        factory: Option<Addr>,
         height: block::Height,
         method: Method,
         err: Option<&Error>,
     ) {
         let elapsed = start.elapsed();
+        let factory = factory.unwrap_or_else(|| Addr::unchecked(""));
         self.call_duration
             .get_or_create(&Labels {
                 factory: factory.to_string(),
@@ -98,9 +101,9 @@ impl<L> Observed<L> {
 }
 
 #[async_trait]
-impl<M> Mekapi for Observed<M>
+impl<N> v1::Api for Observed<N>
 where
-    M: Mekapi,
+    N: v1::Api,
 {
     async fn v1_pool_responses(
         &self,
@@ -112,9 +115,26 @@ where
 
         self.observe(
             start,
-            factory,
+            Some(factory),
             height,
             Method::V1PoolResponses,
+            res.as_ref().err(),
+        );
+
+        res
+    }
+
+    async fn v1_events_mempooltx(
+        &self,
+    ) -> Result<BoxStream<'static, Result<v1::MempoolTxMessage>>> {
+        let start = Instant::now();
+        let res = self.next.v1_events_mempooltx().await;
+
+        self.observe(
+            start,
+            None,
+            block::Height::default(),
+            Method::V1EventsMemprolTx,
             res.as_ref().err(),
         );
 
@@ -123,15 +143,21 @@ where
 }
 
 #[async_trait]
-impl<M> v3::Api for Observed<M>
+impl<N> v3::Api for Observed<N>
 where
-    M: v3::Api,
+    N: v3::Api,
 {
     async fn v3_pools(&self, factory: Addr, height: block::Height) -> Result<Vec<v3::Pool>> {
         let start = Instant::now();
         let res = self.next.v3_pools(factory.clone(), height).await;
 
-        self.observe(start, factory, height, Method::V3Pools, res.as_ref().err());
+        self.observe(
+            start,
+            Some(factory),
+            height,
+            Method::V3Pools,
+            res.as_ref().err(),
+        );
 
         res
     }

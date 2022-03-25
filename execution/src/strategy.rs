@@ -1,7 +1,7 @@
 use cosmwasm_bignumber::Uint256;
 use cosmwasm_std::Addr;
 use tendermint::block::{self};
-use terrars::{dex::Pools, MsgExecuteContract};
+use terrars::{dex::Pools, wasm::MsgExecuteContract};
 
 use crate::accounts;
 
