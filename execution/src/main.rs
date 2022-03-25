@@ -96,6 +96,7 @@ async fn main() -> Result<()> {
             signing_key_bytes,
         ),
     );
+    let params_execute_trades = broadcast::register_params_metrics(&mut registry);
 
     // TODO(xla): Load configured strategies.
     let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
@@ -139,6 +140,7 @@ async fn main() -> Result<()> {
         broadcaster,
         Arc::clone(&tx_tracker),
         args.execute_trades,
+        params_execute_trades,
     ))
     .fuse();
 
