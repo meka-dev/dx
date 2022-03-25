@@ -15,7 +15,8 @@ use common::tracing::{debug, error, trace};
 
 use terrars::{
     dex::{self, belief_price, max_spread, Pool, Token},
-    AccountId, MsgExecuteContract,
+    wasm::MsgExecuteContract,
+    AccountId,
 };
 
 use crate::strategy::Route;

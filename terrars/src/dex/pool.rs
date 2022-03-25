@@ -15,7 +15,8 @@ use tracing::trace;
 use crate::{
     base::Coin,
     dex::{Asset, Token, TokenPair},
-    AccountId, MsgExecuteContract,
+    wasm::MsgExecuteContract,
+    AccountId,
 };
 
 pub type TokenIndex = HashMap<Token, Vec<usize>>;

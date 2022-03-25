@@ -1,4 +1,5 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use cosmrs::{
     auth::{BaseAccount, QueryAccountReponse},
     AccountId,
@@ -57,14 +58,14 @@ impl Http {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl Lcd for Http {
     async fn auth_account(&self, account_id: &AccountId) -> Result<Option<BaseAccount>> {
         let res = self
             .client
             .get(
                 self.base_url
-                    .join(&format!("cosmos/auth/v1beta1/accounts/{}", account_id,))?,
+                    .join(&format!("cosmos/auth/v1beta1/accounts/{}", account_id))?,
             )
             .send()
             .await?
@@ -79,7 +80,7 @@ impl Lcd for Http {
             .client
             .get(
                 self.base_url
-                    .join(&format!("cosmos/bank/v1beta1/balances/{}", account_id,))?,
+                    .join(&format!("cosmos/bank/v1beta1/balances/{}", account_id))?,
             )
             .send()
             .await?
