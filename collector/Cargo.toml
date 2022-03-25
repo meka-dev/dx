@@ -1,0 +1,33 @@
+[package]
+name      = "collector"
+version   = "0.1.0"
+edition   = "2021"
+
+[dependencies]
+anyhow              = { version = "1.0",  default-features = false, features = [ "backtrace", "std" ] }
+argh                = { version = "0.1",  default-features = false }
+async-trait         = { version = "0.1",  default-features = false }
+axum                = { version = "0.4",  default-features = false, features = [ "headers", "http2", "tower-log" ] }
+axum-extra          = { version = "0.1",  default-features = false }
+bytes               = { version = "1.1",  default-features = false }
+chrono              = { version = "0.4",  default-features = false }
+hostname            = { version = "0.3",  default-features = false }
+humantime           = { version = "2.1",  default-features = false }
+hyper               = { version = "0.14", default-features = false, features = [ "client", "http2" ] }
+hyperlocal          = { version = "0.8",  default-features = false, features = [ "client", "server" ] }
+lazy_static         = { version = "1.4",  default-features = false }
+prometheus-client   = { version = "0.15", default-features = false }
+serde               = { version = "1.0",  default-features = false, features = [ "derive" ] }
+tokio               = { version = "1.17", default-features = false, features = [ "macros", "rt-multi-thread", "sync", "time" ] }
+tower-http          = { version = "0.2",  default-features = false, features = [ "trace" ] }
+tracing             = { version = "0.1",  default-features = false, features = [ "attributes" ] }
+ulid                = { version = "0.5",  default-features = false, features = [ "serde", "std" ] }
+
+common              = { version = "0.1",  default-features = false, path = "../common" }
+
+[dev-dependencies]
+assert_matches      = { version = "1.5",  default-features = false }
+hex                 = { version = "0.4",  default-features = false }
+serde_json          = { version = "1.0",  default-features = false }
+tempfile            = { version = "3.3",  default-features = false }
+tower               = { version = "0.4",  default-features = false, features = [ "util" ] }

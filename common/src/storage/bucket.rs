@@ -19,11 +19,18 @@ pub trait Bucket {
         content_length: u64,
         content_type: Option<String>,
         body: B,
-    ) -> Result<Option<Id>>
+    ) -> Result<Metadata>
     where
         B: io::Read + Send + 'body;
 }
 
+#[derive(Debug)]
+pub struct Metadata {
+    pub id: Option<Id>,
+    pub size: u64,
+}
+
+#[derive(Debug)]
 pub struct Id(String);
 
 impl From<String> for Id {
@@ -90,7 +97,7 @@ where
         content_length: u64,
         content_type: Option<String>,
         body: B,
-    ) -> Result<Option<Id>>
+    ) -> Result<Metadata>
     where
         B: io::Read + Send + 'body,
     {

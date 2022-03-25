@@ -1,6 +1,6 @@
 use std::env;
 
-pub use tracing::{debug, error, info, trace};
+pub use tracing::{debug, error, info, instrument, trace, warn};
 
 pub fn init() {
     if env::var_os("RUST_LOG").is_none() {

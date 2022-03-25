@@ -45,16 +45,28 @@ lazy_static! {
     ];
 }
 
+lazy_static! {
+    pub static ref BYTE_BUCKETS: Vec<f64> = vec![
+                  100.0, // 100b
+           1.0 * 1024.0, // 1kb
+          10.0 * 1024.0, // 10kb
+         100.0 * 1024.0, // 100kb
+         250.0 * 1024.0, // 250kb
+         500.0 * 1024.0, // 500kb
+         750.0 * 1024.0, // 750kb
+        1000.0 * 1024.0, // 1mb
+        1250.0 * 1024.0, // 1.25mb
+        1500.0 * 1024.0, // 1.50mb
+        1750.0 * 1024.0, // 1.75mb
+        2000.0 * 1024.0, // 2mb
+    ];
+}
+
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
 pub struct RequestLabels {
     method: String,
     path: String,
     status: String,
-}
-
-pub struct Registry {
-    binary: &'static str,
-    registry: registry::Registry,
 }
 
 pub type RequestDuration = Family<RequestLabels, Histogram>;
@@ -63,6 +75,11 @@ pub fn new_request_duration() -> RequestDuration {
     Family::<RequestLabels, Histogram>::new_with_constructor(|| {
         Histogram::new(BUCKETS.clone().into_iter())
     })
+}
+
+pub struct Registry {
+    binary: &'static str,
+    registry: registry::Registry,
 }
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
@@ -108,10 +125,7 @@ pub fn bind<S: Into<String> + fmt::Display>(
     binary: S,
     mut registry: Registry,
 ) -> impl Future<Output = Result<(), hyper::Error>> {
-    let request_duration = Family::<RequestLabels, Histogram>::new_with_constructor(|| {
-        Histogram::new(BUCKETS.clone().into_iter())
-    });
-
+    let request_duration = new_request_duration();
     registry.registry.register_with_unit(
         prefix(binary, "metrics_http_duration"),
         "metrics endpoint HTTP request latencies",
