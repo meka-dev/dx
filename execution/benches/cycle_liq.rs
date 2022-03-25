@@ -4,7 +4,7 @@ use cosmwasm_bignumber::Decimal256;
 use cosmwasm_std::{Addr, Uint128};
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use execution::strategy::multi_dex::utils::compute_cycle_liq;
+use execution::strategy::multi_dex::multi_hop::compute_cycle_liq;
 use terrars::dex::{Asset, Pool, Token};
 
 fn criterion_benchmark(c: &mut Criterion) {
