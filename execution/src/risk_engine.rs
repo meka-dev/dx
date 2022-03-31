@@ -67,6 +67,8 @@ impl StaticPoolDenyList {
             Addr::unchecked("terra1kh2g4fnhvqtnwwpqa84eywn72ve9vdkp5chhlx"), /* ALTE-LUNA low liq, constant rounding errors? */
             Addr::unchecked("terra1alaaant5ykususyuv0x6k298sh8kl8qkpkuu8e"), /* ALTE-aUST low liq, constant rounding errors? */
             Addr::unchecked("terra10dtff8drpwtfx4976m7cxwpptfy87l5p264xgy"), /* ALTE-ANC low liq, constant rounding errors? */
+            Addr::unchecked("terra19pg6d7rrndg4z4t0jhcd7z9nhl3p5ygqttxjll"), // STT extra trade fee
+            Addr::unchecked("terra1m95udvvdame93kl6j2mk8d03kc982wqgr75jsr"), // STT extra trade fee
         ]);
 
         Self(h)
