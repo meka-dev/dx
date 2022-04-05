@@ -45,7 +45,7 @@ impl metrics::Labeled for MultiHop {
     const NAME: metrics::Name = metrics::Name::MultiHop;
 }
 
-const MAX_PATH_LEN: usize = 5;
+const MAX_PATH_LEN: usize = 4;
 
 impl MultiHop {
     fn dfs(
@@ -233,30 +233,7 @@ impl Strategy for MultiHop {
             .collect::<Vec<_>>();
 
         trades.sort_by(|a, b| b.expected_profit.cmp(&a.expected_profit));
-        let (mut filter, mut out) = if !trades.is_empty() {
-            let a = trades.first().unwrap().route.clone();
-            (
-                HashSet::from_iter(a.into_iter()),
-                vec![trades.first().unwrap().clone()],
-            )
-        } else {
-            (HashSet::new(), vec![])
-        };
-
-        // make sure that trades do not share any pools
-        debug!("trade len {:?}", trades.len());
-        for t in trades.iter().skip(1) {
-            let ft = HashSet::from_iter(t.route.clone().into_iter());
-
-            if filter.is_disjoint(&ft) {
-                out.push(t.clone());
-                for e in ft {
-                    filter.insert(e);
-                }
-            }
-        }
-        debug!("out len {:?}", out.len());
-        out
+        trades.into_iter().take(1).collect_vec()
     }
 }
 
