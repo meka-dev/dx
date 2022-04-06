@@ -23,7 +23,7 @@ use execution::{
     block_emitter::{self, Emitter as _},
     broadcast, config, params,
     risk_engine::{
-        EmptyPoolDeny, RiskClassifier, RiskEngine, StaticPoolDenyList, UnsupportedPoolList,
+        EmptyPoolDeny, RiskClassifier, RiskEngine, StaticPoolAllowList, UnsupportedPoolList,
     },
     strategy::{self, fetcher::Fetcher as _, Trade},
     tracker::{self, Tracker as _},
@@ -148,8 +148,8 @@ async fn main() -> Result<()> {
 
         let risk: RiskEngine<dyn RiskClassifier> = RiskEngine::new(vec![
             Box::new(EmptyPoolDeny {}),
-            Box::new(StaticPoolDenyList::new()),
             Box::new(UnsupportedPoolList::new()),
+            Box::new(StaticPoolAllowList::new()),
         ]);
 
         while let Ok(()) = latest_block_receiver.changed().await {
