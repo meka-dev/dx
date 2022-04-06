@@ -213,7 +213,14 @@ impl Strategy for MultiHop {
                 if let Some(liq) = compute_cycle_liq(&start, ppath.clone()) {
                     // debug!("got a good trade {} on {:?}", liq, path);
                     let bal: Uint256 = *funds.get(&start).unwrap_or(&Uint256::zero());
-                    let size = if liq > bal { bal } else { liq };
+                    if bal <= 1000000u128.into() {
+                        return None;
+                    }
+                    let size = if liq > bal {
+                        bal - Uint256::from(1000000u128)
+                    } else {
+                        liq
+                    };
 
                     // let size = liq;
                     // XXX: the mismatch between size and our balance should be captured in metrics
