@@ -21,9 +21,16 @@ pub struct Trade {
 
 #[async_trait::async_trait]
 pub trait Strategy: Send {
+    async fn execute_mempool_tx(
+        &mut self,
+        height: block::Height,
+        sender: &terrars::AccountId,
+        tx: &terrars::Tx,
+    ) -> Vec<Trade>;
+
     /// Given the current prices of dex pairs a strategy should produce an ordered list of messages
     /// (most likely swaps) to be bundled into one atomic transaction.
-    async fn execute(
+    async fn execute_pools(
         &mut self,
         height: block::Height,
         sender: &terrars::AccountId,
