@@ -50,14 +50,12 @@ impl Display for Name {
 pub trait Labeled {
     const MODULE: Module;
     const NAME: Name;
+}
 
-    fn module(&self) -> Module {
-        Self::MODULE
-    }
-
-    fn name(&self) -> Name {
-        Self::NAME
-    }
+#[derive(Clone, Copy, Debug, Hash, Encode, Eq, PartialEq)]
+enum Method {
+    ExecuteMempoolTx,
+    ExecutePools,
 }
 
 #[derive(Clone, Hash, Encode, Eq, PartialEq)]
@@ -79,6 +77,7 @@ impl Display for Output {
 struct DurationLabels {
     module: Module,
     name: Name,
+    method: Method,
     output: Output,
 }
 
@@ -86,6 +85,7 @@ struct DurationLabels {
 struct TradesLabel {
     module: Module,
     name: Name,
+    method: Method,
 }
 
 pub struct Observed<S> {
@@ -100,8 +100,11 @@ pub struct Observed<S> {
     next: S,
 }
 
-impl<S> Observed<S> {
-    pub fn new(registry: &mut Registry, next: S) -> Self {
+impl<N> Observed<N>
+where
+    N: Labeled,
+{
+    pub fn new(registry: &mut Registry, next: N) -> Self {
         let execute_duration = Family::<DurationLabels, Histogram>::new_with_constructor(|| {
             Histogram::new(BUCKETS.clone().into_iter())
         });
@@ -160,23 +163,8 @@ impl<S> Observed<S> {
             next,
         }
     }
-}
 
-#[async_trait::async_trait]
-impl<S> Strategy for Observed<S>
-where
-    S: Strategy + Labeled + Sync,
-{
-    async fn execute(
-        &mut self,
-        height: block::Height,
-        sender: &terrars::AccountId,
-        funds: &accounts::Balances,
-        pools: &dex::Pools,
-    ) -> Vec<Trade> {
-        let start = Instant::now();
-        let trades = self.next.execute(height, sender, funds, pools).await;
-
+    fn observe(&self, method: Method, start: Instant, height: block::Height, trades: &[Trade]) {
         let elapsed = start.elapsed().as_secs_f64();
         let (size_total, size_max) = trades.iter().fold(
             (Uint256::zero(), Uint256::zero()),
@@ -205,9 +193,10 @@ where
         };
 
         debug!(
-            "module={} name={} height={} output={} size={} expected_profit={} trades={} duration={}",
-            self.next.module(),
-            self.next.name(),
+            "module={} name={} method={:?} height={} output={} size={} expected_profit={} trades={} duration={}",
+            N::MODULE,
+            N::NAME,
+            method,
             height,
             output,
             size_total,
@@ -217,13 +206,15 @@ where
         );
 
         let trade_labels = TradesLabel {
-            module: self.next.module(),
-            name: self.next.name(),
+            module: N::MODULE,
+            name: N::NAME,
+            method,
         };
         self.execute_duration
             .get_or_create(&DurationLabels {
-                module: self.next.module(),
-                name: self.next.name(),
+                module: N::MODULE,
+                name: N::NAME,
+                method,
                 output,
             })
             .observe(elapsed);
@@ -253,6 +244,39 @@ where
                     .inc_by(messages.len().try_into().unwrap());
             },
         );
+    }
+}
+
+#[async_trait::async_trait]
+impl<S> Strategy for Observed<S>
+where
+    S: Strategy + Labeled + Sync,
+{
+    async fn execute_mempool_tx(
+        &mut self,
+        height: block::Height,
+        sender: &terrars::AccountId,
+        tx: &terrars::Tx,
+    ) -> Vec<Trade> {
+        let start = Instant::now();
+        let trades = self.next.execute_mempool_tx(height, sender, tx).await;
+
+        self.observe(Method::ExecuteMempoolTx, start, height, &trades);
+
+        trades
+    }
+
+    async fn execute_pools(
+        &mut self,
+        height: block::Height,
+        sender: &terrars::AccountId,
+        funds: &accounts::Balances,
+        pools: &dex::Pools,
+    ) -> Vec<Trade> {
+        let start = Instant::now();
+        let trades = self.next.execute_pools(height, sender, funds, pools).await;
+
+        self.observe(Method::ExecutePools, start, height, &trades);
 
         trades
     }

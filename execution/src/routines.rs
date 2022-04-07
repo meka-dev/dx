@@ -1,0 +1,124 @@
+use std::sync::Arc;
+
+use anyhow::Result;
+use futures::StreamExt as _;
+use tendermint::block;
+use tokio::sync::{mpsc, watch, Mutex};
+
+use common::tracing::{debug, error};
+use terrars::{dex, lcd::Lcd, mekapi};
+
+use crate::{
+    risk_engine::{
+        EmptyPoolDeny, RiskClassifier, RiskEngine, StaticPoolAllowList, UnsupportedPoolList,
+    },
+    strategy::{fetcher::Fetcher, Strategy, Trade},
+    tracker::Tracker,
+};
+
+/// Subroutine to keep the dependent information for strategies up-to-date and execute
+/// strategies.
+#[allow(clippy::too_many_arguments)]
+pub async fn execution<F, L, M, T>(
+    lcd: L,
+    mekapi: M,
+    fetcher: F,
+    tx_tracker: Arc<Mutex<T>>,
+    mut latest_block_receiver: watch::Receiver<block::Block>,
+    mut mempool_tx_receiver: mpsc::Receiver<mekapi::v1::MempoolTxMessage>,
+    trade_sender: mpsc::Sender<Trade>,
+    account_id: terrars::AccountId,
+    mut strategies: Vec<Box<dyn Strategy + Sync>>,
+) -> Result<()>
+where
+    F: Fetcher<L, M>,
+    L: Lcd + Clone,
+    M: mekapi::v3::Api + Clone,
+    T: Tracker,
+{
+    debug!("Init strategy executor");
+
+    let risk: RiskEngine<dyn RiskClassifier> = RiskEngine::new(vec![
+        Box::new(EmptyPoolDeny {}),
+        Box::new(StaticPoolAllowList::new()),
+        Box::new(UnsupportedPoolList::new()),
+    ]);
+
+    loop {
+        tokio::select! {
+            Ok(()) = latest_block_receiver.changed() => {
+                let latest_block = latest_block_receiver.borrow().clone();
+                let height = latest_block.header().height;
+
+                // Ensure the lock is dropped to avoid halting the machinery.
+                if let Err(err) = tx_tracker.lock().await.observe_block(latest_block) {
+                    // TODO(xla): Move this to tracker observation impl.
+                    error!("failed to tracker::observe: {}", err);
+                };
+
+                if let Ok((funds, pairs)) = fetcher
+                    .fetch(lcd.clone(), mekapi.clone(), &account_id.clone(), height)
+                    .await
+                {
+                    let pools = dex::Pools::from(
+                        pairs
+                            .into_iter()
+                            .filter(|pool| !risk.exclude(pool))
+                            .collect::<Vec<_>>(),
+                    );
+                    for strategy in strategies.iter_mut() {
+                        let trades = strategy
+                            .execute_pools(height, &account_id, &funds, &pools)
+                            .await;
+
+                        for trade in trades {
+                            trade_sender.send(trade).await?;
+                        }
+                    }
+                }
+            },
+
+            Some(msg) = mempool_tx_receiver.recv() => {
+                for strategy in strategies.iter_mut() {
+                    let trades = strategy.execute_mempool_tx(msg.height, &account_id, &msg.tx).await;
+
+                    for trade in trades {
+                        trade_sender.send(trade).await?;
+                    }
+                }
+            }
+
+            else => break,
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn mempool_tx<M>(
+    mekapi: M,
+    mempool_tx_sender: mpsc::Sender<mekapi::v1::MempoolTxMessage>,
+) -> Result<()>
+where
+    M: mekapi::v1::Api,
+{
+    debug!("Init mempool tx stream");
+
+    let mut events = mekapi.v1_events_mempooltx().await?;
+
+    loop {
+        match events.next().await {
+            Some(res) => match res {
+                Ok(msg) => {
+                    if let Err(err) = mempool_tx_sender.try_send(msg) {
+                        error!("failed to send mempool tx: {}", err);
+                    }
+                },
+                Err(err) => error!("failed to decode mempool tx: {}", err),
+            },
+            None => {
+                events = mekapi.v1_events_mempooltx().await?;
+            },
+        }
+    }
+}

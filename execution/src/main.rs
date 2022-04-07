@@ -1,7 +1,7 @@
 use std::{fs, sync::Arc};
 
 use anyhow::Result;
-use futures::{FutureExt as _, StreamExt};
+use futures::{FutureExt as _, StreamExt as _};
 use tendermint_rpc::{
     query::{EventType, Query},
     Client as _, SubscriptionClient, WebSocketClient,
@@ -13,7 +13,6 @@ use common::{
     tracing::{self, debug, error},
 };
 use terrars::{
-    dex,
     lcd::{self, Lcd},
     mekapi, BaseAccount,
 };
@@ -21,12 +20,9 @@ use terrars::{
 use execution::{
     accounts,
     block_emitter::{self, Emitter as _},
-    broadcast, config, params,
-    risk_engine::{
-        EmptyPoolDeny, RiskClassifier, RiskEngine, StaticPoolAllowList, UnsupportedPoolList,
-    },
-    strategy::{self, fetcher::Fetcher as _, Trade},
-    tracker::{self, Tracker as _},
+    broadcast, config, params, routines,
+    strategy::{self, Trade},
+    tracker,
 };
 
 const BINARY_NAMESPACE: &str = "execution";
@@ -51,10 +47,12 @@ async fn main() -> Result<()> {
 
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.
-    let (latest_block_sender, mut latest_block_receiver) = {
+    let (latest_block_sender, latest_block_receiver) = {
         let res = client.latest_block().await?;
         watch::channel(res.block)
     };
+    let (mempool_tx_sender, mempool_tx_receiver) =
+        mpsc::channel::<mekapi::v1::MempoolTxMessage>(1024);
     let (trade_sender, trade_receiver) = mpsc::channel::<Trade>(100);
 
     let mut registry = metrics::Registry::new(BINARY_NAMESPACE);
@@ -100,7 +98,7 @@ async fn main() -> Result<()> {
     );
 
     // TODO(xla): Load configured strategies.
-    let mut strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
+    let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
         vec![Box::new(strategy::metrics::Observed::new(
             &mut registry,
             strategy::multi_dex::multi_hop::MultiHop::default(),
@@ -132,6 +130,9 @@ async fn main() -> Result<()> {
         .fuse()
     };
 
+    let mut mempool_tx_handle =
+        tokio::spawn(routines::mempool_tx(mekapi.clone(), mempool_tx_sender)).fuse();
+
     // Subroutine which compiles, signs and broadcasts message bundles into transactions.
     let mut broadcast_handle = tokio::spawn(broadcast::run(
         trade_receiver,
@@ -141,61 +142,31 @@ async fn main() -> Result<()> {
     ))
     .fuse();
 
-    // Subroutine to keep the dependent information for strategies up-to-date and execute
-    // strategies.
-    let mut execution_handle = tokio::spawn(async move {
-        debug!("Init strategy executor");
-
-        let risk: RiskEngine<dyn RiskClassifier> = RiskEngine::new(vec![
-            Box::new(EmptyPoolDeny {}),
-            Box::new(UnsupportedPoolList::new()),
-            Box::new(StaticPoolAllowList::new()),
-        ]);
-
-        while let Ok(()) = latest_block_receiver.changed().await {
-            let latest_block = latest_block_receiver.borrow().clone();
-            let height = latest_block.header().height;
-
-            // Ensure the lock is dropped to avoid halting the machinery.
-            if let Err(err) = tx_tracker.lock().await.observe_block(latest_block) {
-                // TODO(xla): Move this to tracker observation impl.
-                error!("failed to tracker::observe: {}", err);
-            };
-
-            if let Ok((funds, pairs)) = pool_fetcher
-                .fetch(lcd.clone(), mekapi.clone(), &account_id.clone(), height)
-                .await
-            {
-                let pools = dex::Pools::from(
-                    pairs
-                        .into_iter()
-                        .filter(|pool| !risk.exclude(pool))
-                        .collect::<Vec<_>>(),
-                );
-                for strategy in strategies.iter_mut() {
-                    let trades = strategy.execute(height, &account_id, &funds, &pools).await;
-
-                    for trade in trades {
-                        trade_sender.send(trade).await?;
-                    }
-                }
-            }
-        }
-
-        Ok::<(), anyhow::Error>(())
-    })
+    let mut execution_handle = tokio::spawn(routines::execution(
+        lcd,
+        mekapi,
+        pool_fetcher,
+        tx_tracker,
+        latest_block_receiver,
+        mempool_tx_receiver,
+        trade_sender,
+        account_id,
+        strategies,
+    ))
     .fuse();
 
     // TODO(xla): Handle signals.
     loop {
-        futures::select! {
-            join = params_server_handle => join??,
-            join = metrics_server_handle => join??,
-            join = driver_handle => join??,
-            join = latest_block_handle => join??,
-            join = broadcast_handle => join??,
-            join = execution_handle => join??,
-            complete => break
+        tokio::select! {
+            join = &mut params_server_handle => join??,
+            join = &mut metrics_server_handle => join??,
+            join = &mut driver_handle => join??,
+            join = &mut latest_block_handle => join??,
+            join = &mut mempool_tx_handle => join??,
+            join = &mut broadcast_handle => join??,
+            join = &mut execution_handle => join??,
+
+            else => break
         }
     }
 
