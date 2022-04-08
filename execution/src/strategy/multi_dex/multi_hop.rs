@@ -16,7 +16,7 @@ use common::tracing::{debug, error, trace};
 use terrars::{
     dex::{self, belief_price, max_spread, Pool, Token},
     wasm::MsgExecuteContract,
-    AccountId, Msg,
+    AccountId,
 };
 
 use crate::strategy::Route;
@@ -187,35 +187,8 @@ impl Strategy for MultiHop {
         &mut self,
         _height: block::Height,
         _sender: &terrars::AccountId,
-        tx: &terrars::Tx,
+        _tx: &terrars::Tx,
     ) -> Vec<Trade> {
-        use terrars::MsgProto;
-
-        let swaps = tx
-            .body
-            .messages
-            .iter()
-            .filter_map(|msg| {
-                if msg.type_url
-                    == terrars::proto::terra::wasm::v1beta1::MsgExecuteContract::TYPE_URL
-                {
-                    let _execute = terrars::wasm::MsgExecuteContract::from_any(msg).unwrap();
-
-                    // Check if execute.contract_addr matches any of the cached pools.
-                    // Check if execut.execute_msg is a swap.
-                    // Deserialize execute.execute_msg into value from cosmwasm json.
-
-                    return Some(());
-                }
-
-                None
-            })
-            .collect::<Vec<_>>();
-
-        if !swaps.is_empty() {
-            // Crazy arbs go here.
-        }
-
         vec![]
     }
 
