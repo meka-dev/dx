@@ -1,5 +1,6 @@
 use cosmwasm_std::Addr;
 use serde::{Deserialize, Serialize};
+use terraswap::asset::AssetInfo;
 
 const DENOM_UST: &str = "uusd";
 const DENOM_LUNA: &str = "uluna";
@@ -35,6 +36,17 @@ impl Token {
 
     pub fn is_ust(&self) -> bool {
         *self == Self::ust()
+    }
+}
+
+impl From<AssetInfo> for Token {
+    fn from(input: AssetInfo) -> Self {
+        match input {
+            AssetInfo::Token { contract_addr } => Token::Cw20 {
+                contract_addr: Addr::unchecked(contract_addr),
+            },
+            AssetInfo::NativeToken { denom } => Token::Native { denom },
+        }
     }
 }
 

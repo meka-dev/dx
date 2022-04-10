@@ -1,7 +1,7 @@
 mod asset;
 pub use asset::Asset;
 mod pool;
-pub use pool::{belief_price, max_spread, swap, Pool, Pools};
+pub use pool::{assert_max_spread, belief_price, max_spread, swap, Pool, Pools};
 mod token;
 pub use token::{Pair as TokenPair, Token};
 
