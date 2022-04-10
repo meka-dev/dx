@@ -6,7 +6,7 @@ use std::{
 
 use cosmrs::Denom;
 use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{to_binary, Addr, Uint128};
+use cosmwasm_std::{to_binary, Addr, Decimal, Uint128};
 use cw20::Cw20ExecuteMsg;
 use serde::Deserialize;
 use terraswap::pair::Cw20HookMsg;
@@ -22,7 +22,7 @@ use crate::{
 pub type TokenIndex = HashMap<Token, Vec<usize>>;
 pub type PairIndex = HashMap<TokenPair, Vec<usize>>;
 
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 pub struct Pool {
     pub assets: [Asset; 2],
     pub contract_address: Addr,
@@ -82,6 +82,28 @@ impl Pool {
         trace!("out {:?}", out);
 
         Some((out, spread))
+    }
+
+    pub fn update(&mut self, bid_token: &Token, in_amount: Uint256, out_amount: Uint256) {
+        let (bid_asset_idx, ask_asset_idx) = match &self.assets {
+            [bid, _] if bid.token == *bid_token => (0, 1),
+            [_, bid] if bid.token == *bid_token => (1, 0),
+            _ => return,
+        };
+
+        self.assets[bid_asset_idx].amount =
+            self.assets[bid_asset_idx].amount + Into::<Uint128>::into(in_amount);
+        self.assets[ask_asset_idx].amount =
+            self.assets[ask_asset_idx].amount - Into::<Uint128>::into(out_amount);
+
+        self.assets[bid_asset_idx].amount_decimal = Asset::to_scaled_decimal256(
+            self.assets[bid_asset_idx].amount,
+            self.assets[bid_asset_idx].decimals as u32,
+        );
+        self.assets[ask_asset_idx].amount_decimal = Asset::to_scaled_decimal256(
+            self.assets[ask_asset_idx].amount,
+            self.assets[ask_asset_idx].decimals as u32,
+        );
     }
 
     pub fn swap(
@@ -211,6 +233,47 @@ pub fn belief_price(amount_in: Uint256, amount_out: Uint256) -> Decimal256 {
 pub fn max_spread(_amount_out: Uint256, _spread: Uint256) -> Decimal256 {
     // spread / amount_out
     Decimal256::zero()
+}
+
+// From terraswap pair contract
+pub fn assert_max_spread(
+    belief_price: Option<Decimal>,
+    max_spread: Option<Decimal>,
+    offer_amount: Uint128,
+    return_amount: Uint128,
+    spread_amount: Uint128,
+) -> bool {
+    let offer_amount: Uint256 = offer_amount.into();
+    let return_amount: Uint256 = return_amount.into();
+    let spread_amount: Uint256 = spread_amount.into();
+
+    if let (Some(max_spread), Some(belief_price)) = (max_spread, belief_price) {
+        let belief_price: Decimal256 = belief_price.into();
+        let max_spread: Decimal256 = max_spread.into();
+        // println!("bp {:?} ms {:?}", belief_price, max_spread);
+
+        let expected_return = offer_amount / belief_price;
+        let spread_amount = if expected_return > return_amount {
+            expected_return - return_amount
+        } else {
+            Uint256::zero()
+        };
+        // println!("er {:?} sa {:?}", expected_return, spread_amount);
+
+        // println!("ratio {:?}", Decimal256::from_ratio(spread_amount, expected_return));
+        if return_amount < expected_return
+            && Decimal256::from_ratio(spread_amount, expected_return) > max_spread
+        {
+            return false;
+        }
+    } else if let Some(max_spread) = max_spread {
+        let max_spread: Decimal256 = max_spread.into();
+        if Decimal256::from_ratio(spread_amount, return_amount + spread_amount) > max_spread {
+            return false;
+        }
+    }
+
+    true
 }
 
 #[cfg(test)]

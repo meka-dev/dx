@@ -1,17 +1,26 @@
 #![allow(clippy::borrowed_box)]
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    sync::{
+        atomic::{AtomicU64, AtomicUsize, Ordering},
+        RwLock,
+    },
+};
 
 use bigint::U256;
 use common::tracing::{debug, error, trace};
 use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{Addr, Decimal256 as StdDecimal256, Fraction, Uint256 as StdUint256};
+use cosmwasm_std::{
+    from_binary, to_vec, Addr, Decimal, Decimal256 as StdDecimal256, Fraction, Uint128,
+    Uint256 as StdUint256,
+};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use rayon::prelude::*;
 use tendermint::block;
 use terrars::{
-    dex::{self, belief_price, max_spread, Pool, Token},
+    dex::{self, assert_max_spread, belief_price, max_spread, Pool, Token},
     wasm::MsgExecuteContract,
     AccountId,
 };
@@ -29,12 +38,17 @@ type XxIndexSet<K> = IndexSet<K, Xxh3Builder>;
 type TokenAdjacencyMap = HashMap<Token, HashSet<Addr>>;
 
 // Mapping to allow efficient pool data look-up
-type PoolMap<'a> = HashMap<Addr, &'a Pool>;
+type PoolMap = HashMap<Addr, Pool>;
 
 #[derive(Default)]
 pub struct MultiHop {
-    num_pools: usize,
+    num_pools: AtomicUsize,
+    sync_height: AtomicU64,
+    funds: RwLock<accounts::Balances>,
+    pools: RwLock<HashMap<Addr, Pool>>,
     paths: Vec<Vec<Addr>>,
+    // pool_paths: RwLock<HashMap<Addr, XxIndexSet<Vec<Addr>>>>,
+    pool_paths: RwLock<HashMap<Addr, Vec<Vec<Addr>>>>,
 }
 
 impl metrics::Labeled for MultiHop {
@@ -48,7 +62,7 @@ impl MultiHop {
     fn dfs(
         &self,
         start: &Token,
-        pool_map: &PoolMap<'_>,
+        pool_map: &PoolMap,
         token_adjacencies: &TokenAdjacencyMap,
     ) -> Vec<Vec<Addr>> {
         let mut pool_paths: Vec<Vec<Addr>> = vec![];
@@ -137,13 +151,9 @@ impl MultiHop {
         pool_paths
     }
 
-    fn prepare_paths<'a>(
-        &mut self,
-        start: Token,
-        pools: &'a dex::Pools,
-    ) -> HashMap<Addr, &'a Pool> {
+    fn prepare_paths<'a>(&mut self, start: Token, pools: &'a dex::Pools) -> PoolMap {
         // lets us efficiently look up pools
-        let mut pool_map: PoolMap<'_> = HashMap::new();
+        let mut pool_map: PoolMap = HashMap::new();
         // token -> pools
         let mut token_adjacencies: TokenAdjacencyMap = HashMap::new();
 
@@ -163,7 +173,7 @@ impl MultiHop {
                 .or_insert_with(HashSet::new)
                 .insert(pool.contract_address.clone());
 
-            pool_map.insert(pool.contract_address.clone(), pool);
+            pool_map.insert(pool.contract_address.clone(), pool.clone());
         }
 
         // XXX: do I care about cleaning up the graph to remove unused pairs?
@@ -171,9 +181,57 @@ impl MultiHop {
         // token_adjacencies.retain(|_, v| v.len() > 1);
 
         self.paths = self.dfs(&start, &pool_map, &token_adjacencies);
+        let mut pps: HashMap<Addr, Vec<Vec<Addr>>> = HashMap::new();
+        for path in &self.paths {
+            for step in path {
+                // pps.entry(step.clone()).or_insert(XxIndexSet::with_hasher(Xxh3Builder::new())).
+                // insert(path.clone());
+                pps.entry(step.clone()).or_insert(vec![]).push(path.clone());
+            }
+        }
+        let mut sp = self.pool_paths.write().unwrap();
+        *sp = pps;
         debug!("pool_paths {:#?}", self.paths.len());
         pool_map
     }
+}
+
+use cw20::Cw20ExecuteMsg;
+use serde::Deserialize;
+use terraswap::{
+    asset::{Asset, AssetInfo},
+    pair::{Cw20HookMsg, ExecuteMsg},
+    router::ExecuteMsg as RouterExecuteMsg,
+};
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+enum Target {
+    Cw20ExecuteMsg(Cw20ExecuteMsg),
+    ExecuteMsg(ExecuteMsg),
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+enum SendTarget {
+    Cw20HookMsg(Cw20HookMsg),
+    RouterExecuteMsg(RouterExecuteMsg),
+}
+
+#[derive(Deserialize, Debug)]
+struct Swap {
+    contract_address: Addr,
+    offer_asset: AssetInfo,
+    amount: Uint128,
+    belief_price: Option<Decimal>,
+    max_spread: Option<Decimal>,
+}
+
+// struct RouterSwap {}
+
+#[derive(Deserialize, Debug)]
+enum Action {
+    Swap(Swap),
 }
 
 #[async_trait::async_trait]
@@ -181,74 +239,254 @@ impl Strategy for MultiHop {
     #[allow(clippy::needless_collect)]
     async fn execute_mempool_tx(
         &mut self,
-        _height: block::Height,
-        _sender: &terrars::AccountId,
-        _tx: &terrars::Tx,
+        height: block::Height,
+        sender: &terrars::AccountId,
+        tx: &terrars::Tx,
     ) -> Vec<Trade> {
-        vec![]
+        use terrars::MsgProto;
+
+        if self.num_pools.load(Ordering::Relaxed) == 0
+            || self.sync_height.load(Ordering::Relaxed) < height.into()
+        {
+            // pools need to be loaded by block sync
+            return vec![];
+        }
+
+        let actions = tx
+            .body
+            .messages
+            .iter()
+            .filter_map(|msg| {
+                if msg.type_url
+                    == terrars::proto::terra::wasm::v1beta1::MsgExecuteContract::TYPE_URL
+                {
+                    let execute = terrars::wasm::MsgExecuteContract::from_any(msg).ok()?;
+
+                    match serde_json::from_slice(&execute.execute_msg) {
+                        Ok::<Target, _>(Target::Cw20ExecuteMsg(Cw20ExecuteMsg::Send {
+                            contract,
+                            amount,
+                            msg,
+                        })) => {
+                            // error!("cw20 sned {:#?} {:?}", amount, msg);
+                            match serde_json::from_slice(&msg) {
+                                Ok::<SendTarget, _>(SendTarget::Cw20HookMsg(
+                                    Cw20HookMsg::Swap {
+                                        belief_price,
+                                        max_spread,
+                                        ..
+                                    },
+                                )) => {
+                                    return Some(Action::Swap(Swap {
+                                        contract_address: Addr::unchecked(contract),
+                                        offer_asset: AssetInfo::Token {
+                                            contract_addr: execute.contract_address.to_string(),
+                                        },
+                                        amount,
+                                        belief_price,
+                                        max_spread,
+                                    }))
+                                },
+                                Ok::<SendTarget, _>(SendTarget::RouterExecuteMsg(
+                                    RouterExecuteMsg::ExecuteSwapOperations { .. },
+                                )) => return None, /* TODO: need table for token pairs to lookup */
+                                // pool addrs
+                                _ => return None,
+                            }
+                        },
+                        Ok::<Target, _>(Target::ExecuteMsg(ExecuteMsg::ProvideLiquidity {
+                            ..
+                        })) => return None, // TODO
+                        Ok::<Target, _>(Target::ExecuteMsg(ExecuteMsg::Swap {
+                            offer_asset,
+                            belief_price,
+                            max_spread,
+                            ..
+                        })) => {
+                            return Some(Action::Swap(Swap {
+                                contract_address: execute.contract_address,
+                                offer_asset: offer_asset.info,
+                                amount: offer_asset.amount,
+                                belief_price,
+                                max_spread,
+                            }))
+                        },
+                        Err(_) => return None,
+                        _ => return None,
+                    }
+                }
+
+                None
+            })
+            .collect::<Vec<_>>();
+
+        // error!("actions {:#?}", actions);
+        let mut touched: Vec<Addr> = vec![];
+        {
+            let mut spools = self.pools.write().unwrap();
+            for action in actions {
+                match action {
+                    Action::Swap(Swap {
+                        contract_address,
+                        offer_asset,
+                        amount,
+                        belief_price,
+                        max_spread,
+                    }) => {
+                        if let Some(p) = spools.get_mut(&contract_address) {
+                            if let Some((out, spread)) = p.compute_swap(
+                                &offer_asset.clone().into(),
+                                &p.ask_token(&offer_asset.clone().into()),
+                                amount.into(),
+                            ) {
+                                if !assert_max_spread(
+                                    belief_price,
+                                    max_spread,
+                                    amount,
+                                    out.into(),
+                                    spread.into(),
+                                ) {
+                                    error!(
+                                        "swep fail {:?}",
+                                        (
+                                            contract_address,
+                                            offer_asset,
+                                            amount,
+                                            out,
+                                            belief_price,
+                                            max_spread
+                                        )
+                                    );
+                                } else {
+                                    // error!("p before {:#?}", p);
+                                    p.update(
+                                        &offer_asset.clone().into(),
+                                        amount.into(),
+                                        out.into(),
+                                    );
+                                    // error!("p after {:#?}", p);
+                                    touched.push(contract_address);
+                                }
+                            }
+                        }
+                    },
+                }
+            }
+        }
+
+        let start = dex::Token::ust();
+        let spools = self.pools.read().unwrap();
+        let funds = self.funds.read().unwrap();
+        let spps = self.pool_paths.read().unwrap();
+
+        let bal: Uint256 = *funds.get(&start).unwrap_or(&Uint256::zero());
+        if bal <= 1000000u128.into() {
+            // we poor :(
+            return vec![];
+        }
+
+        let paths = HashSet::<Vec<Addr>>::from_iter(
+            touched
+                .iter()
+                .map(|t| (*spps.get(t).unwrap_or(&vec![])).clone())
+                .flatten(),
+        );
+        // error!("paths {:?}", paths.len());
+        let mut trades = paths
+            .iter()
+            .filter_map(|path| find_trade(path, &spools, &start, sender, bal))
+            .collect::<Vec<_>>();
+
+        trades.sort_by(|a, b| b.expected_profit.cmp(&a.expected_profit));
+        trades
+            .into_iter()
+            .take(1)
+            .filter(|e| e.expected_profit >= 400000u128.into())
+            .collect_vec()
     }
 
     async fn execute_pools(
         &mut self,
-        _height: block::Height,
+        height: block::Height,
         sender: &terrars::AccountId,
         funds: &accounts::Balances,
         pools: &dex::Pools,
     ) -> Vec<Trade> {
         let start = dex::Token::ust();
 
-        let pool_map;
-        if self.num_pools == pools.0.len() {
+        let p = if self.num_pools.load(Ordering::Relaxed) == pools.0.len() {
             // No need to rebuild paths, just update liq
             debug!("num_pools unchanged, no need to build graph");
-            pool_map = HashMap::from_iter(pools.0.iter().map(|p| (p.contract_address.clone(), p)));
+            HashMap::from_iter(
+                pools
+                    .0
+                    .iter()
+                    .map(|p| (p.contract_address.clone(), (*p).clone())),
+            )
         } else {
-            self.num_pools = pools.0.len();
-            pool_map = self.prepare_paths(start.clone(), pools);
+            self.num_pools.store(pools.0.len(), Ordering::Relaxed);
+            self.prepare_paths(start.clone(), pools)
+        };
+
+        {
+            let mut spools = self.pools.write().unwrap();
+            *spools = p;
+            let mut fs = self.funds.write().unwrap();
+            *fs = (*funds).clone();
+            self.sync_height.store(height.into(), Ordering::Relaxed);
         }
 
+        let bal: Uint256 = *funds.get(&start).unwrap_or(&Uint256::zero());
+        if bal <= 1000000u128.into() {
+            return vec![];
+        }
+        let spools = self.pools.read().unwrap();
         let mut trades = self
             .paths
             .par_iter()
-            .filter_map(|path| {
-                // debug!("path: {:#?}", path);
-                let ppath = path
-                    .iter()
-                    .map(|a| *pool_map.get(a).unwrap())
-                    .collect_vec()
-                    .into_iter();
-                if let Some(liq) = compute_cycle_liq(&start, ppath.clone()) {
-                    // debug!("got a good trade {} on {:?}", liq, path);
-                    let bal: Uint256 = *funds.get(&start).unwrap_or(&Uint256::zero());
-                    if bal <= 1000000u128.into() {
-                        return None;
-                    }
-                    let size = if liq > bal {
-                        bal - Uint256::from(1000000u128)
-                    } else {
-                        liq
-                    };
-
-                    // let size = liq;
-                    // XXX: the mismatch between size and our balance should be captured in metrics
-                    if let Some((expected_profit, messages, route)) =
-                        trade_path(sender, ppath.clone(), &start, size)
-                    {
-                        return Some(Trade {
-                            size,
-                            expected_profit,
-                            messages,
-                            route,
-                        });
-                    }
-                }
-                None
-            })
+            .filter_map(|path| find_trade(path, &spools, &start, sender, bal))
             .collect::<Vec<_>>();
 
         trades.sort_by(|a, b| b.expected_profit.cmp(&a.expected_profit));
         trades.into_iter().take(1).collect_vec()
     }
+}
+
+// Check if a given path can generate a profitable trade (ignoring tx fee)
+fn find_trade(
+    path: &Vec<Addr>,
+    spools: &HashMap<Addr, Pool>,
+    start: &Token,
+    sender: &AccountId,
+    bal: Uint256,
+) -> Option<Trade> {
+    // debug!("path: {:#?}", path);
+    let ppath = path
+        .iter()
+        .map(|a| spools.get(a).unwrap())
+        .collect_vec()
+        .into_iter();
+    if let Some(liq) = compute_cycle_liq(&start, ppath.clone()) {
+        // debug!("got a good trade {} on {:?}", liq, path);
+        let size = if liq > bal {
+            bal - Uint256::from(1000000u128)
+        } else {
+            liq
+        };
+
+        // XXX: the mismatch between size and our balance should be captured in metrics
+        if let Some((expected_profit, messages, route)) =
+            trade_path(sender, ppath.clone(), &start, size)
+        {
+            return Some(Trade {
+                size,
+                expected_profit,
+                messages,
+                route,
+            });
+        }
+    }
+    None
 }
 
 // Iterate through a bunch of pools and properly arrange them s.t.
@@ -403,7 +641,7 @@ fn sd256_to_d256(d: StdDecimal256) -> Decimal256 {
 fn get_tokens(
     start: &Token,
     trail: &XxIndexSet<&Addr>,
-    pool_map: &HashMap<Addr, &Pool>,
+    pool_map: &PoolMap,
 ) -> Option<(Token, Token)> {
     if trail.is_empty() {
         return None;
