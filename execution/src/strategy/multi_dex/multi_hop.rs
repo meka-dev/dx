@@ -11,18 +11,32 @@ use std::{
 use bigint::U256;
 use common::tracing::{debug, error, trace};
 use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{
-    from_binary, to_vec, Addr, Decimal, Decimal256 as StdDecimal256, Fraction, Uint128,
-    Uint256 as StdUint256,
-};
+use cosmwasm_std::{Addr, Decimal256 as StdDecimal256, Fraction, Uint256 as StdUint256};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use rayon::prelude::*;
 use tendermint::block;
 use terrars::{
-    dex::{self, assert_max_spread, belief_price, max_spread, Pool, Token},
+    dex::{
+        self,
+        assert_max_spread,
+        belief_price,
+        max_spread,
+        Action,
+        AssetInfo,
+        Cw20ExecuteMsg,
+        Cw20HookMsg,
+        ExecuteMsg,
+        Pool,
+        RouterExecuteMsg,
+        SendTarget,
+        Swap,
+        Target,
+        Token,
+    },
     wasm::MsgExecuteContract,
     AccountId,
+    Msg,
 };
 use xxhash_rust::xxh3::Xxh3Builder;
 
@@ -151,7 +165,7 @@ impl MultiHop {
         pool_paths
     }
 
-    fn prepare_paths<'a>(&mut self, start: Token, pools: &'a dex::Pools) -> PoolMap {
+    fn prepare_paths(&mut self, start: Token, pools: &dex::Pools) -> PoolMap {
         // lets us efficiently look up pools
         let mut pool_map: PoolMap = HashMap::new();
         // token -> pools
@@ -194,44 +208,6 @@ impl MultiHop {
         debug!("pool_paths {:#?}", self.paths.len());
         pool_map
     }
-}
-
-use cw20::Cw20ExecuteMsg;
-use serde::Deserialize;
-use terraswap::{
-    asset::{Asset, AssetInfo},
-    pair::{Cw20HookMsg, ExecuteMsg},
-    router::ExecuteMsg as RouterExecuteMsg,
-};
-
-#[derive(Deserialize, Debug)]
-#[serde(untagged)]
-enum Target {
-    Cw20ExecuteMsg(Cw20ExecuteMsg),
-    ExecuteMsg(ExecuteMsg),
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(untagged)]
-enum SendTarget {
-    Cw20HookMsg(Cw20HookMsg),
-    RouterExecuteMsg(RouterExecuteMsg),
-}
-
-#[derive(Deserialize, Debug)]
-struct Swap {
-    contract_address: Addr,
-    offer_asset: AssetInfo,
-    amount: Uint128,
-    belief_price: Option<Decimal>,
-    max_spread: Option<Decimal>,
-}
-
-// struct RouterSwap {}
-
-#[derive(Deserialize, Debug)]
-enum Action {
-    Swap(Swap),
 }
 
 #[async_trait::async_trait]
@@ -289,7 +265,7 @@ impl Strategy for MultiHop {
                                 },
                                 Ok::<SendTarget, _>(SendTarget::RouterExecuteMsg(
                                     RouterExecuteMsg::ExecuteSwapOperations { .. },
-                                )) => return None, /* TODO: need table for token pairs to lookup */
+                                )) => return None, // TODO: need table for token pairs to lookup
                                 // pool addrs
                                 _ => return None,
                             }
@@ -359,11 +335,7 @@ impl Strategy for MultiHop {
                                     );
                                 } else {
                                     // error!("p before {:#?}", p);
-                                    p.update(
-                                        &offer_asset.clone().into(),
-                                        amount.into(),
-                                        out.into(),
-                                    );
+                                    p.update(&offer_asset.clone().into(), amount.into(), out);
                                     // error!("p after {:#?}", p);
                                     touched.push(contract_address);
                                 }
@@ -388,8 +360,7 @@ impl Strategy for MultiHop {
         let paths = HashSet::<Vec<Addr>>::from_iter(
             touched
                 .iter()
-                .map(|t| (*spps.get(t).unwrap_or(&vec![])).clone())
-                .flatten(),
+                .flat_map(|t| (*spps.get(t).unwrap_or(&vec![])).clone()),
         );
         // error!("paths {:?}", paths.len());
         let mut trades = paths
@@ -401,7 +372,7 @@ impl Strategy for MultiHop {
         trades
             .into_iter()
             .take(1)
-            .filter(|e| e.expected_profit >= 400000u128.into())
+            .filter(|e| e.expected_profit >= 300000u128.into())
             .collect_vec()
     }
 
@@ -454,7 +425,7 @@ impl Strategy for MultiHop {
 
 // Check if a given path can generate a profitable trade (ignoring tx fee)
 fn find_trade(
-    path: &Vec<Addr>,
+    path: &[Addr],
     spools: &HashMap<Addr, Pool>,
     start: &Token,
     sender: &AccountId,
@@ -466,7 +437,7 @@ fn find_trade(
         .map(|a| spools.get(a).unwrap())
         .collect_vec()
         .into_iter();
-    if let Some(liq) = compute_cycle_liq(&start, ppath.clone()) {
+    if let Some(liq) = compute_cycle_liq(start, ppath.clone()) {
         // debug!("got a good trade {} on {:?}", liq, path);
         let size = if liq > bal {
             bal - Uint256::from(1000000u128)
@@ -476,7 +447,7 @@ fn find_trade(
 
         // XXX: the mismatch between size and our balance should be captured in metrics
         if let Some((expected_profit, messages, route)) =
-            trade_path(sender, ppath.clone(), &start, size)
+            trade_path(sender, ppath.clone(), start, size)
         {
             return Some(Trade {
                 size,

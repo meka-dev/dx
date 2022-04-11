@@ -4,6 +4,18 @@ mod pool;
 pub use pool::{assert_max_spread, belief_price, max_spread, swap, Pool, Pools};
 mod token;
 pub use token::{Pair as TokenPair, Token};
+mod swap;
+pub use swap::{
+    Action,
+    AssetInfo,
+    Cw20ExecuteMsg,
+    Cw20HookMsg,
+    ExecuteMsg,
+    RouterExecuteMsg,
+    SendTarget,
+    Swap,
+    Target,
+};
 
 pub mod astroport {
     pub const ADDRESS: &str = "terra1fnywlw4edny3vw44x04xd67uzkdqluymgreu7g";

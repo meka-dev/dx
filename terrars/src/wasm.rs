@@ -1,6 +1,6 @@
 use anyhow::Result;
 use cosmrs::tx::{Msg, MsgProto};
-use cosmwasm_std::Addr;
+pub use cosmwasm_std::Addr;
 use serde::{Deserialize, Serialize};
 
 use crate::{base, proto};

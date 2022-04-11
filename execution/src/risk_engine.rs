@@ -345,6 +345,8 @@ impl StaticPoolAllowList {
             Addr::unchecked("terra134m8n2epp0n40qr08qsvvrzycn2zq4zcpmue48"),
             Addr::unchecked("terra1je2lsw0720h2w64ca0559zcav5ltsqcv3230ze"),
             Addr::unchecked("terra1v4kpj65uq63m4x0mqzntzm27ecpactt42nyp5c"),
+            Addr::unchecked("terra1tkcnky57lthm2w7xce9cj5jeu9hjtq427tpwxr"),
+            Addr::unchecked("terra1n6rn6cn8a3rqad8v2mth3u3qwgq9styt84wv4u"),
         ]);
 
         Self(h)
