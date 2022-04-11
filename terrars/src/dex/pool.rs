@@ -236,6 +236,7 @@ pub fn max_spread(_amount_out: Uint256, _spread: Uint256) -> Decimal256 {
 }
 
 // From terraswap pair contract
+// TODO: astroport has slightly different logic
 pub fn assert_max_spread(
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,

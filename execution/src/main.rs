@@ -92,13 +92,7 @@ async fn main() -> Result<()> {
     )));
     let broadcaster = broadcast::Observed::new(
         &mut registry,
-        broadcast::Rpc::new(
-            client.clone(),
-            lcd.clone(),
-            args.chain_id,
-            account,
-            signing_key_bytes,
-        ),
+        broadcast::Rpc::new(client.clone(), args.chain_id, account, signing_key_bytes),
     );
 
     // TODO(xla): Load configured strategies.

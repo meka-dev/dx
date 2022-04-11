@@ -86,7 +86,6 @@ where
                     let trades = strategy.execute_mempool_tx(msg.height, &account_id, &msg.tx).await;
 
                     for trade in trades {
-                        error!("trade {:#?}", trade);
                         trade_sender.send(trade).await?;
                     }
                 }

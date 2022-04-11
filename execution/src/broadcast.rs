@@ -1,4 +1,7 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    collections::HashSet,
+    sync::{Arc, RwLock},
+};
 
 use anyhow::{Context as _, Result};
 use async_trait::async_trait;
@@ -13,7 +16,7 @@ use prometheus_client::{
 };
 use tendermint::{abci::Transaction, block::Height, chain};
 use tendermint_rpc::{endpoint::broadcast, Client as _, WebSocketClient};
-use terrars::{base::abci::GasInfo, lcd, tx, BaseAccount, Msg as _, SigningKey};
+use terrars::{base::abci::GasInfo, wasm::Addr, BaseAccount, Msg as _, SigningKey};
 use tokio::{
     sync::{mpsc, Mutex},
     time::Instant,
@@ -86,19 +89,17 @@ pub trait Broadcaster {
     async fn simulate(&self, trade: &Trade) -> Result<Simulation>;
 }
 
-pub struct Rpc<L> {
+pub struct Rpc {
     account: BaseAccount,
     client: WebSocketClient,
     chain_id: chain::Id,
-    lcd: L,
     signing_key_bytes: Vec<u8>,
     sequence: u64,
 }
 
-impl<L> Rpc<L> {
+impl Rpc {
     pub fn new(
         client: WebSocketClient,
-        lcd: L,
         chain_id: chain::Id,
         account: BaseAccount,
         signing_key_bytes: Vec<u8>,
@@ -109,7 +110,6 @@ impl<L> Rpc<L> {
             account,
             chain_id,
             client,
-            lcd,
             signing_key_bytes,
             sequence,
         }
@@ -117,10 +117,7 @@ impl<L> Rpc<L> {
 }
 
 #[async_trait]
-impl<L> Broadcaster for Rpc<L>
-where
-    L: lcd::Lcd,
-{
+impl Broadcaster for Rpc {
     async fn broadcast(
         &mut self,
         fee: u64,
@@ -163,49 +160,50 @@ where
 
     async fn simulate(&self, trade: &Trade) -> Result<Simulation> {
         let expected_profit = trade.expected_profit.0.as_u64();
-        let messages = trade
-            .messages
-            .clone()
-            .into_iter()
-            .map(|msg| msg.to_any().unwrap())
-            .collect::<Vec<_>>();
-        let simulate_tx = tx::sign(
-            self.chain_id.clone(),
-            &SigningKey::from_bytes(&self.signing_key_bytes).map_err(|err| {
-                anyhow::anyhow!("failed to craft signing key from bytes: {}", err)
-            })?,
-            self.account.account_number,
-            self.sequence,
-            0,
-            0,
-            Height::try_from(0_u64).unwrap(),
-            messages,
-        )?;
+        let gas_used = trade
+            .route
+            .iter()
+            .fold(0u64, |acc, m| acc + gas_estimator(m));
 
-        match self.lcd.tx_simulate(&simulate_tx).await? {
-            lcd::Response::Ok(tx::SimulateResponse { gas_info, .. }) => {
-                let fee = (gas_info.gas_used as f64 * 0.18) as u64;
-
-                let outcome = if expected_profit > fee {
-                    Outcome::Profitable
-                } else {
-                    Outcome::NotProfitable
-                };
-
-                Ok(Simulation {
-                    fee,
-                    gas_info,
-                    outcome,
-                })
+        let fee = (gas_used as f64 * 0.18f64) as u64;
+        let outcome = if expected_profit > fee {
+            Outcome::Profitable
+        } else {
+            Outcome::NotProfitable
+        };
+        Ok(Simulation {
+            fee,
+            gas_info: GasInfo {
+                gas_wanted: 0,
+                gas_used,
             },
-            lcd::Response::Error(lcd::Error { message, .. }) => {
-                Err(anyhow::anyhow!("tx simulation failed: {}", message))
-            },
-        }
+            outcome,
+        })
     }
 }
 
-impl<L> Labeled for Rpc<L> {
+// TODO: where to?
+fn gas_estimator(addr: &Addr) -> u64 {
+    let expensive = HashSet::from([
+        Addr::unchecked("terra1qpd9n7afwf45rkjlpujrrdfh83pldec8rpujgn"), // bLuna/ust
+        Addr::unchecked("terra18r6rdnkgrg74zew3d8l9nhk0m4xanpeukw3e20"), // bLuna/ust
+        Addr::unchecked("terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p"), // bLuna/luna
+        Addr::unchecked("terra1v93ll6kqp33unukuwls3pslquehnazudu653au"), // bLuna/luna
+        Addr::unchecked("terra1x8h5gan6vey5cz2xfyst74mtqsj7746fqj2hze"), // bLuna/lunax
+        Addr::unchecked("terra10lv5wz84kpwxys7jeqkfxx299drs3vnw0lj8mz"), // nLuna/psi
+        Addr::unchecked("terra1zvn8z6y8u2ndwvsjhtpsjsghk6pa6ugwzxp6vx"), // nLuna/psi
+        Addr::unchecked("terra1c5swgtnuunpf75klq5uztynurazuwqf0mmmcyy"), // beth/meth
+        Addr::unchecked("terra1myl709y74vrdcyuxy6g9wv5l2sgah4e9lstnwe"), // beth/ust
+    ]);
+
+    if expensive.contains(addr) {
+        625000
+    } else {
+        350000
+    }
+}
+
+impl Labeled for Rpc {
     const NAME: Name = Name::Rpc;
 }
 
