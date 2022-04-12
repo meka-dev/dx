@@ -3,27 +3,23 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use bigint::U256;
+use common::tracing::{debug, error, trace};
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Addr, Decimal256 as StdDecimal256, Fraction, Uint256 as StdUint256};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use rayon::prelude::*;
 use tendermint::block;
-use xxhash_rust::xxh3::Xxh3Builder;
-
-use common::tracing::{debug, error, trace};
-
 use terrars::{
     dex::{self, belief_price, max_spread, Pool, Token},
     wasm::MsgExecuteContract,
     AccountId,
 };
-
-use crate::strategy::Route;
+use xxhash_rust::xxh3::Xxh3Builder;
 
 use crate::{
     accounts,
-    strategy::{metrics, Strategy, Trade},
+    strategy::{metrics, Route, Strategy, Trade},
 };
 
 // type XxIndexMap<K, V> = IndexMap<K, V, Xxh3Builder>;

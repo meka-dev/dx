@@ -1,4 +1,5 @@
 use anyhow::Result;
+use common::metrics::{self, Registry};
 use cosmwasm_std::Addr;
 use prometheus_client::{
     encoding::text::Encode,
@@ -6,13 +7,10 @@ use prometheus_client::{
     registry::Unit,
 };
 use tendermint::{abci::transaction::Hash, Block};
-
-use common::metrics::{self, Registry};
 use tokio::time::Instant;
 
-use crate::strategy::Route;
-
 use super::Tracker;
+use crate::strategy::Route;
 
 #[derive(Clone, Hash, Debug, Encode, Eq, PartialEq)]
 enum Method {

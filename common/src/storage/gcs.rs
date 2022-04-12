@@ -8,7 +8,8 @@ use reqwest::{Client, ClientBuilder};
 use tame_gcs::{
     http,
     objects::{self, InsertObjectOptional, InsertResponse, Object},
-    ApiResponse, BucketName,
+    ApiResponse,
+    BucketName,
 };
 use tame_oauth::gcp::{self as oauth, TokenProvider as _};
 

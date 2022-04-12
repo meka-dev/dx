@@ -5,7 +5,8 @@ use axum::{
     http::Request,
     response::{Headers, IntoResponse},
     routing::get,
-    Router, Server,
+    Router,
+    Server,
 };
 use axum_extra::{middleware, middleware::Next};
 use lazy_static::lazy_static;

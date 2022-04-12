@@ -1,29 +1,33 @@
 use std::{fs, sync::Arc};
 
 use anyhow::Result;
-use futures::{FutureExt as _, StreamExt as _};
-use tendermint_rpc::{
-    query::{EventType, Query},
-    Client as _, SubscriptionClient, WebSocketClient,
-};
-use tokio::sync::{mpsc, watch, Mutex};
-
 use common::{
     metrics,
     tracing::{self, debug, error},
 };
-use terrars::{
-    lcd::{self, Lcd},
-    mekapi, BaseAccount,
-};
-
 use execution::{
     accounts,
     block_emitter::{self, Emitter as _},
-    broadcast, config, params, routines,
+    broadcast,
+    config,
+    params,
+    routines,
     strategy::{self, Trade},
     tracker,
 };
+use futures::{FutureExt as _, StreamExt as _};
+use tendermint_rpc::{
+    query::{EventType, Query},
+    Client as _,
+    SubscriptionClient,
+    WebSocketClient,
+};
+use terrars::{
+    lcd::{self, Lcd},
+    mekapi,
+    BaseAccount,
+};
+use tokio::sync::{mpsc, watch, Mutex};
 
 const BINARY_NAMESPACE: &str = "execution";
 

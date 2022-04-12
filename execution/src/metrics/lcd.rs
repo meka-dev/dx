@@ -1,6 +1,7 @@
 use std::time::Instant;
 
 use anyhow::Result;
+use common::metrics::{Registry, ResultLabel, BUCKETS};
 use cosmwasm_std::Addr;
 use prometheus_client::{
     encoding::text::Encode,
@@ -8,12 +9,12 @@ use prometheus_client::{
     registry::Unit,
 };
 use serde::{Deserialize, Serialize};
-
-use common::metrics::{Registry, ResultLabel, BUCKETS};
 use terrars::{
     base::Coin,
     lcd::{self, Lcd, Response},
-    tx, AccountId, BaseAccount,
+    tx,
+    AccountId,
+    BaseAccount,
 };
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]

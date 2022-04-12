@@ -171,12 +171,13 @@ mod tests {
     use serde_json::json;
     use wiremock::{
         matchers::{method, path, query_param},
-        Mock, MockServer, ResponseTemplate,
+        Mock,
+        MockServer,
+        ResponseTemplate,
     };
 
-    use crate::{base::Coin, tx, AccountId, BaseAccount, SigningKey};
-
     use super::{Http, Lcd, Response};
+    use crate::{base::Coin, tx, AccountId, BaseAccount, SigningKey};
 
     #[tokio::test]
     async fn http_auth_account() -> Result<(), Box<dyn std::error::Error>> {

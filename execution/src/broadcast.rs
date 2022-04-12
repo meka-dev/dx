@@ -2,6 +2,10 @@ use std::sync::{Arc, RwLock};
 
 use anyhow::{Context as _, Result};
 use async_trait::async_trait;
+use common::{
+    metrics::{Registry, ResultLabel, BUCKETS},
+    tracing::{debug, error, info},
+};
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{counter::Counter, family::Family, histogram::Histogram},
@@ -9,16 +13,11 @@ use prometheus_client::{
 };
 use tendermint::{abci::Transaction, block::Height, chain};
 use tendermint_rpc::{endpoint::broadcast, Client as _, WebSocketClient};
+use terrars::{base::abci::GasInfo, lcd, tx, BaseAccount, Msg as _, SigningKey};
 use tokio::{
     sync::{mpsc, Mutex},
     time::Instant,
 };
-
-use common::{
-    metrics::{Registry, ResultLabel, BUCKETS},
-    tracing::{debug, error, info},
-};
-use terrars::{base::abci::GasInfo, lcd, tx, BaseAccount, Msg as _, SigningKey};
 
 use crate::{strategy::Trade, tracker::Tracker};
 

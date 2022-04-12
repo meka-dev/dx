@@ -67,7 +67,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        toolchain: [stable]
+        toolchain: [nightly]
 
     name: Lint
     runs-on: ${{ matrix.os }}

@@ -154,16 +154,17 @@ mod tests {
     use pretty_assertions::assert_eq;
     use wiremock::{
         matchers::{method, path, query_param},
-        Mock, MockServer, ResponseTemplate,
+        Mock,
+        MockServer,
+        ResponseTemplate,
     };
-
-    use crate::dex::{self, Token};
 
     use super::{
         v1::Api as _,
         v3::{self, Api as _},
         Http,
     };
+    use crate::dex::{self, Token};
 
     #[tokio::test]
     async fn v1_events_mempooltx() -> Result<()> {

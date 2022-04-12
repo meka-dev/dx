@@ -7,6 +7,7 @@ use axum::{
     Router,
 };
 use bytes::Bytes;
+use common::metrics::{self, Registry, RequestDuration};
 use hyper::{server::accept::Accept, Server, StatusCode};
 use prometheus_client::registry::Unit;
 use tokio::{
@@ -15,8 +16,6 @@ use tokio::{
 };
 use tower_http::trace::TraceLayer;
 use tracing::instrument;
-
-use common::metrics::{self, Registry, RequestDuration};
 
 use crate::{
     error::Error,
@@ -130,9 +129,8 @@ mod tests {
     use tokio::sync::mpsc::{self, error::TryRecvError};
     use tower::ServiceExt as _;
 
-    use crate::{event::Event, namespace::Namespace, producer, segment::Segment};
-
     use super::{v1_routes, Api, Error};
+    use crate::{event::Event, namespace::Namespace, producer, segment::Segment};
 
     lazy_static! {
         static ref TEST_NAMESPACE: Namespace =

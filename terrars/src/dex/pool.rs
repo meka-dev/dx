@@ -215,13 +215,14 @@ pub fn max_spread(_amount_out: Uint256, _spread: Uint256) -> Decimal256 {
 
 #[cfg(test)]
 mod tests {
-    use super::Token;
-    use crate::{dex::swap, AccountId};
     use std::str::FromStr;
-    use terraswap::pair::ExecuteMsg;
 
     use cosmwasm_bignumber::{Decimal256, Uint256};
     use cosmwasm_std::Addr;
+    use terraswap::pair::ExecuteMsg;
+
+    use super::Token;
+    use crate::{dex::swap, AccountId};
 
     #[test]
     fn swap_number_integrity() {

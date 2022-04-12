@@ -127,9 +127,8 @@ impl Segment {
 
 #[cfg(test)]
 mod tests {
-    use crate::{event::Event, namespace::Namespace, producer::Producer};
-
     use super::Segment;
+    use crate::{event::Event, namespace::Namespace, producer::Producer};
 
     #[test]
     fn segment_construct() {
