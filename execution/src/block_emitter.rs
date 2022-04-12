@@ -1,4 +1,5 @@
 use anyhow::{Context as _, Result};
+use common::{metrics::Registry, VERSION};
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{family::Family, gauge::Gauge},
@@ -6,8 +7,6 @@ use prometheus_client::{
 use tendermint::{block::Height, Block};
 use tendermint_rpc::event::{Event, EventData};
 use tokio::sync::watch;
-
-use common::{metrics::Registry, VERSION};
 
 pub trait Emitter {
     fn emit(

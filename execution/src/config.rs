@@ -4,9 +4,8 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use tendermint::chain;
-
 use params_derive::params;
+use tendermint::chain;
 
 const CHAIN_ID: &str = "columbus-5";
 const LCD_URL: &str = "http://127.0.0.1:1317";

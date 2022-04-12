@@ -1,5 +1,9 @@
 use std::fmt::Display;
 
+use common::{
+    metrics::{Registry, BUCKETS},
+    tracing::debug,
+};
 use cosmwasm_bignumber::Uint256;
 use prometheus_client::{
     encoding::text::Encode,
@@ -7,17 +11,11 @@ use prometheus_client::{
     registry::Unit,
 };
 use tendermint::block;
+use terrars::dex;
 use tokio::time::Instant;
 
-use common::{
-    metrics::{Registry, BUCKETS},
-    tracing::debug,
-};
-use terrars::dex;
-
-use crate::{accounts, strategy::Strategy};
-
 use super::Trade;
+use crate::{accounts, strategy::Strategy};
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 pub enum Module {

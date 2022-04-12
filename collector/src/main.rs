@@ -1,8 +1,7 @@
 use anyhow::Result;
+use common::{metrics, storage, tracing};
 use hyperlocal::SocketIncoming;
 use tokio::{select, sync::mpsc};
-
-use common::{metrics, storage, tracing};
 
 use crate::{config::USER_AGENT, segment::Segment};
 

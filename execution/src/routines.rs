@@ -1,16 +1,19 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use common::tracing::{debug, error};
 use futures::StreamExt as _;
 use tendermint::block;
-use tokio::sync::{mpsc, watch, Mutex};
-
-use common::tracing::{debug, error};
 use terrars::{dex, lcd::Lcd, mekapi};
+use tokio::sync::{mpsc, watch, Mutex};
 
 use crate::{
     risk_engine::{
-        EmptyPoolDeny, RiskClassifier, RiskEngine, StaticPoolAllowList, UnsupportedPoolList,
+        EmptyPoolDeny,
+        RiskClassifier,
+        RiskEngine,
+        StaticPoolAllowList,
+        UnsupportedPoolList,
     },
     strategy::{fetcher::Fetcher, Strategy, Trade},
     tracker::Tracker,

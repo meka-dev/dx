@@ -149,9 +149,8 @@ mod tests {
     use prost::Message as _;
     use serde_json::json;
 
-    use crate::proto;
-
     use super::Coin;
+    use crate::proto;
 
     #[test]
     fn coin_cosmrs_round_trip() {

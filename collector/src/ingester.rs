@@ -4,6 +4,10 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
+use common::{
+    metrics::{Registry, BUCKETS},
+    tracing::{error, trace, warn},
+};
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{counter::Counter, family::Family, histogram::Histogram},
@@ -15,11 +19,6 @@ use tokio::{
     time::{self, Instant},
 };
 use tracing::instrument;
-
-use common::{
-    metrics::{Registry, BUCKETS},
-    tracing::{error, trace, warn},
-};
 
 use crate::segment::{Key, Segment};
 

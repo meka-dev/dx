@@ -3,7 +3,10 @@ pub use cosmrs::{
     bank::MsgSend,
     crypto::secp256k1::SigningKey,
     tx::{Msg, MsgProto, Tx},
-    AccountId, Any as Message, Decimal, Denom,
+    AccountId,
+    Any as Message,
+    Decimal,
+    Denom,
 };
 
 mod bank;

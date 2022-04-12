@@ -1,14 +1,13 @@
 use std::{future::Future, net::SocketAddr, sync::Arc};
 
 use axum::{middleware, Router, Server};
+use common::metrics;
 use prometheus_client::{
     metrics::{family::Family, histogram::Histogram},
     registry::Unit,
 };
 use tokio::sync::Mutex;
 use tower_http::trace::TraceLayer;
-
-use common::metrics;
 
 pub fn bind(
     registry: &mut metrics::Registry,

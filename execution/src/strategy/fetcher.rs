@@ -1,6 +1,10 @@
 use std::fmt;
 
 use anyhow::Result;
+use common::{
+    metrics::{Registry, ResultLabel, BUCKETS},
+    tracing::{debug, error},
+};
 use cosmwasm_std::Addr;
 use prometheus_client::{
     encoding::text::Encode,
@@ -8,13 +12,8 @@ use prometheus_client::{
     registry::Unit,
 };
 use tendermint::block::Height;
-use tokio::{task::JoinHandle, time::Instant};
-
-use common::{
-    metrics::{Registry, ResultLabel, BUCKETS},
-    tracing::{debug, error},
-};
 use terrars::{dex, lcd::Lcd, mekapi, AccountId};
+use tokio::{task::JoinHandle, time::Instant};
 
 use crate::accounts;
 

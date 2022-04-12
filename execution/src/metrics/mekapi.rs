@@ -2,6 +2,10 @@ use std::time::Instant;
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
+use common::{
+    metrics::{Registry, ResultLabel, BUCKETS},
+    tracing::{debug, error},
+};
 use cosmwasm_std::Addr;
 use futures::stream::BoxStream;
 use prometheus_client::{
@@ -10,11 +14,6 @@ use prometheus_client::{
     registry::Unit,
 };
 use tendermint::block;
-
-use common::{
-    metrics::{Registry, ResultLabel, BUCKETS},
-    tracing::{debug, error},
-};
 use terrars::{
     dex,
     mekapi::{v1, v3},

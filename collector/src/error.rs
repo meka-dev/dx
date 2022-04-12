@@ -44,7 +44,6 @@ impl<T> From<TrySendError<T>> for Error {
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
-
     use serde_json::json;
 
     use super::Error;

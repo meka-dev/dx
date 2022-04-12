@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, Uint128};
-
 use terrars::dex::Pool;
 
 pub struct RiskEngine<M>

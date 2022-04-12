@@ -1,10 +1,9 @@
 #![warn(clippy::nursery, clippy::pedantic)]
 
-use proc_macro_error::proc_macro_error;
-
 use codegen::codegen;
 use extract::extract;
 use parse::parse;
+use proc_macro_error::proc_macro_error;
 
 mod codegen;
 mod extract;
