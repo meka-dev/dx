@@ -47,7 +47,7 @@ impl v1::Api for Http {
             .filter_map(|res| async move {
                 match res {
                     Ok(Event::Message(eventsource_stream::Event { event, data, .. }))
-                        if event == "mempooltx-v1".to_string() =>
+                        if event == *"mempooltx-v1" =>
                     {
                         let res = serde_json::from_str::<v1::MempoolTxMessage>(&data)
                             .context("failed to decode tx event message data");
@@ -77,7 +77,7 @@ impl v1::Api for Http {
             .filter_map(|res| async move {
                 match res {
                     Ok(Event::Message(eventsource_stream::Event { event, data, .. }))
-                        if event == "mempooltx-v2".to_string() =>
+                        if event == *"mempooltx-v2".to_string() =>
                     {
                         let res = serde_json::from_str::<v1::MempoolTxV2Message>(&data)
                             .context("failed to decode tx event message data");

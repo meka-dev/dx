@@ -56,8 +56,8 @@ pub struct Pair(pub [Token; 2]);
 impl Pair {
     pub fn other(&self, t: &Token) -> Option<&Token> {
         match &self.0 {
-            [target, other] if t == target => Some(&other),
-            [other, target] if t == target => Some(&other),
+            [target, other] if t == target => Some(other),
+            [other, target] if t == target => Some(other),
             _ => None,
         }
     }

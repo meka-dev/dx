@@ -9,7 +9,6 @@ env:
   CARGO_INCREMENTAL: 0
   CARGO_NET_RETRY: 10
   RUST_BACKTRACE: short
-  RUSTFLAGS: "-Dwarnings -Dnonstandard-style -Drust-2018-idioms -Dunused"
   RUSTUP_MAX_RETRIES: 10
 
 jobs:
@@ -101,41 +100,15 @@ jobs:
       - name: Run fmt check
         run: cargo fmt --all -- --check
 
-      - name: Run clippy on common
+      - name: Run clippy
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: clippy
-          # TODO(xla): Introduce other crates here once stabilised and cleaned
-          # up.
           # FIXME(xla): We can't move the compatibility flag into RUSTFLAGS due
           # to a regression in 1.58, in progress here:
           # https://github.com/rust-lang/rust/pull/93449
-          args: -p common --no-deps --all-features --all-targets -- -Drust-2021-compatibility
-
-      - name: Run clippy on collector
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          name: clippy
-          # TODO(xla): Introduce other crates here once stabilised and cleaned
-          # up.
-          # FIXME(xla): We can't move the compatibility flag into RUSTFLAGS due
-          # to a regression in 1.58, in progress here:
-          # https://github.com/rust-lang/rust/pull/93449
-          args: -p common --no-deps --all-features --all-targets -- -Drust-2021-compatibility
-
-      - name: Run clippy on execution
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          name: clippy
-          # TODO(xla): Introduce other crates here once stabilised and cleaned
-          # up.
-          # FIXME(xla): We can't move the compatibility flag into RUSTFLAGS due
-          # to a regression in 1.58, in progress here:
-          # https://github.com/rust-lang/rust/pull/93449
-          args: -p execution --no-deps --all-features --all-targets -- -Drust-2021-compatibility
+          args: --workspace --no-deps --all-features --all-targets -- -Dwarnings -Dnonstandard-style -Drust-2018-idioms -Dunused -Drust-2021-compatibility 
 
   test:
     strategy:

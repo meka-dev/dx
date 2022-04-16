@@ -108,7 +108,6 @@ async fn main() -> Result<()> {
     let metrics_server = metrics::bind(args.metrics_addr, BINARY_NAMESPACE, registry);
     let mut metrics_server_handle = tokio::spawn(metrics_server).fuse();
 
-    // Subroutine to keep lastest block up-to-date.
     let mut latest_block_handle = {
         let client = client.clone();
         tokio::spawn(async move {
@@ -131,7 +130,6 @@ async fn main() -> Result<()> {
     let mut mempool_tx_handle =
         tokio::spawn(routines::mempool_tx_v2(mekapi.clone(), mempool_tx_sender)).fuse();
 
-    // Subroutine which compiles, signs and broadcasts message bundles into transactions.
     let mut broadcast_handle = tokio::spawn(broadcast::run(
         trade_receiver,
         broadcaster,

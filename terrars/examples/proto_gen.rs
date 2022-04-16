@@ -38,7 +38,7 @@ mod package {
 
     pub fn normalize(src: &str, path: &[String], out_dir: &str) -> io::Result<()> {
         create(out_dir)?;
-        if path.len() > 0 {
+        if !path.is_empty() {
             return normalize(
                 src,
                 &path[1..path.len()],
@@ -66,7 +66,7 @@ mod package {
                 .file_name()
                 .to_str()
                 .unwrap()
-                .split(".")
+                .split('.')
                 .map(String::from)
                 .collect::<Vec<String>>();
 
@@ -139,8 +139,8 @@ fn main() -> io::Result<()> {
     let mut proto_files = get_protos(third_party_proto_path.to_str().unwrap());
     proto_files.extend(get_protos(terra_proto_path.to_str().unwrap()));
 
-    let terra_path = format!("{}/", terra_proto_path.to_str().unwrap().to_string());
-    let third_party_path = format!("{}/", third_party_proto_path.to_str().unwrap().to_string());
+    let terra_path = format!("{}/", terra_proto_path.to_str().unwrap());
+    let third_party_path = format!("{}/", third_party_proto_path.to_str().unwrap());
 
     config.compile_protos(proto_files.as_slice(), &[third_party_path, terra_path])?;
 

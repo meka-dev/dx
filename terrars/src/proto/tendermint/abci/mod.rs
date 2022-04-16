@@ -14,6 +14,7 @@ pub struct Request {
     pub value: ::core::option::Option<request::Value>,
 }
 /// Nested message and enum types in `Request`.
+#[allow(clippy::large_enum_variant)]
 pub mod request {
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Value {
