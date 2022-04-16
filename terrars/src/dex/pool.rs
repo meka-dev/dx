@@ -22,7 +22,7 @@ use crate::{
 pub type TokenIndex = HashMap<Token, Vec<usize>>;
 pub type PairIndex = HashMap<TokenPair, Vec<usize>>;
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq)]
 pub struct Pool {
     pub assets: [Asset; 2],
     pub contract_address: Addr,
@@ -33,6 +33,12 @@ pub struct Pool {
 impl Hash for Pool {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.contract_address.hash(state);
+    }
+}
+
+impl PartialEq for Pool {
+    fn eq(&self, other: &Self) -> bool {
+        self.contract_address == other.contract_address
     }
 }
 
@@ -91,10 +97,8 @@ impl Pool {
             _ => return,
         };
 
-        self.assets[bid_asset_idx].amount =
-            self.assets[bid_asset_idx].amount + Into::<Uint128>::into(in_amount);
-        self.assets[ask_asset_idx].amount =
-            self.assets[ask_asset_idx].amount - Into::<Uint128>::into(out_amount);
+        self.assets[bid_asset_idx].amount += Into::<Uint128>::into(in_amount);
+        self.assets[ask_asset_idx].amount -= Into::<Uint128>::into(out_amount);
 
         self.assets[bid_asset_idx].amount_decimal = Asset::to_scaled_decimal256(
             self.assets[bid_asset_idx].amount,
