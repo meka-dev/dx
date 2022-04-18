@@ -28,7 +28,7 @@ pub async fn execution<F, L, M, T>(
     fetcher: F,
     tx_tracker: Arc<Mutex<T>>,
     mut latest_block_receiver: watch::Receiver<block::Block>,
-    mut mempool_tx_receiver: mpsc::Receiver<mekapi::v1::MempoolTxMessage>,
+    mut mempool_tx_receiver: mpsc::Receiver<mekapi::v1::MempoolTxV2Message>,
     trade_sender: mpsc::Sender<Trade>,
     account_id: terrars::AccountId,
     mut strategies: Vec<Box<dyn Strategy + Sync>>,
@@ -83,7 +83,7 @@ where
 
             Some(msg) = mempool_tx_receiver.recv() => {
                 for strategy in strategies.iter_mut() {
-                    let trades = strategy.execute_mempool_tx(msg.height, &account_id, &msg.tx).await;
+                    let trades = strategy.execute_mempool_tx(msg.height, &account_id, &msg.pools).await;
 
                     for trade in trades {
                         trade_sender.send(trade).await?;
@@ -121,6 +121,34 @@ where
             },
             None => {
                 events = mekapi.v1_events_mempooltx().await?;
+            },
+        }
+    }
+}
+
+pub async fn mempool_tx_v2<M>(
+    mekapi: M,
+    mempool_tx_sender: mpsc::Sender<mekapi::v1::MempoolTxV2Message>,
+) -> Result<()>
+where
+    M: mekapi::v1::Api,
+{
+    debug!("Init mempool tx stream");
+
+    let mut events = mekapi.v1_events_mempooltx_v2().await?;
+
+    loop {
+        match events.next().await {
+            Some(res) => match res {
+                Ok(msg) => {
+                    if let Err(err) = mempool_tx_sender.try_send(msg) {
+                        error!("failed to send mempool tx: {}", err);
+                    }
+                },
+                Err(err) => error!("failed to decode mempool tx: {}", err),
+            },
+            None => {
+                events = mekapi.v1_events_mempooltx_v2().await?;
             },
         }
     }

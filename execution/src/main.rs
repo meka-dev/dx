@@ -56,7 +56,7 @@ async fn main() -> Result<()> {
         watch::channel(res.block)
     };
     let (mempool_tx_sender, mempool_tx_receiver) =
-        mpsc::channel::<mekapi::v1::MempoolTxMessage>(1024);
+        mpsc::channel::<mekapi::v1::MempoolTxV2Message>(1024);
     let (trade_sender, trade_receiver) = mpsc::channel::<Trade>(100);
 
     let mut registry = metrics::Registry::new(BINARY_NAMESPACE);
@@ -129,7 +129,7 @@ async fn main() -> Result<()> {
     };
 
     let mut mempool_tx_handle =
-        tokio::spawn(routines::mempool_tx(mekapi.clone(), mempool_tx_sender)).fuse();
+        tokio::spawn(routines::mempool_tx_v2(mekapi.clone(), mempool_tx_sender)).fuse();
 
     // Subroutine which compiles, signs and broadcasts message bundles into transactions.
     let mut broadcast_handle = tokio::spawn(broadcast::run(

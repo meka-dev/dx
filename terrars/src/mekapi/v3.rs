@@ -11,7 +11,7 @@ pub trait Api: Send + Sync {
     async fn v3_pools(&self, factory: Addr, height: block::Height) -> Result<Vec<Pool>>;
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Pool {
     pub contract_address: Addr,
     pub liquidity_token: Addr,
