@@ -254,10 +254,10 @@ where
         &mut self,
         height: block::Height,
         sender: &terrars::AccountId,
-        tx: &terrars::Tx,
+        pools: &[terrars::mekapi::v3::Pool],
     ) -> Vec<Trade> {
         let start = Instant::now();
-        let trades = self.next.execute_mempool_tx(height, sender, tx).await;
+        let trades = self.next.execute_mempool_tx(height, sender, pools).await;
 
         self.observe(Method::ExecuteMempoolTx, start, height, &trades);
 

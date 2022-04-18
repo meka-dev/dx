@@ -23,6 +23,7 @@ use terrars::{
 enum Method {
     V1PoolResponses,
     V1EventsMemprolTx,
+    V1EventsMemprolTxV2,
     V3Pools,
 }
 
@@ -134,6 +135,23 @@ where
             None,
             block::Height::default(),
             Method::V1EventsMemprolTx,
+            res.as_ref().err(),
+        );
+
+        res
+    }
+
+    async fn v1_events_mempooltx_v2(
+        &self,
+    ) -> Result<BoxStream<'static, Result<v1::MempoolTxV2Message>>> {
+        let start = Instant::now();
+        let res = self.next.v1_events_mempooltx_v2().await;
+
+        self.observe(
+            start,
+            None,
+            block::Height::default(),
+            Method::V1EventsMemprolTxV2,
             res.as_ref().err(),
         );
 

@@ -1,12 +1,6 @@
 #![allow(clippy::borrowed_box)]
 
-use std::{
-    collections::{HashMap, HashSet, VecDeque},
-    sync::{
-        atomic::{AtomicU64, AtomicUsize, Ordering},
-        RwLock,
-    },
-};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use bigint::U256;
 use common::tracing::{debug, error, trace};
@@ -14,29 +8,11 @@ use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Addr, Decimal256 as StdDecimal256, Fraction, Uint256 as StdUint256};
 use indexmap::IndexSet;
 use itertools::Itertools;
-use rayon::prelude::*;
 use tendermint::block;
 use terrars::{
-    dex::{
-        self,
-        assert_max_spread,
-        belief_price,
-        max_spread,
-        Action,
-        AssetInfo,
-        Cw20ExecuteMsg,
-        Cw20HookMsg,
-        ExecuteMsg,
-        Pool,
-        RouterExecuteMsg,
-        SendTarget,
-        Swap,
-        Target,
-        Token,
-    },
+    dex::{self, belief_price, max_spread, Pool, Token},
     wasm::MsgExecuteContract,
     AccountId,
-    Msg,
 };
 use xxhash_rust::xxh3::Xxh3Builder;
 
@@ -56,13 +32,12 @@ type PoolMap = HashMap<Addr, Pool>;
 
 #[derive(Default)]
 pub struct MultiHop {
-    num_pools: AtomicUsize,
-    sync_height: AtomicU64,
-    funds: RwLock<accounts::Balances>,
-    pools: RwLock<HashMap<Addr, Pool>>,
+    num_pools: usize,
+    sync_height: u64,
+    funds: accounts::Balances,
+    pools: HashMap<Addr, Pool>,
     paths: Vec<Vec<Addr>>,
-    // pool_paths: RwLock<HashMap<Addr, XxIndexSet<Vec<Addr>>>>,
-    pool_paths: RwLock<HashMap<Addr, Vec<Vec<Addr>>>>,
+    pool_paths: HashMap<Addr, Vec<Vec<Addr>>>,
 }
 
 impl metrics::Labeled for MultiHop {
@@ -203,8 +178,7 @@ impl MultiHop {
                 pps.entry(step.clone()).or_insert(vec![]).push(path.clone());
             }
         }
-        let mut sp = self.pool_paths.write().unwrap();
-        *sp = pps;
+        self.pool_paths = pps;
         debug!("pool_paths {:#?}", self.paths.len());
         pool_map
     }
@@ -217,141 +191,26 @@ impl Strategy for MultiHop {
         &mut self,
         height: block::Height,
         sender: &terrars::AccountId,
-        tx: &terrars::Tx,
+        pools: &[terrars::mekapi::v3::Pool],
     ) -> Vec<Trade> {
-        use terrars::MsgProto;
-
-        if self.num_pools.load(Ordering::Relaxed) == 0
-            || self.sync_height.load(Ordering::Relaxed) < height.into()
-        {
+        if self.num_pools == 0 || self.sync_height < height.into() {
             // pools need to be loaded by block sync
             return vec![];
         }
 
-        let actions = tx
-            .body
-            .messages
-            .iter()
-            .filter_map(|msg| {
-                if msg.type_url
-                    == terrars::proto::terra::wasm::v1beta1::MsgExecuteContract::TYPE_URL
-                {
-                    let execute = terrars::wasm::MsgExecuteContract::from_any(msg).ok()?;
-
-                    match serde_json::from_slice(&execute.execute_msg) {
-                        Ok::<Target, _>(Target::Cw20ExecuteMsg(Cw20ExecuteMsg::Send {
-                            contract,
-                            amount,
-                            msg,
-                        })) => {
-                            // error!("cw20 sned {:#?} {:?}", amount, msg);
-                            match serde_json::from_slice(&msg) {
-                                Ok::<SendTarget, _>(SendTarget::Cw20HookMsg(
-                                    Cw20HookMsg::Swap {
-                                        belief_price,
-                                        max_spread,
-                                        ..
-                                    },
-                                )) => {
-                                    return Some(Action::Swap(Swap {
-                                        contract_address: Addr::unchecked(contract),
-                                        offer_asset: AssetInfo::Token {
-                                            contract_addr: execute.contract_address.to_string(),
-                                        },
-                                        amount,
-                                        belief_price,
-                                        max_spread,
-                                    }))
-                                },
-                                Ok::<SendTarget, _>(SendTarget::RouterExecuteMsg(
-                                    RouterExecuteMsg::ExecuteSwapOperations { .. },
-                                )) => return None, // TODO: need table for token pairs to lookup
-                                // pool addrs
-                                _ => return None,
-                            }
-                        },
-                        Ok::<Target, _>(Target::ExecuteMsg(ExecuteMsg::ProvideLiquidity {
-                            ..
-                        })) => return None, // TODO
-                        Ok::<Target, _>(Target::ExecuteMsg(ExecuteMsg::Swap {
-                            offer_asset,
-                            belief_price,
-                            max_spread,
-                            ..
-                        })) => {
-                            return Some(Action::Swap(Swap {
-                                contract_address: execute.contract_address,
-                                offer_asset: offer_asset.info,
-                                amount: offer_asset.amount,
-                                belief_price,
-                                max_spread,
-                            }))
-                        },
-                        Err(_) => return None,
-                        _ => return None,
-                    }
-                }
-
-                None
-            })
-            .collect::<Vec<_>>();
-
-        // error!("actions {:#?}", actions);
-        let mut touched: Vec<Addr> = vec![];
+        let mut touched: Vec<&Addr> = vec![];
         {
-            let mut spools = self.pools.write().unwrap();
-            for action in actions {
-                match action {
-                    Action::Swap(Swap {
-                        contract_address,
-                        offer_asset,
-                        amount,
-                        belief_price,
-                        max_spread,
-                    }) => {
-                        if let Some(p) = spools.get_mut(&contract_address) {
-                            if let Some((out, spread)) = p.compute_swap(
-                                &offer_asset.clone().into(),
-                                &p.ask_token(&offer_asset.clone().into()),
-                                amount.into(),
-                            ) {
-                                if !assert_max_spread(
-                                    belief_price,
-                                    max_spread,
-                                    amount,
-                                    out.into(),
-                                    spread.into(),
-                                ) {
-                                    error!(
-                                        "swep fail {:?}",
-                                        (
-                                            contract_address,
-                                            offer_asset,
-                                            amount,
-                                            out,
-                                            belief_price,
-                                            max_spread
-                                        )
-                                    );
-                                } else {
-                                    // error!("p before {:#?}", p);
-                                    p.update(&offer_asset.clone().into(), amount.into(), out);
-                                    // error!("p after {:#?}", p);
-                                    touched.push(contract_address);
-                                }
-                            }
-                        }
-                    },
+            for ps in pools {
+                if let Some(p) = self.pools.get_mut(&ps.contract_address) {
+                    *p = (*ps).clone().into();
+                    touched.push(&ps.contract_address);
                 }
             }
         }
 
         let start = dex::Token::ust();
-        let spools = self.pools.read().unwrap();
-        let funds = self.funds.read().unwrap();
-        let spps = self.pool_paths.read().unwrap();
 
-        let bal: Uint256 = *funds.get(&start).unwrap_or(&Uint256::zero());
+        let bal: Uint256 = *self.funds.get(&start).unwrap_or(&Uint256::zero());
         if bal <= 1000000u128.into() {
             // we poor :(
             return vec![];
@@ -360,32 +219,32 @@ impl Strategy for MultiHop {
         let paths = HashSet::<Vec<Addr>>::from_iter(
             touched
                 .iter()
-                .flat_map(|t| (*spps.get(t).unwrap_or(&vec![])).clone()),
+                .flat_map(|t| (*self.pool_paths.get(t).unwrap_or(&vec![])).clone()),
         );
         // error!("paths {:?}", paths.len());
         let mut trades = paths
             .iter()
-            .filter_map(|path| find_trade(path, &spools, &start, sender, bal))
+            .filter_map(|path| find_trade(path, &self.pools, &start, sender, bal))
             .collect::<Vec<_>>();
 
         trades.sort_by(|a, b| b.expected_profit.cmp(&a.expected_profit));
         trades
             .into_iter()
             .take(1)
-            .filter(|e| e.expected_profit >= 300000u128.into())
+            .filter(|e| e.expected_profit >= 200000u128.into())
             .collect_vec()
     }
 
     async fn execute_pools(
         &mut self,
         height: block::Height,
-        sender: &terrars::AccountId,
+        _sender: &terrars::AccountId,
         funds: &accounts::Balances,
         pools: &dex::Pools,
     ) -> Vec<Trade> {
         let start = dex::Token::ust();
 
-        let p = if self.num_pools.load(Ordering::Relaxed) == pools.0.len() {
+        let p = if self.num_pools == pools.0.len() {
             // No need to rebuild paths, just update liq
             debug!("num_pools unchanged, no need to build graph");
             HashMap::from_iter(
@@ -395,31 +254,30 @@ impl Strategy for MultiHop {
                     .map(|p| (p.contract_address.clone(), (*p).clone())),
             )
         } else {
-            self.num_pools.store(pools.0.len(), Ordering::Relaxed);
-            self.prepare_paths(start.clone(), pools)
+            self.num_pools = pools.0.len();
+            self.prepare_paths(start, pools)
         };
 
-        {
-            let mut spools = self.pools.write().unwrap();
-            *spools = p;
-            let mut fs = self.funds.write().unwrap();
-            *fs = (*funds).clone();
-            self.sync_height.store(height.into(), Ordering::Relaxed);
-        }
+        self.pools = p;
+        self.funds = (*funds).clone();
+        self.sync_height = height.into();
 
-        let bal: Uint256 = *funds.get(&start).unwrap_or(&Uint256::zero());
-        if bal <= 1000000u128.into() {
-            return vec![];
-        }
-        let spools = self.pools.read().unwrap();
-        let mut trades = self
-            .paths
-            .par_iter()
-            .filter_map(|path| find_trade(path, &spools, &start, sender, bal))
-            .collect::<Vec<_>>();
-
-        trades.sort_by(|a, b| b.expected_profit.cmp(&a.expected_profit));
-        trades.into_iter().take(1).collect_vec()
+        // if we can react to all tx via the mempool then we dont need the following anymore and
+        // that also means less lock contention
+        // let bal: Uint256 = *funds.get(&start).unwrap_or(&Uint256::zero());
+        // if bal <= 1000000u128.into() {
+        // return vec![];
+        // }
+        // let spools = self.pools.read().unwrap();
+        // let mut trades = self
+        // .paths
+        // .par_iter()
+        // .filter_map(|path| find_trade(path, &spools, &start, sender, bal))
+        // .collect::<Vec<_>>();
+        //
+        // trades.sort_by(|a, b| b.expected_profit.cmp(&a.expected_profit));
+        // trades.into_iter().take(1).collect_vec()
+        return vec![];
     }
 }
 
