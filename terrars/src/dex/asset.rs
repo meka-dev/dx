@@ -78,7 +78,7 @@ impl TryFrom<&AssetJson> for Asset {
     type Error = Error;
 
     fn try_from(input: &AssetJson) -> Result<Self, Self::Error> {
-        // FIXME(xla): Mekapi currently doesn't consistently give use the decimals.
+        // NB(xla): Mekapi currently doesn't consistently give use the decimals.
         let decimals = 6;
         Ok(Self {
             amount: input.amount,

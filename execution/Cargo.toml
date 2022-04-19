@@ -23,8 +23,9 @@ serde_json          = { version = "1.0",  default-features = false }
 sha2                = { version = "0.10", default-features = false, features = [ "std" ] }
 tendermint          = { version = "0.23", default-features = false }
 tendermint-rpc      = { version = "0.23", default-features = true,  features = [ "websocket-client" ] }
-tokio               = { version = "1.0",  default-features = false, features = [ "macros", "rt-multi-thread", "sync", "time" ] }
+tokio               = { version = "1.0",  default-features = false, features = [ "macros", "rt-multi-thread", "signal", "sync", "time" ] }
 tower-http          = { version = "0.2",  default-features = false, features = [ "trace" ] }
+tracing             = { version = "0.1",  default-features = false, features = [ "attributes" ] }
 xxhash-rust         = { version = "0.8",  default-features = false, features = [ "xxh3" ] }
 
 common              = { version = "0.1",  default-features = false, path = "../common" }

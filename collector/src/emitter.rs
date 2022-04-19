@@ -26,8 +26,6 @@ where
     E: Emitter,
 {
     while let Some(segment) = incoming.recv().await {
-        // FIXME(xla): Ideally files that are scheduled to go out to the storage backend
-        // actually exist on disk and are only removed once the complete upload is verified.
         match emitter.emit(segment).await {
             Ok(metadata) => debug!(msg = "succeeded to insert", metadata = ?metadata),
             Err(err) => error!(msg = "failed to insert", err = ?err),

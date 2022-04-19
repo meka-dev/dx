@@ -34,7 +34,6 @@ pub struct ExistenceProof {
 /// then there is no valid proof for the given key.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct NonExistenceProof {
-    /// TODO: remove this as unnecessary??? we prove a range
     #[prost(bytes = "vec", tag = "1")]
     pub key: ::prost::alloc::vec::Vec<u8>,
     #[prost(message, optional, tag = "2")]
@@ -232,7 +231,6 @@ pub struct CompressedExistenceProof {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CompressedNonExistenceProof {
-    /// TODO: remove this as unnecessary??? we prove a range
     #[prost(bytes = "vec", tag = "1")]
     pub key: ::prost::alloc::vec::Vec<u8>,
     #[prost(message, optional, tag = "2")]

@@ -52,7 +52,7 @@ impl headers::Header for Producer {
     }
 
     fn encode<E: Extend<HeaderValue>>(&self, _values: &mut E) {
-        todo!()
+        unreachable!()
     }
 }
 
