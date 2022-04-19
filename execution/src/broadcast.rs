@@ -137,7 +137,7 @@ impl Broadcaster for Rpc {
             })?,
             self.account.account_number,
             self.sequence,
-            // TODO(xla): Use actual gas prices.
+            // NB(xla): Using fixed gas prices here, could diverge.
             fee,
             (gas_info.gas_used as f64 * 1.10) as u64,
             Height::try_from(0_u64).unwrap(),
@@ -182,7 +182,6 @@ impl Broadcaster for Rpc {
     }
 }
 
-// TODO: where to?
 fn gas_estimator(addr: &Addr) -> u64 {
     let expensive = HashSet::from([
         Addr::unchecked("terra1qpd9n7afwf45rkjlpujrrdfh83pldec8rpujgn"), // bLuna/ust

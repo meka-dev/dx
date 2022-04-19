@@ -4,10 +4,16 @@ use anyhow::Result;
 use common::tracing::{debug, error};
 use futures::StreamExt as _;
 use tendermint::block;
+use tendermint_rpc::{
+    query::{EventType, Query},
+    SubscriptionClient as _,
+    WebSocketClient,
+};
 use terrars::{dex, lcd::Lcd, mekapi};
 use tokio::sync::{mpsc, watch, Mutex};
 
 use crate::{
+    block_emitter::Emitter,
     risk_engine::{
         EmptyPoolDeny,
         RiskClassifier,
@@ -54,10 +60,7 @@ where
                 let height = latest_block.header().height;
 
                 // Ensure the lock is dropped to avoid halting the machinery.
-                if let Err(err) = tx_tracker.lock().await.observe_block(latest_block) {
-                    // TODO(xla): Move this to tracker observation impl.
-                    error!("failed to tracker::observe: {}", err);
-                };
+                let _ = tx_tracker.lock().await.observe_block(latest_block);
 
                 if let Ok((funds, pairs)) = fetcher
                     .fetch(lcd.clone(), mekapi.clone(), &account_id.clone(), height)
@@ -92,6 +95,24 @@ where
             }
 
             else => break,
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn latest_block<E>(client: WebSocketClient, emitter: E) -> Result<()>
+where
+    E: Emitter,
+{
+    debug!("Init block subscription");
+
+    let query = Query::from(EventType::NewBlock);
+    let mut events = client.subscribe(query).await?;
+
+    while let Some(res) = events.next().await {
+        if let Err(err) = emitter.emit(res) {
+            error!("failed to emit latest block: {}", err);
         }
     }
 

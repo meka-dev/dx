@@ -16,8 +16,6 @@ const TIMEOUT_HEIGHT: u64 = 10;
 
 pub trait Tracker {
     fn is_tracked(&self, route: &Route) -> Option<Addr>;
-    // TODO(xla): Communicate through the result how many txs have been observed, of those how many
-    // where in the cache and further how many have been evicted.
     fn observe_block(&mut self, block: Block) -> Result<()>;
     fn track(&mut self, hash: Hash, route: &Route) -> Option<Route>;
 }

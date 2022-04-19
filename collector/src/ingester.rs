@@ -55,8 +55,6 @@ where
                 for segment in segments {
                     match outgoing.try_send(segment) {
                         Ok(_) => {},
-                        // FIXME(xla): Segments should persist, likely on disk and attempted to
-                        // redeliver, instead of just being dropped.
                         Err(TrySendError::Full(_)) => {
                             warn!(branch = "flush", msg = "failed to send segment, dropping");
                         },

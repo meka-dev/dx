@@ -31,7 +31,6 @@ pub struct Api {
 
 impl Api {
     pub fn new(registry: &mut Registry) -> Self {
-        // TODO(xla): Add additional metrics to surface ingestion details, e.g. event payload size.
         let request_duration = metrics::new_request_duration();
         registry.register_with_unit(
             "api_request_duration",

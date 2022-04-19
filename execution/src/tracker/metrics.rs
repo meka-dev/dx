@@ -8,6 +8,7 @@ use prometheus_client::{
 };
 use tendermint::{abci::transaction::Hash, Block};
 use tokio::time::Instant;
+use tracing::instrument;
 
 use super::Tracker;
 use crate::strategy::Route;
@@ -66,10 +67,12 @@ where
         res
     }
 
+    #[instrument(skip(self), err)]
     fn observe_block(&mut self, block: Block) -> Result<()> {
         let start = Instant::now();
         let res = self.next.observe_block(block);
         self.observe(start, Method::ObserveBlock);
+
         res
     }
 

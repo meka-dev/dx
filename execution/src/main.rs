@@ -3,25 +3,21 @@ use std::{fs, sync::Arc};
 use anyhow::Result;
 use common::{
     metrics,
-    tracing::{self, debug, error},
+    tracing::{self, error},
 };
 use execution::{
     accounts,
-    block_emitter::{self, Emitter as _},
+    block_emitter,
     broadcast,
     config,
     params,
     routines,
+    signals,
     strategy::{self, Trade},
     tracker,
 };
-use futures::{FutureExt as _, StreamExt as _};
-use tendermint_rpc::{
-    query::{EventType, Query},
-    Client as _,
-    SubscriptionClient,
-    WebSocketClient,
-};
+use futures::FutureExt as _;
+use tendermint_rpc::{Client as _, SubscriptionClient, WebSocketClient};
 use terrars::{
     lcd::{self, Lcd},
     mekapi,
@@ -48,6 +44,8 @@ async fn main() -> Result<()> {
         error!("Node status: {:?}", status);
         return Err(anyhow::anyhow!("node still catching up"));
     }
+
+    let (shutdown_sender, _shutdown_receiver) = mpsc::channel::<()>(1);
 
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.
@@ -95,12 +93,13 @@ async fn main() -> Result<()> {
         broadcast::Rpc::new(client.clone(), args.chain_id, account, signing_key_bytes),
     );
 
-    // TODO(xla): Load configured strategies.
     let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
         vec![Box::new(strategy::metrics::Observed::new(
             &mut registry,
             strategy::multi_dex::multi_hop::MultiHop::default(),
         ))];
+
+    let mut signals_handle = tokio::spawn(signals::routine(shutdown_sender)).fuse();
 
     let params_server = params::bind(&mut registry, args.params_addr, args_router);
     let mut params_server_handle = tokio::spawn(params_server).fuse();
@@ -108,24 +107,8 @@ async fn main() -> Result<()> {
     let metrics_server = metrics::bind(args.metrics_addr, BINARY_NAMESPACE, registry);
     let mut metrics_server_handle = tokio::spawn(metrics_server).fuse();
 
-    let mut latest_block_handle = {
-        let client = client.clone();
-        tokio::spawn(async move {
-            debug!("Init block subscription");
-
-            let query = Query::from(EventType::NewBlock);
-            let mut events = client.subscribe(query).await?;
-
-            while let Some(res) = events.next().await {
-                if let Err(err) = emitter.emit(res) {
-                    error!("failed to emit latest block: {}", err);
-                }
-            }
-
-            Ok::<(), anyhow::Error>(())
-        })
-        .fuse()
-    };
+    let mut latest_block_handle =
+        tokio::spawn(routines::latest_block(client.clone(), emitter)).fuse();
 
     let mut mempool_tx_handle =
         tokio::spawn(routines::mempool_tx_v2(mekapi.clone(), mempool_tx_sender)).fuse();
@@ -151,9 +134,9 @@ async fn main() -> Result<()> {
     ))
     .fuse();
 
-    // TODO(xla): Handle signals.
     loop {
         tokio::select! {
+            join = &mut signals_handle => join??,
             join = &mut params_server_handle => join??,
             join = &mut metrics_server_handle => join??,
             join = &mut driver_handle => join??,

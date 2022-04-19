@@ -45,7 +45,8 @@ pub fn extract(item: Ast) -> Model {
         .iter()
         .cloned()
         .map(|mut field| {
-            // TODO(xla): Parse actual attribute TokenStream to get paramterisation.
+            // TODO(xla tracking PR: #94): Parse actual attribute TokenStream to get
+            // paramterisation.
             let dynamic = field.attrs.iter().any(|attr| {
                 attr.path.get_ident().map(ToString::to_string) == Some(FIELD_ATTRIBUTE.to_string())
             });
