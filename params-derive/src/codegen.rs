@@ -70,9 +70,9 @@ pub fn codegen(model: Model) -> TokenStream {
 
             async fn put_param<V>(
                 axum::Json(value): axum::Json<V>,
-                param: std::sync::Arc<std::sync::RwLock<V>>,
+                param: std::sync::Arc<tokio::sync::RwLock<V>>,
             ) -> impl axum::response::IntoResponse {
-                let mut param = param.write().unwrap();
+                let mut param = param.write().await;
                 *param = value;
 
                 axum::http::StatusCode::NO_CONTENT

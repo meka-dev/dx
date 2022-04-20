@@ -1,7 +1,4 @@
-use std::{
-    collections::HashSet,
-    sync::{Arc, RwLock},
-};
+use std::{collections::HashSet, sync::Arc};
 
 use anyhow::{Context as _, Result};
 use async_trait::async_trait;
@@ -18,7 +15,7 @@ use tendermint::{abci::Transaction, block::Height, chain};
 use tendermint_rpc::{endpoint::broadcast, Client as _, WebSocketClient};
 use terrars::{base::abci::GasInfo, wasm::Addr, BaseAccount, Msg as _, SigningKey};
 use tokio::{
-    sync::{mpsc, Mutex},
+    sync::{mpsc, Mutex, RwLock},
     time::Instant,
 };
 
@@ -57,9 +54,7 @@ where
         }
 
         if let Ok(simulation) = broadcaster.simulate(&trade).await {
-            let execute_trades = *execute_trades
-                .read()
-                .expect("failed to acquire poisoned lock");
+            let execute_trades = *execute_trades.read().await;
 
             if execute_trades && simulation.outcome == Outcome::Profitable {
                 if let Ok(check) = broadcaster

@@ -1,6 +1,7 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use params_derive::params;
+use tokio::sync::RwLock;
 
 /// Such params, much joy
 #[params]
