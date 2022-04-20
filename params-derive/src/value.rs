@@ -22,7 +22,7 @@ impl ToTokens for Value {
         } = self;
 
         let wrapped_ty = if *dynamic {
-            quote! { ::std::sync::Arc<::std::sync::RwLock<#ty>> }
+            quote! { ::std::sync::Arc<::tokio::sync::RwLock<#ty>> }
         } else {
             quote! { #ty }
         };

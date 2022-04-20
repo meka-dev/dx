@@ -1,11 +1,8 @@
-use std::{
-    net::SocketAddr,
-    str::FromStr,
-    sync::{Arc, RwLock},
-};
+use std::{net::SocketAddr, str::FromStr, sync::Arc};
 
 use params_derive::params;
 use tendermint::chain;
+use tokio::sync::RwLock;
 
 const CHAIN_ID: &str = "columbus-5";
 const LCD_URL: &str = "http://127.0.0.1:1317";

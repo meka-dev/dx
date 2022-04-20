@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use common::tracing::{debug, error};
+use cosmwasm_bignumber::Uint256;
 use futures::StreamExt as _;
 use tendermint::block;
 use tendermint_rpc::{
@@ -9,10 +10,16 @@ use tendermint_rpc::{
     SubscriptionClient as _,
     WebSocketClient,
 };
-use terrars::{dex, lcd::Lcd, mekapi};
-use tokio::sync::{mpsc, watch, Mutex};
+use terrars::{
+    dex::{self, Token},
+    lcd::Lcd,
+    mekapi,
+    AccountId,
+};
+use tokio::sync::{mpsc, watch, Mutex, RwLock};
 
 use crate::{
+    accounts,
     block_emitter::Emitter,
     risk_engine::{
         EmptyPoolDeny,
@@ -173,4 +180,35 @@ where
             },
         }
     }
+}
+
+pub async fn treasurer<L>(
+    lcd: L,
+    mut latest_block_receiver: watch::Receiver<block::Block>,
+    account_id: AccountId,
+    execute_trades: Arc<RwLock<bool>>,
+) -> Result<()>
+where
+    L: Lcd + Clone,
+{
+    let last = *accounts::fetch(lcd.clone(), account_id.clone())
+        .await?
+        .get(&Token::ust())
+        .unwrap_or(&Uint256::zero());
+
+    while let Ok(()) = latest_block_receiver.changed().await {
+        let current = *accounts::fetch(lcd.clone(), account_id.clone())
+            .await?
+            .get(&Token::ust())
+            .unwrap_or(&Uint256::zero());
+
+        if last.multiply_ratio(9, 10) >= current {
+            error!("balance critically dropped: {} -> {}", last, current);
+
+            let mut toggle = execute_trades.write().await;
+            *toggle = false;
+        }
+    }
+
+    Ok(())
 }
