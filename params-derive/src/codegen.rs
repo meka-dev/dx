@@ -25,17 +25,20 @@ pub fn codegen(model: Model) -> TokenStream {
             #(#values),*
         }
 
-        use serde::ser::SerializeStruct as _;
+
         impl #impl_generics ::serde::ser::Serialize for #ident #ty_generics #where_clause {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
                 S: ::serde::ser::Serializer,
             {
-                #[derive(serde::Serialize)]
+                use ::serde::ser::SerializeStruct as _;
+
+                #[derive(::serde::Serialize)]
                 struct SerializeField<T> {
                     dynamic: bool,
                     value: T,
                 }
+
                 let mut s = serializer.serialize_struct(#name, #len)?;
                 #(#serialize_fields)*
                 s.end()

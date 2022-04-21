@@ -8,7 +8,7 @@ use common::{
 };
 use prometheus_client::{
     encoding::text::Encode,
-    metrics::{counter::Counter, family::Family, histogram::Histogram},
+    metrics::{counter::Counter, family::Family, gauge::Gauge, histogram::Histogram},
     registry::Unit,
 };
 use tendermint::{abci::Transaction, block::Height, chain};
@@ -40,6 +40,7 @@ pub async fn run<B, T>(
     mut broadcaster: B,
     tx_tracker: Arc<Mutex<T>>,
     execute_trades: Arc<RwLock<bool>>,
+    params_execute_trades: Family<EmptyLabels, Gauge>,
 ) -> Result<()>
 where
     B: Broadcaster,
@@ -55,6 +56,10 @@ where
 
         if let Ok(simulation) = broadcaster.simulate(&trade).await {
             let execute_trades = *execute_trades.read().await;
+
+            params_execute_trades
+                .get_or_create(&EmptyLabels {})
+                .set(if execute_trades { 1 } else { 0 });
 
             if execute_trades && simulation.outcome == Outcome::Profitable {
                 if let Ok(check) = broadcaster
@@ -224,7 +229,7 @@ struct CallLabels {
 }
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
-struct PerformanceLabels {
+pub struct PerformanceLabels {
     name: Name,
     method: Method,
 }
@@ -362,4 +367,18 @@ where
             },
         }
     }
+}
+
+#[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
+pub struct EmptyLabels {}
+
+pub fn register_params_metrics(registry: &mut Registry) -> Family<EmptyLabels, Gauge> {
+    let params_execute_trades = Family::<EmptyLabels, Gauge>::default();
+    registry.register(
+        "params_execute_trades",
+        "Boolean metric indicating if trading is active (1) or halted (0)",
+        Box::new(params_execute_trades.clone()),
+    );
+
+    params_execute_trades
 }

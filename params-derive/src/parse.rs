@@ -40,7 +40,7 @@ mod tests {
                 struct Params {
                     pub readable: String,
 
-                    #[writable]
+                    #[params_value(metric, writable)]
                     pub toggle: bool,
                 }
             ),
