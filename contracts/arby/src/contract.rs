@@ -1,8 +1,8 @@
 use std::str::from_utf8;
 
 use astroport::{
-    asset::{Asset as AstroAsset, AssetInfo as AstroAssetInfo},
-    pair::{Cw20HookMsg, ExecuteMsg as AstroExecuteMsg},
+    asset::{Asset, AssetInfo},
+    pair::{Cw20HookMsg, ExecuteMsg as AstroExecuteMsg, QueryMsg, SimulationResponse},
 };
 #[allow(unused_imports)]
 use cosmwasm_std::entry_point;
@@ -29,14 +29,14 @@ use cw_storage_plus::{Item, Map};
 
 use crate::{
     error::ContractError,
-    msg::{Asset, AssetInfo, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SimulationResponse},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg},
 };
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:mtek-arby";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-const POST_BALANCE: Item<'_, Uint128> = Item::new("output");
+const POST_BALANCE: Item<'_, Uint128> = Item::new("post_balance");
 const OWNER: Item<'_, Addr> = Item::new("owner");
 const SPRINTERS: Map<'_, Addr, ()> = Map::new("sprinters");
 
@@ -144,7 +144,7 @@ pub fn sprint(
     }
 
     let bal = match path.get(0) {
-        Some((_, AssetInfo::Native { denom })) if denom == "uust" => {
+        Some((_, AssetInfo::NativeToken { denom })) if denom == "uust" => {
             deps.querier.query_balance(env.contract.address, denom)?
         },
         _ => return Err(ContractError::UnsupportedStartAsset {}),
@@ -204,11 +204,11 @@ fn mk_msg(addr: &Addr, ass: &AssetInfo, amount: Uint128) -> Result<CosmosMsg, Co
                 funds: vec![],
             }))
         },
-        AssetInfo::Native { denom } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+        AssetInfo::NativeToken { denom } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: addr.to_string(),
             msg: to_binary(&AstroExecuteMsg::Swap {
-                offer_asset: AstroAsset {
-                    info: AstroAssetInfo::NativeToken {
+                offer_asset: Asset {
+                    info: AssetInfo::NativeToken {
                         denom: denom.clone(),
                     },
                     amount,
@@ -245,7 +245,7 @@ pub fn withdraw(
             })?,
             funds: vec![],
         }),
-        AssetInfo::Native { denom } => BankMsg::Send {
+        AssetInfo::NativeToken { denom } => BankMsg::Send {
             to_address: to.to_string(),
             amount: coins(amount.into(), denom),
         }
@@ -414,7 +414,7 @@ mod tests {
         assert_eq!(0, res.messages.len());
 
         let msg = ExecuteMsg::Withdraw {
-            asset: AssetInfo::Native {
+            asset: AssetInfo::NativeToken {
                 denom: "token".to_string(),
             },
             amount: Uint128::from(2u128),
@@ -445,7 +445,7 @@ mod tests {
 
         let info = mock_info("other", &[]);
         let msg = ExecuteMsg::Withdraw {
-            asset: AssetInfo::Native {
+            asset: AssetInfo::NativeToken {
                 denom: "token".to_string(),
             },
             amount: Uint128::from(2u128),
