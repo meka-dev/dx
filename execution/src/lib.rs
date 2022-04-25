@@ -6,6 +6,5 @@ pub mod metrics;
 pub mod params;
 pub mod risk_engine;
 pub mod routines;
-pub mod signals;
 pub mod strategy;
 pub mod tracker;

@@ -1,7 +1,8 @@
 use anyhow::Result;
-use common::tracing::info;
 use tokio::{select, sync::mpsc};
 use tracing::instrument;
+
+use crate::tracing::info;
 
 #[cfg(unix)]
 #[instrument(name = "signals routine", skip(shutdown_tx))]
@@ -21,5 +22,5 @@ pub async fn routine(shutdown_tx: mpsc::Sender<()>) -> Result<()> {
     info!(?signal, "received termination signal");
     let _ = shutdown_tx.try_send(());
 
-    Ok(())
+    anyhow::Ok(())
 }

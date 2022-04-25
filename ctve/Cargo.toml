@@ -1,0 +1,14 @@
+[package]
+name    = "ctve"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eyre    = { version = "0.6",  default-features = false }
+futures = { version = "0.3",  default-features = false, features = [ "async-await", "std" ] }
+tokio   = { version = "1.0",  default-features = false, features = [ "macros", "rt-multi-thread", "signal", "sync", "time" ] }
+tracing = { version = "0.1",  default-features = false, features = [ "attributes" ] }
+
+common  = { version = "0.1",  default-features = false, path = "../common" }
+
+[dev-dependencies]

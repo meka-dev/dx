@@ -4,6 +4,7 @@ members = [
   "collector",
   "common",
   "contracts/arby",
+  "ctve",
   "execution",
   "params-derive",
   "terrars"

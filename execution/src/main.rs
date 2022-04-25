@@ -3,6 +3,7 @@ use std::{fs, sync::Arc};
 use anyhow::Result;
 use common::{
     metrics,
+    signals,
     tracing::{self, error},
 };
 use execution::{
@@ -12,7 +13,6 @@ use execution::{
     config,
     params,
     routines,
-    signals,
     strategy::{self, Trade},
     tracker,
 };

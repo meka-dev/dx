@@ -1,4 +1,5 @@
 pub mod metrics;
+pub mod signals;
 pub mod storage;
 pub mod tracing;
 
