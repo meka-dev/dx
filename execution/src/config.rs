@@ -2,6 +2,7 @@ use std::{net::SocketAddr, str::FromStr, sync::Arc};
 
 use params_derive::params;
 use tendermint::chain;
+use terrars::AccountId;
 use tokio::sync::RwLock;
 
 const CHAIN_ID: &str = "columbus-5";
@@ -50,6 +51,13 @@ pub struct Args {
     /// location of the file on disk holding the secret key (./secret.key)
     #[argh(option, default = "String::from(\"./secret.key\")")]
     pub secret_key_file: String,
+
+    /// address of contract that atomic arbitrage trades go through
+    #[argh(
+        option,
+        default = "AccountId::from_str(\"terra1zad09hklg3msvhlq7x7xxqr98gwv0tp5cyjwtr\").unwrap()"
+    )]
+    pub arby_addr: AccountId,
 }
 
 fn into_dynamic<T: FromStr>(input: &str) -> Result<Arc<RwLock<T>>, String> {

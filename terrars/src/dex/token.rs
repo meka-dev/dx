@@ -1,3 +1,4 @@
+use astroport::asset::AssetInfo as AstroAssetInfo;
 use cosmwasm_std::Addr;
 use serde::{Deserialize, Serialize};
 use terraswap::asset::AssetInfo;
@@ -46,6 +47,17 @@ impl From<AssetInfo> for Token {
                 contract_addr: Addr::unchecked(contract_addr),
             },
             AssetInfo::NativeToken { denom } => Token::Native { denom },
+        }
+    }
+}
+
+impl From<Token> for AstroAssetInfo {
+    fn from(input: Token) -> Self {
+        match input {
+            Token::Cw20 { contract_addr } => AstroAssetInfo::Token {
+                contract_addr: Addr::unchecked(contract_addr),
+            },
+            Token::Native { denom } => AstroAssetInfo::NativeToken { denom },
         }
     }
 }

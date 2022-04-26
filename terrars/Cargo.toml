@@ -6,9 +6,9 @@ edition = "2021"
 [dependencies]
 anyhow              = { version = "1.0",  default-features = false }
 async-trait         = { version = "0.1",  default-features = false }
-astroport           = { version = "1.0",  default-features = false }
+astroport           = { version = "0.3",  default-features = false } # use 0.3 instead of a more recent version for consistency, as it's the version used on chain
 base64              = { version = "0.13", default-features = false }
-cosmrs              = { version = "0.4",  default-features = false, features = [ "cosmwasm" ], git = "https://github.com/meka-dev/cosmos-rust.git", branch = "xla/expand-types" }
+cosmrs              = { version = "0.6",  default-features = false, features = [ "cosmwasm" ], git = "https://github.com/meka-dev/cosmos-rust.git", branch = "xla/expand-types" }
 cosmwasm-std        = { version = "0.16", default-features = false }
 cosmwasm-bignumber  = { version = "2.2",  default-features = false }
 cw20                = { version = "0.8",  default-features = false } # We need 0.8 because the terraswap contracts are still on that version
@@ -28,7 +28,6 @@ tokio               = { version = "1.0",  default-features = false, features = [
 tracing             = { version = "0.1",  default-features = false }
 
 [dev-dependencies]
-astroport           = { version = "1.0",  default-features = false }
 pretty_assertions   = { version = "1.1",  default-features = false, features = [ "std" ] }
 prost-build         = { version = "0.9",  default-features = false }
 walkdir             = { version = "2.3",  default-features = false }

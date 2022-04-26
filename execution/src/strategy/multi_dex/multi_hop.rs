@@ -2,15 +2,16 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
+use arby::msg::ExecuteMsg;
 use bigint::U256;
 use common::tracing::{debug, error, trace};
 use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{Addr, Decimal256 as StdDecimal256, Fraction, Uint256 as StdUint256};
+use cosmwasm_std::{Addr, Decimal256 as StdDecimal256, Fraction, Uint128, Uint256 as StdUint256};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use tendermint::block;
 use terrars::{
-    dex::{self, belief_price, max_spread, Pool, Token},
+    dex::{self, max_spread, Pool, Token},
     wasm::MsgExecuteContract,
     AccountId,
 };
@@ -38,6 +39,7 @@ pub struct MultiHop {
     pools: HashMap<Addr, Pool>,
     paths: Vec<Vec<Addr>>,
     pool_paths: HashMap<Addr, Vec<Vec<Addr>>>,
+    proxy: String,
 }
 
 impl metrics::Labeled for MultiHop {
@@ -48,6 +50,13 @@ impl metrics::Labeled for MultiHop {
 const MAX_PATH_LEN: usize = 4;
 
 impl MultiHop {
+    pub fn new(proxy: String) -> Self {
+        MultiHop {
+            proxy,
+            ..MultiHop::default()
+        }
+    }
+
     fn dfs(
         &self,
         start: &Token,
@@ -224,7 +233,16 @@ impl Strategy for MultiHop {
         // error!("paths {:?}", paths.len());
         let mut trades = paths
             .iter()
-            .filter_map(|path| find_trade(path, &self.pools, &start, sender, bal))
+            .filter_map(|path| {
+                find_trade(
+                    path,
+                    &self.pools,
+                    &start,
+                    sender,
+                    bal,
+                    Addr::unchecked(self.proxy.clone()),
+                )
+            })
             .collect::<Vec<_>>();
 
         trades.sort_by(|a, b| b.expected_profit.cmp(&a.expected_profit));
@@ -288,6 +306,7 @@ fn find_trade(
     start: &Token,
     sender: &AccountId,
     bal: Uint256,
+    proxy: Addr,
 ) -> Option<Trade> {
     // debug!("path: {:#?}", path);
     let ppath = path
@@ -304,13 +323,13 @@ fn find_trade(
         };
 
         // XXX: the mismatch between size and our balance should be captured in metrics
-        if let Some((expected_profit, messages, route)) =
-            trade_path(sender, ppath.clone(), start, size)
+        if let Some((expected_profit, message, route)) =
+            trade_path(sender, proxy, ppath.clone(), start, size)
         {
             return Some(Trade {
                 size,
                 expected_profit,
-                messages,
+                messages: vec![message],
                 route,
             });
         }
@@ -322,13 +341,14 @@ fn find_trade(
 // asset0 is always bid and asset1 is the ask.
 pub fn trade_path<'a, T: Iterator<Item = &'a Pool>>(
     sender: &AccountId,
+    proxy: Addr,
     pools: T,
     start: &Token,
     amount: Uint256,
-) -> Option<(Uint256, Vec<MsgExecuteContract>, Route)> {
-    let mut msgs = vec![];
+) -> Option<(Uint256, MsgExecuteContract, Route)> {
     let mut cb = amount;
     let mut bid_token = start.clone();
+    let mut path = vec![];
     let mut route = vec![];
 
     for p in pools {
@@ -348,13 +368,7 @@ pub fn trade_path<'a, T: Iterator<Item = &'a Pool>>(
                 max_spread(swap_ret, spread),
                 p.contract_address,
             );
-            msgs.push(p.swap(
-                sender,
-                &bid_token,
-                cb,
-                belief_price(cb, swap_ret),
-                max_spread(swap_ret, spread),
-            ));
+            path.push(p.swap_arby(&bid_token));
             route.push(p.contract_address.clone());
 
             cb = swap_ret;
@@ -371,7 +385,19 @@ pub fn trade_path<'a, T: Iterator<Item = &'a Pool>>(
     }
     trace!("positive delta {}", cb - amount);
 
-    Some((cb - amount, msgs, route))
+    let msg = MsgExecuteContract {
+        coins: vec![],
+        contract_address: proxy,
+        execute_msg: serde_json::to_vec(&ExecuteMsg::Sprint {
+            input: amount.into(),
+            min_out: Uint128::new(0u128),
+            path,
+        })
+        .ok()?,
+        sender: sender.to_string(),
+    };
+
+    Some((cb - amount, msg, route))
 }
 
 // XXX: this might eventually go into a contract

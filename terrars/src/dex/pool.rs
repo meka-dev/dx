@@ -4,6 +4,7 @@ use std::{
     str::FromStr as _,
 };
 
+use astroport::asset::AssetInfo;
 use cosmrs::Denom;
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{to_binary, Addr, Decimal, Uint128};
@@ -126,6 +127,10 @@ impl Pool {
             belief_price,
             max_spread,
         )
+    }
+
+    pub fn swap_arby(&self, token: &Token) -> (Addr, AssetInfo) {
+        (self.contract_address.clone(), (*token).clone().into())
     }
 
     pub fn token_pair(&self) -> TokenPair {
