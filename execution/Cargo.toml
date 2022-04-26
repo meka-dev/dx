@@ -28,6 +28,7 @@ tower-http          = { version = "0.2",  default-features = false, features = [
 tracing             = { version = "0.1",  default-features = false, features = [ "attributes" ] }
 xxhash-rust         = { version = "0.8",  default-features = false, features = [ "xxh3" ] }
 
+arby                = { version = "0.1",  default-features = false, path = "../contracts/arby" }
 common              = { version = "0.1",  default-features = false, path = "../common" }
 params-derive       = { version = "0.1",  default-features = false, path = "../params-derive" }
 terrars             = { version = "0.1",  default-features = false, path = "../terrars" }

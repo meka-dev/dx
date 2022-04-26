@@ -43,6 +43,7 @@ pub async fn execution<F, L, M, T>(
     mut latest_block_receiver: watch::Receiver<block::Block>,
     mut mempool_tx_receiver: mpsc::Receiver<mekapi::v1::MempoolTxV2Message>,
     trade_sender: mpsc::Sender<Trade>,
+    proxy_addr: terrars::AccountId,
     account_id: terrars::AccountId,
     mut strategies: Vec<Box<dyn Strategy + Sync>>,
 ) -> Result<()>
@@ -70,7 +71,7 @@ where
                 let _ = tx_tracker.lock().await.observe_block(latest_block);
 
                 if let Ok((funds, pairs)) = fetcher
-                    .fetch(lcd.clone(), mekapi.clone(), &account_id.clone(), height)
+                    .fetch(lcd.clone(), mekapi.clone(), &proxy_addr, height)
                     .await
                 {
                     let pools = dex::Pools::from(

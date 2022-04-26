@@ -96,7 +96,7 @@ async fn main() -> Result<()> {
     let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
         vec![Box::new(strategy::metrics::Observed::new(
             &mut registry,
-            strategy::multi_dex::multi_hop::MultiHop::default(),
+            strategy::multi_dex::multi_hop::MultiHop::new(args.arby_addr.clone().to_string()),
         ))];
 
     let mut signals_handle = tokio::spawn(signals::routine(shutdown_sender)).fuse();
@@ -137,6 +137,7 @@ async fn main() -> Result<()> {
         latest_block_receiver,
         mempool_tx_receiver,
         trade_sender,
+        args.arby_addr,
         account_id,
         strategies,
     ))

@@ -29,6 +29,7 @@ pub enum Outcome {
     NotProfitable,
 }
 
+#[derive(Debug)]
 pub struct Simulation {
     fee: u64,
     gas_info: GasInfo,
@@ -158,7 +159,9 @@ impl Broadcaster for Rpc {
         let gas_used = trade
             .route
             .iter()
-            .fold(0u64, |acc, m| acc + gas_estimator(m));
+            .fold(0u64, |acc, m| acc + gas_estimator(m))
+            * 2;
+        // NB: remove *2 once we have a better estimate
 
         let fee = (gas_used as f64 * 0.18f64) as u64;
         let outcome = if expected_profit > fee {
