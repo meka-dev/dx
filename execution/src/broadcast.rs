@@ -160,8 +160,8 @@ impl Broadcaster for Rpc {
             .route
             .iter()
             .fold(0u64, |acc, m| acc + gas_estimator(m))
-            * 2;
-        // NB: remove *2 once we have a better estimate
+            + 200000;
+        // NB: add a static overhead for calling via proxy
 
         let fee = (gas_used as f64 * 0.18f64) as u64;
         let outcome = if expected_profit > fee {
