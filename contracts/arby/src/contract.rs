@@ -144,7 +144,7 @@ pub fn sprint(
     }
 
     let bal = match path.get(0) {
-        Some((_, AssetInfo::NativeToken { denom })) if denom == "uust" => {
+        Some((_, AssetInfo::NativeToken { denom })) if denom == "uusd" => {
             deps.querier.query_balance(env.contract.address, denom)?
         },
         _ => return Err(ContractError::UnsupportedStartAsset {}),
