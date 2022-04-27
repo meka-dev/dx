@@ -477,8 +477,8 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
 name = "cosmos-sdk-proto"
-version = "0.9.0"
-source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#6a9a797fb047d50ef3c3c8ef4cd5802d97a1a44d"
+version = "0.11.0"
+source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#7d528c5991be9e7f06b9cb9d28e808071f0d3d98"
 dependencies = [
  "prost",
  "prost-types",
@@ -487,8 +487,8 @@ dependencies = [
 
 [[package]]
 name = "cosmrs"
-version = "0.4.1"
-source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#6a9a797fb047d50ef3c3c8ef4cd5802d97a1a44d"
+version = "0.6.0"
+source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#7d528c5991be9e7f06b9cb9d28e808071f0d3d98"
 dependencies = [
  "cosmos-sdk-proto",
  "ecdsa 0.13.4",
@@ -2982,9 +2982,9 @@ dependencies = [
 
 [[package]]
 name = "tendermint"
-version = "0.23.3"
+version = "0.23.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9ef686b8ecd36550d0581f0989c9d8607090b23005df479d8e6ba348b5800b9"
+checksum = "16a3d617db287955b07e4bf1523b831bf5055e7d3ceab8504174181df40cb143"
 dependencies = [
  "async-trait",
  "bytes",
@@ -3027,9 +3027,9 @@ dependencies = [
 
 [[package]]
 name = "tendermint-proto"
-version = "0.23.3"
+version = "0.23.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9e0a0251fd81bed7420bea0f4d91c2a58f6c9fa34d5b2f70bed0ba8890de5aa"
+checksum = "b8a65da26cc1f24cd53f40d1267372c22d6ce727d9fd40c6c61b879b26154994"
 dependencies = [
  "bytes",
  "flex-error",
