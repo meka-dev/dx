@@ -15,7 +15,7 @@ impl ToTokens for Route {
 
         let out = quote! {
             .route(#route, axum::routing::put({
-                let param = Arc::clone(&self.#ident);
+                let param = Arc::clone(&params.#ident);
                 move |body| Self::put_param::<#ty>(body, param)
             }))
         };

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use common::tracing::{debug, error};
@@ -16,7 +16,7 @@ use terrars::{
     mekapi,
     AccountId,
 };
-use tokio::sync::{mpsc, watch, Mutex, RwLock};
+use tokio::sync::{mpsc, watch, Mutex};
 
 use crate::{
     accounts,
@@ -198,6 +198,7 @@ where
         .unwrap_or(&Uint256::zero());
 
     while let Ok(()) = latest_block_receiver.changed().await {
+        let execute_trades = Arc::clone(&execute_trades);
         let current = *accounts::fetch(lcd.clone(), account_id.clone())
             .await?
             .get(&Token::ust())
@@ -206,8 +207,12 @@ where
         if last.multiply_ratio(9, 10) >= current {
             error!("balance critically dropped: {} -> {}", last, current);
 
-            let mut toggle = execute_trades.write().await;
-            *toggle = false;
+            tokio::task::spawn_blocking(move || {
+                let mut toggle = execute_trades.write().unwrap();
+                *toggle = false;
+            })
+            .await
+            .unwrap();
         }
     }
 

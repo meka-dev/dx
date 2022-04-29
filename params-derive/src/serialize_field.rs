@@ -15,7 +15,7 @@ impl ToTokens for SerializeField {
 
         let val = if self.dynamic {
             quote! {
-                &(*self.#ident.blocking_read())
+                &(*self.#ident.read().unwrap())
             }
         } else {
             quote! {
