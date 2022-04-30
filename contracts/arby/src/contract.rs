@@ -42,11 +42,11 @@ pub fn instantiate(
     deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    OWNER.save(deps.storage, &info.sender)?;
+    OWNER.save(deps.storage, &msg.owner)?;
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
@@ -246,13 +246,16 @@ mod tests {
         // let mut deps = mock_dependencies_with_balances(vec![()]&coins(2, "token"));
         let mut deps = mock_dependencies(&coins(2, "token"));
 
-        let msg = InstantiateMsg {};
-        let info = mock_info("creator", &[]);
+        let owner = Addr::unchecked("owner");
+        let msg = InstantiateMsg {
+            owner: owner.clone(),
+        };
+        let info = mock_info("deployer", &[]);
 
-        let res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
 
-        assert_eq!(Ok(info.sender), OWNER.load(&deps.storage));
+        assert_eq!(Ok(owner), OWNER.load(&deps.storage));
     }
 
     #[test]
@@ -260,8 +263,9 @@ mod tests {
         // let mut deps = mock_dependencies_with_balances(vec![()]&coins(2, "token"));
         let mut deps = mock_dependencies(&coins(20, "uusd"));
 
-        let msg = InstantiateMsg {};
-        let info = mock_info("owner", &[]);
+        let owner = Addr::unchecked("owner");
+        let info = mock_info("sender", &[]);
+        let msg = InstantiateMsg { owner };
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
@@ -286,8 +290,9 @@ mod tests {
         // let mut deps = mock_dependencies_with_balances(vec![()]&coins(2, "token"));
         let mut deps = mock_dependencies(&coins(20, "uusd"));
 
-        let msg = InstantiateMsg {};
-        let info = mock_info("owner", &[]);
+        let owner = Addr::unchecked("owner");
+        let msg = InstantiateMsg { owner };
+        let info = mock_info("sender", &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
@@ -314,10 +319,13 @@ mod tests {
         // let mut deps = mock_dependencies_with_balances(vec![()]&coins(2, "token"));
         let mut deps = mock_dependencies(&coins(2, "token"));
 
-        let msg = InstantiateMsg {};
-        let info = mock_info("owner", &[]);
+        let owner = Addr::unchecked("owner");
+        let msg = InstantiateMsg {
+            owner: owner.clone(),
+        };
+        let info = mock_info("sender", &[]);
 
-        let res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
 
         let msg = ExecuteMsg::Withdraw {
@@ -327,7 +335,16 @@ mod tests {
             amount: Uint128::from(2u128),
             to: Addr::unchecked("bar"),
         };
-        let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            MessageInfo {
+                sender: owner,
+                funds: vec![],
+            },
+            msg,
+        )
+        .unwrap();
         assert_eq!(
             vec![SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
                 to_address: "bar".to_owned(),
@@ -342,8 +359,9 @@ mod tests {
         // let mut deps = mock_dependencies_with_balances(vec![()]&coins(2, "token"));
         let mut deps = mock_dependencies(&coins(2, "token"));
 
-        let msg = InstantiateMsg {};
-        let info = mock_info("owner", &[]);
+        let owner = Addr::unchecked("owner");
+        let msg = InstantiateMsg { owner };
+        let info = mock_info("sender", &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
