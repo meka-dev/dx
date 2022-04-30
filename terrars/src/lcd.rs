@@ -336,6 +336,8 @@ mod tests {
                 bank_account.sequence,
                 1000,
                 1000,
+                None,
+                None,
                 Height::try_from(0u64)?,
                 vec![send.to_any()?],
             )?

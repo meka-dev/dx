@@ -16,7 +16,7 @@ use prometheus_client::{
 };
 use tendermint::{abci::Transaction, block::Height, chain};
 use tendermint_rpc::{endpoint::broadcast, Client as _, WebSocketClient};
-use terrars::{base::abci::GasInfo, wasm::Addr, BaseAccount, Msg as _, SigningKey};
+use terrars::{base::abci::GasInfo, wasm::Addr, AccountId, BaseAccount, Msg as _, SigningKey};
 use tokio::{
     sync::{mpsc, Mutex},
     time::Instant,
@@ -98,6 +98,7 @@ pub struct Rpc {
     chain_id: chain::Id,
     signing_key_bytes: Vec<u8>,
     sequence: u64,
+    treasury: Option<AccountId>,
 }
 
 impl Rpc {
@@ -106,6 +107,7 @@ impl Rpc {
         chain_id: chain::Id,
         account: BaseAccount,
         signing_key_bytes: Vec<u8>,
+        treasury: Option<AccountId>,
     ) -> Self {
         let sequence = account.sequence;
 
@@ -115,6 +117,7 @@ impl Rpc {
             client,
             signing_key_bytes,
             sequence,
+            treasury,
         }
     }
 }
@@ -143,6 +146,8 @@ impl Broadcaster for Rpc {
             // NB(xla): Using fixed gas prices here, could diverge.
             fee,
             (gas_info.gas_used as f64 * 1.10) as u64,
+            self.treasury.clone(),
+            self.treasury.clone(),
             Height::try_from(0_u64).unwrap(),
             messages,
         )
