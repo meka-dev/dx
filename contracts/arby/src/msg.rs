@@ -6,16 +6,11 @@ use serde::{Deserialize, Serialize};
 // include postcondition
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InstantiateMsg {
-    pub sprinters: Vec<Addr>,
-}
+pub struct InstantiateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    SetSprinters {
-        sprinters: Vec<Addr>,
-    },
     Sprint {
         input: Uint128,
         min_out: Uint128,
