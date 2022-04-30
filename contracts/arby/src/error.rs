@@ -15,6 +15,9 @@ pub enum ContractError {
     #[error("UnsupportedStartAsset")]
     UnsupportedStartAsset {},
 
+    #[error("InvalidMinOut")]
+    InvalidMinOut {},
+
     #[error("Insufficient")]
     Insufficient {},
 

@@ -1,5 +1,3 @@
-use std::str::from_utf8;
-
 use astroport::{
     asset::{Asset, AssetInfo},
     pair::{Cw20HookMsg, ExecuteMsg as AstroExecuteMsg, QueryMsg, SimulationResponse},
@@ -25,7 +23,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw20::Cw20ExecuteMsg;
-use cw_storage_plus::{Item, Map};
+use cw_storage_plus::Item;
 
 use crate::{
     error::ContractError,
@@ -38,21 +36,17 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const POST_BALANCE: Item<'_, Uint128> = Item::new("post_balance");
 const OWNER: Item<'_, Addr> = Item::new("owner");
-const SPRINTERS: Map<'_, Addr, ()> = Map::new("sprinters");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
-    msg: InstantiateMsg,
+    _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     OWNER.save(deps.storage, &info.sender)?;
-    for s in msg.sprinters {
-        SPRINTERS.save(deps.storage, s, &())?;
-    }
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
@@ -67,7 +61,6 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::SetSprinters { sprinters } => set_sprinters(deps, info, sprinters),
         ExecuteMsg::Sprint {
             input,
             min_out,
@@ -102,35 +95,9 @@ pub fn assert_post_balance(
     Ok(Response::new())
 }
 
-pub fn set_sprinters(
-    deps: DepsMut<'_>,
-    info: MessageInfo,
-    sprinters: Vec<Addr>,
-) -> Result<Response, ContractError> {
-    if info.sender != OWNER.load(deps.storage)? {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    let old: Vec<_> = SPRINTERS
-        .keys(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .collect();
-    for k in old {
-        SPRINTERS.remove(
-            deps.storage,
-            Addr::unchecked(from_utf8(&k).map_err(|_| ContractError::Unsupported {})?),
-        )
-    }
-
-    for s in sprinters {
-        SPRINTERS.save(deps.storage, s, &())?;
-    }
-
-    Ok(Response::new())
-}
-
 pub fn sprint(
     deps: DepsMut<'_>,
-    info: MessageInfo,
+    _info: MessageInfo,
     env: Env,
     input: Uint128,
     min_out: Uint128,
@@ -138,9 +105,6 @@ pub fn sprint(
 ) -> Result<Response, ContractError> {
     if path.len() < 2 {
         return Err(ContractError::PathTooShort {});
-    }
-    if !SPRINTERS.has(deps.storage, info.sender) {
-        return Err(ContractError::Unauthorized {});
     }
 
     let bal = match path.get(0) {
@@ -150,7 +114,12 @@ pub fn sprint(
         _ => return Err(ContractError::UnsupportedStartAsset {}),
     };
 
-    POST_BALANCE.save(deps.storage, &(min_out + bal.amount))?;
+    POST_BALANCE.save(
+        deps.storage,
+        &bal.amount
+            .checked_add(min_out)
+            .map_err(|_| ContractError::InvalidMinOut {})?,
+    )?;
 
     let mut msgs: Vec<SubMsg> = vec![];
     let mut input = input;
@@ -277,69 +246,13 @@ mod tests {
         // let mut deps = mock_dependencies_with_balances(vec![()]&coins(2, "token"));
         let mut deps = mock_dependencies(&coins(2, "token"));
 
-        let msg = InstantiateMsg {
-            sprinters: vec![Addr::unchecked("foo")],
-        };
+        let msg = InstantiateMsg {};
         let info = mock_info("creator", &[]);
 
-        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
         assert_eq!(0, res.messages.len());
 
-        assert_eq!(
-            Ok(()),
-            SPRINTERS.load(&deps.storage, Addr::unchecked("foo"))
-        );
-    }
-
-    #[test]
-    fn set_sprinters() {
-        // let mut deps = mock_dependencies_with_balances(vec![()]&coins(2, "token"));
-        let mut deps = mock_dependencies(&[]);
-
-        let msg = InstantiateMsg {
-            sprinters: vec![Addr::unchecked("foo")],
-        };
-        let info = mock_info("owner", &[]);
-        instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
-
-        let msg = ExecuteMsg::SetSprinters {
-            sprinters: vec![Addr::unchecked("baz"), Addr::unchecked("bar")],
-        };
-        execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-        assert_ne!(
-            Ok(()),
-            SPRINTERS.load(&deps.storage, Addr::unchecked("foo"))
-        );
-
-        assert_eq!(
-            Ok(()),
-            SPRINTERS.load(&deps.storage, Addr::unchecked("baz"))
-        );
-        assert_eq!(
-            Ok(()),
-            SPRINTERS.load(&deps.storage, Addr::unchecked("bar"))
-        );
-    }
-
-    #[test]
-    fn prevent_non_owner_set_sprinters() {
-        // let mut deps = mock_dependencies_with_balances(vec![()]&coins(2, "token"));
-        let mut deps = mock_dependencies(&coins(2, "token"));
-
-        let msg = InstantiateMsg {
-            sprinters: vec![Addr::unchecked("foo")],
-        };
-        let info = mock_info("owner", &[]);
-        instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        let info = mock_info("other", &[]);
-        let msg = ExecuteMsg::SetSprinters {
-            sprinters: vec![Addr::unchecked("baz"), Addr::unchecked("bar")],
-        };
-        assert_eq!(
-            Err(ContractError::Unauthorized {}),
-            execute(deps.as_mut(), mock_env(), info, msg)
-        );
+        assert_eq!(Ok(info.sender), OWNER.load(&deps.storage));
     }
 
     #[test]
@@ -347,9 +260,7 @@ mod tests {
         // let mut deps = mock_dependencies_with_balances(vec![()]&coins(2, "token"));
         let mut deps = mock_dependencies(&coins(20, "uusd"));
 
-        let msg = InstantiateMsg {
-            sprinters: vec![Addr::unchecked("foo")],
-        };
+        let msg = InstantiateMsg {};
         let info = mock_info("owner", &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -375,9 +286,7 @@ mod tests {
         // let mut deps = mock_dependencies_with_balances(vec![()]&coins(2, "token"));
         let mut deps = mock_dependencies(&coins(20, "uusd"));
 
-        let msg = InstantiateMsg {
-            sprinters: vec![Addr::unchecked("foo")],
-        };
+        let msg = InstantiateMsg {};
         let info = mock_info("owner", &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -405,9 +314,7 @@ mod tests {
         // let mut deps = mock_dependencies_with_balances(vec![()]&coins(2, "token"));
         let mut deps = mock_dependencies(&coins(2, "token"));
 
-        let msg = InstantiateMsg {
-            sprinters: vec![Addr::unchecked("foo")],
-        };
+        let msg = InstantiateMsg {};
         let info = mock_info("owner", &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
@@ -435,9 +342,7 @@ mod tests {
         // let mut deps = mock_dependencies_with_balances(vec![()]&coins(2, "token"));
         let mut deps = mock_dependencies(&coins(2, "token"));
 
-        let msg = InstantiateMsg {
-            sprinters: vec![Addr::unchecked("foo")],
-        };
+        let msg = InstantiateMsg {};
         let info = mock_info("owner", &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
