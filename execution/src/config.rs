@@ -58,9 +58,16 @@ pub struct Args {
     /// address of contract that atomic arbitrage trades go through
     #[argh(
         option,
-        default = "AccountId::from_str(\"terra1zad09hklg3msvhlq7x7xxqr98gwv0tp5cyjwtr\").unwrap()"
+        default = "AccountId::from_str(\"terra1lerw0sk4zt4nkxqr465ekgflpl4e98kl3ydm58\").unwrap()"
     )]
     pub arby_addr: AccountId,
+
+    /// address of treasury which pays for fees and on which behalf execute are issued
+    #[argh(
+        option,
+        default = "AccountId::from_str(\"terra1sstgnc5rvmhte5rju9vh75wgnf3dktavmawzrp\").unwrap()"
+    )]
+    pub treasury: AccountId,
 }
 
 fn into_dynamic<T: FromStr>(input: &str) -> Result<Arc<RwLock<T>>, String> {

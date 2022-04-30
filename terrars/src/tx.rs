@@ -5,6 +5,7 @@ use cosmrs::{
     crypto::secp256k1::SigningKey,
     tendermint::{block, chain},
     tx::{Body, Fee, Gas, SignDoc, SignerInfo},
+    AccountId,
 };
 use serde::{Deserialize, Serialize};
 
@@ -42,18 +43,24 @@ pub fn sign(
     sequence: u64,
     amount: u64,
     gas_limit: impl Into<Gas>,
+    payer: Option<AccountId>,
+    granter: Option<AccountId>,
     timeout_height: impl Into<block::Height>,
     msgs: Vec<Message>,
 ) -> Result<Vec<u8>> {
     let body = Body::new(msgs, "", timeout_height);
     let signer_info = SignerInfo::single_direct(Some(private_key.public_key()), sequence);
-    let auth_info = signer_info.auth_info(Fee::from_amount_and_gas(
+    let mut fee = Fee::from_amount_and_gas(
         cosmrs::Coin {
             amount: amount.into(),
             denom: cosmrs::Denom::from_str("uusd").unwrap(),
         },
         gas_limit,
-    ));
+    );
+    fee.payer = payer;
+    fee.granter = granter;
+
+    let auth_info = signer_info.auth_info(fee);
     let doc = SignDoc::new(&body, &auth_info, &chain_id, account_number)
         .map_err(|err| anyhow::anyhow!("SignDoc creation failed: {}", err))?;
     let signed = doc

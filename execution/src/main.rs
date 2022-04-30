@@ -90,7 +90,13 @@ async fn main() -> Result<()> {
     )));
     let broadcaster = broadcast::Observed::new(
         &mut registry,
-        broadcast::Rpc::new(client.clone(), args.chain_id, account, signing_key_bytes),
+        broadcast::Rpc::new(
+            client.clone(),
+            args.chain_id,
+            account,
+            signing_key_bytes,
+            Some(args.treasury),
+        ),
     );
 
     let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
