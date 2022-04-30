@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+
+set -e
+
+terrad tx wasm instantiate $CODE_ID "{}" \
+  --from $OWNER \
+  --keyring-backend=$KEYRING_BACKEND \
+  --chain-id=columbus-5 \
+  --node http://ter2:26657 \
+  --gas=auto \
+  --gas-prices="0.38uusd" \
+  --gas-adjustment=1.4 \
+  --broadcast-mode=block
