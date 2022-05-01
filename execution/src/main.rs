@@ -95,7 +95,7 @@ async fn main() -> Result<()> {
             args.chain_id,
             account,
             signing_key_bytes,
-            None,
+            Some(args.treasury.clone()),
         ),
     );
 

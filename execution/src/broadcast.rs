@@ -146,7 +146,7 @@ impl Broadcaster for Rpc {
             // NB(xla): Using fixed gas prices here, could diverge.
             fee,
             (gas_info.gas_used as f64 * 1.10) as u64,
-            self.treasury.clone(),
+            None,
             self.treasury.clone(),
             Height::try_from(0_u64).unwrap(),
             messages,
