@@ -13,9 +13,9 @@ use prometheus_client::{
 };
 use tendermint::block::Height;
 use terrars::{dex, lcd::Lcd, mekapi, AccountId};
-use tokio::{task::JoinHandle, time::Instant};
+use tokio::time::Instant;
 
-use crate::accounts;
+use crate::{accounts, spawn::flatten};
 
 #[async_trait::async_trait]
 pub trait Fetcher<L, M>
@@ -92,14 +92,6 @@ where
             funds,
             pools.into_iter().map(dex::Pool::from).collect::<Vec<_>>(),
         ))
-    }
-}
-
-async fn flatten<T>(handle: JoinHandle<Result<T>>) -> Result<T> {
-    match handle.await {
-        Ok(Ok(res)) => Ok(res),
-        Ok(Err(err)) => Err(err),
-        Err(err) => Err(anyhow::anyhow!("handle failed: {}", err)),
     }
 }
 

@@ -15,6 +15,7 @@ use execution::{
     signals,
     strategy::{self, Trade},
     tracker,
+    treasurer,
 };
 use futures::FutureExt as _;
 use tendermint_rpc::{Client as _, SubscriptionClient, WebSocketClient};
@@ -98,6 +99,15 @@ async fn main() -> Result<()> {
             None,
         ),
     );
+    let treasurer = treasurer::Treasurer::new(
+        &mut registry,
+        treasurer::AddressBook {
+            arby: args.arby_addr.clone(),
+            treasury: args.treasury,
+        },
+        Arc::clone(&args.execute_trades),
+        lcd.clone(),
+    );
 
     let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
         vec![Box::new(strategy::metrics::Observed::new(
@@ -113,13 +123,8 @@ async fn main() -> Result<()> {
     let metrics_server = metrics::bind(args.metrics_addr, BINARY_NAMESPACE, registry);
     let mut metrics_server_handle = tokio::spawn(metrics_server).fuse();
 
-    let mut treasurer_handle = tokio::spawn(routines::treasurer(
-        lcd.clone(),
-        latest_block_receiver.clone(),
-        account_id.clone(),
-        Arc::clone(&args.execute_trades),
-    ))
-    .fuse();
+    let mut treasurer_handle =
+        tokio::spawn(treasurer::run(treasurer, latest_block_receiver.clone())).fuse();
 
     let mut latest_block_handle =
         tokio::spawn(routines::latest_block(client.clone(), emitter)).fuse();
