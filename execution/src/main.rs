@@ -102,10 +102,7 @@ async fn main() -> Result<()> {
     );
     let treasurer = treasurer::Treasurer::new(
         &mut registry,
-        treasurer::AddressBook {
-            arby: addresses.arby.clone(),
-            treasury: addresses.treasury.clone(),
-        },
+        addresses.clone(),
         Arc::clone(&args.execute_trades),
         lcd.clone(),
     );

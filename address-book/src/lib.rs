@@ -8,7 +8,7 @@ lazy_static! {
     pub static ref CURRENT: AddressBook = serde_json::from_str(CURRENT_JSON).unwrap();
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct AddressBook {
     pub arby: AccountId,
@@ -16,14 +16,14 @@ pub struct AddressBook {
     pub treasury: AccountId,
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case", tag = "state")]
 pub enum Feegrant {
     Granted { host: String },
     Revoked { last_host: String },
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Sprinter {
     pub account_id: AccountId,
