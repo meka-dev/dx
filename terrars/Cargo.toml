@@ -14,7 +14,7 @@ cosmwasm-bignumber  = { version = "2.2",  default-features = false }
 cw20                = { version = "0.8",  default-features = false } # We need 0.8 because the terraswap contracts are still on that version
 cw20-base           = { version = "0.8",  default-features = false }
 eventsource-stream  = { version = "0.2",  default-features = false }
-futures             = { version = "0.3",  default-features = false }
+futures             = { version = "0.3",  default-features = false, features = [ "alloc" ] }
 hex                 = { version = "0.4",  default-features = false }
 prost               = { version = "0.9",  default-features = false }
 prost-types         = { version = "0.9",  default-features = false }

@@ -6,7 +6,6 @@ use std::{
 
 use params_derive::params;
 use tendermint::chain;
-use terrars::AccountId;
 
 const CHAIN_ID: &str = "columbus-5";
 const LCD_URL: &str = "http://127.0.0.1:1317";
@@ -54,20 +53,6 @@ pub struct Args {
     /// location of the file on disk holding the secret key (./secret.key)
     #[argh(option, default = "String::from(\"./secret.key\")")]
     pub secret_key_file: String,
-
-    /// address of contract that atomic arbitrage trades go through
-    #[argh(
-        option,
-        default = "AccountId::from_str(\"terra1lerw0sk4zt4nkxqr465ekgflpl4e98kl3ydm58\").unwrap()"
-    )]
-    pub arby_addr: AccountId,
-
-    /// address of treasury which pays for fees and on which behalf execute are issued
-    #[argh(
-        option,
-        default = "AccountId::from_str(\"terra1sstgnc5rvmhte5rju9vh75wgnf3dktavmawzrp\").unwrap()"
-    )]
-    pub treasury: AccountId,
 }
 
 fn into_dynamic<T: FromStr>(input: &str) -> Result<Arc<RwLock<T>>, String> {

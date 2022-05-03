@@ -33,6 +33,7 @@ async fn main() -> Result<()> {
     tracing::init();
 
     let (args, args_router) = argh::from_env::<config::Args>().router();
+    let addresses = &(*address_book::CURRENT);
 
     // Set up RPC client.
     let (client, driver) = WebSocketClient::new(args.rpc_url.as_str()).await?;
@@ -96,14 +97,14 @@ async fn main() -> Result<()> {
             args.chain_id,
             account,
             signing_key_bytes,
-            Some(args.treasury.clone()),
+            Some(addresses.treasury.clone()),
         ),
     );
     let treasurer = treasurer::Treasurer::new(
         &mut registry,
         treasurer::AddressBook {
-            arby: args.arby_addr.clone(),
-            treasury: args.treasury,
+            arby: addresses.arby.clone(),
+            treasury: addresses.treasury.clone(),
         },
         Arc::clone(&args.execute_trades),
         lcd.clone(),
@@ -112,7 +113,7 @@ async fn main() -> Result<()> {
     let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
         vec![Box::new(strategy::metrics::Observed::new(
             &mut registry,
-            strategy::multi_dex::multi_hop::MultiHop::new(args.arby_addr.clone().to_string()),
+            strategy::multi_dex::multi_hop::MultiHop::new(addresses.arby.clone().to_string()),
         ))];
 
     let mut signals_handle = tokio::spawn(signals::routine(shutdown_sender)).fuse();
@@ -148,7 +149,7 @@ async fn main() -> Result<()> {
         latest_block_receiver,
         mempool_tx_receiver,
         trade_sender,
-        args.arby_addr,
+        addresses.arby.clone(),
         account_id,
         strategies,
     ))

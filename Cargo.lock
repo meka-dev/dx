@@ -12,6 +12,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "address-book"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "serde",
+ "serde_json",
+ "terrars",
+]
+
+[[package]]
 name = "adler"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1033,6 +1043,7 @@ dependencies = [
 name = "execution"
 version = "0.1.0"
 dependencies = [
+ "address-book",
  "anyhow",
  "arby",
  "argh",
