@@ -100,6 +100,10 @@ where
         )?;
 
         let current = *arby_balances.get(&Token::ust()).unwrap_or(&Uint256::zero());
+        let current_treasury = *treasury_balances
+            .get(&Token::ust())
+            .unwrap_or(&Uint256::zero());
+
         if let Some(last) = self.last {
             if last.multiply_ratio(9, 10) >= current {
                 error!("balance critically dropped: {} -> {}", last, current);
@@ -120,16 +124,13 @@ where
             .get_or_create(&Labels {
                 contract: Contract::Arby,
             })
-            .set((current.0 / 10u64.pow(12).into()).as_u64());
+            .set(current.0.as_u64());
 
-        let current_treasury = *treasury_balances
-            .get(&Token::ust())
-            .unwrap_or(&Uint256::zero());
         self.account_balance_uusd
             .get_or_create(&Labels {
                 contract: Contract::Treasury,
             })
-            .set((current_treasury.0 / 10u64.pow(12).into()).as_u64());
+            .set(current_treasury.0.as_u64());
 
         Ok(())
     }
