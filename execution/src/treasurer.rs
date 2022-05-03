@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock};
 
+use address_book::AddressBook;
 use anyhow::Result;
 use common::{
     metrics::Registry,
@@ -11,7 +12,7 @@ use prometheus_client::{
     metrics::{family::Family, gauge::Gauge},
 };
 use tendermint::block;
-use terrars::{dex::Token, lcd::Lcd, AccountId};
+use terrars::{dex::Token, lcd::Lcd};
 use tokio::sync::watch;
 
 use crate::{accounts, spawn::flatten};
@@ -32,20 +33,15 @@ where
     Ok(())
 }
 
-pub struct AddressBook {
-    pub arby: AccountId,
-    pub treasury: AccountId,
-}
-
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
-pub enum Contract {
+pub enum Account {
     Arby,
     Treasury,
 }
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 struct Labels {
-    contract: Contract,
+    account: Account,
 }
 
 pub struct Treasurer<L> {
@@ -122,13 +118,13 @@ where
 
         self.account_balance_uusd
             .get_or_create(&Labels {
-                contract: Contract::Arby,
+                account: Account::Arby,
             })
             .set(current.0.as_u64());
 
         self.account_balance_uusd
             .get_or_create(&Labels {
-                contract: Contract::Treasury,
+                account: Account::Treasury,
             })
             .set(current_treasury.0.as_u64());
 
