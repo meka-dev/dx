@@ -3,6 +3,8 @@ use std::{fs, sync::Arc};
 use anyhow::Result;
 use common::{
     metrics,
+    params,
+    signals,
     tracing::{self, error},
 };
 use execution::{
@@ -10,15 +12,13 @@ use execution::{
     block_emitter,
     broadcast,
     config,
-    params,
     routines,
-    signals,
     strategy::{self, Trade},
     tracker,
     treasurer,
 };
 use futures::FutureExt as _;
-use tendermint_rpc::{Client as _, SubscriptionClient, WebSocketClient};
+use tendermint_rpc::{Client as _, SubscriptionClient as _, WebSocketClient};
 use terrars::{
     lcd::{self, Lcd},
     mekapi,

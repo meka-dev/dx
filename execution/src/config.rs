@@ -4,13 +4,9 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use common::{CHAIN_ID, LCD_URL, MEKAPI_URL, RPC_URL};
 use params_derive::params;
 use tendermint::chain;
-
-const CHAIN_ID: &str = "columbus-5";
-const LCD_URL: &str = "http://127.0.0.1:1317";
-const MEKAPI_URL: &str = "http://127.0.0.1:4401";
-const RPC_URL: &str = "ws://127.0.0.1:26657/websocket";
 
 /// Execution environemnt for Mekatek strategies.
 #[params]

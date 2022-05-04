@@ -3,6 +3,7 @@ use std::fmt;
 use anyhow::Result;
 use common::{
     metrics::{Registry, ResultLabel, BUCKETS},
+    spawn::flatten,
     tracing::{debug, error},
 };
 use cosmwasm_std::Addr;
@@ -15,7 +16,7 @@ use tendermint::block::Height;
 use terrars::{dex, lcd::Lcd, mekapi, AccountId};
 use tokio::time::Instant;
 
-use crate::{accounts, spawn::flatten};
+use crate::accounts;
 
 #[async_trait::async_trait]
 pub trait Fetcher<L, M>

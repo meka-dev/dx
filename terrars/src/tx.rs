@@ -1,10 +1,11 @@
 use std::str::FromStr as _;
 
 use anyhow::Result;
+pub use cosmrs::tx::{AuthInfo, Fee, SignatureBytes};
 use cosmrs::{
     crypto::secp256k1::SigningKey,
     tendermint::{block, chain},
-    tx::{Body, Fee, Gas, SignDoc, SignerInfo},
+    tx::{Body, Gas, SignDoc, SignerInfo},
     AccountId,
 };
 use serde::{Deserialize, Serialize};

@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, time::Duration};
 
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 
 const API_SOCKET_PATH: &str = "/tmp/mtek-collector.sock";
 
@@ -55,14 +55,6 @@ pub struct Args {
     /// path to file containing GCS service account information
     #[argh(option, default = "SERVICE_ACCOUNT_PATH.to_string()")]
     pub service_account: String,
-}
-
-pub fn host() -> Result<String> {
-    Ok(hostname::get()
-        .context("failed to read hostname")?
-        .to_str()
-        .expect("hostname not present")
-        .to_owned())
 }
 
 fn parse_duration(value: &str) -> Result<Duration, String> {
