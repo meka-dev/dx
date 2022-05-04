@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
         emitter::Observed::new(
             &mut registry,
             args.bucket,
-            emitter::Gcs::new(config::BINARY.to_string(), config::host()?, bucket),
+            emitter::Gcs::new(config::BINARY.to_string(), common::host()?, bucket),
         ),
         flush_receiver,
     ));

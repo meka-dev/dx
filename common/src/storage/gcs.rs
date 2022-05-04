@@ -1,4 +1,4 @@
-use std::{fs, io};
+use std::{fs, io, sync::Arc};
 
 use anyhow::{anyhow, Context as _, Error, Result};
 use axum::http::HeaderValue;
@@ -15,9 +15,10 @@ use tame_oauth::gcp::{self as oauth, TokenProvider as _};
 
 use crate::storage::bucket::{Backend, Bucket, Id, Labeled, Metadata};
 
+#[derive(Clone)]
 pub struct Gcs<'bucket> {
-    auth: oauth::TokenProviderWrapper,
-    bucket_name: BucketName<'bucket>,
+    auth: Arc<oauth::TokenProviderWrapper>,
+    bucket_name: Arc<BucketName<'bucket>>,
     client: Client,
 }
 
@@ -89,8 +90,8 @@ impl<'bucket> Gcs<'bucket> {
             .context("failed to construct HTTP client")?;
 
         Ok(Self {
-            auth,
-            bucket_name,
+            auth: Arc::new(auth),
+            bucket_name: Arc::new(bucket_name),
             client,
         })
     }

@@ -1,7 +1,8 @@
 use anyhow::Result;
-use common::tracing::info;
 use tokio::{select, sync::mpsc};
 use tracing::instrument;
+
+use crate::tracing::info;
 
 #[cfg(unix)]
 #[instrument(name = "signals routine", skip(shutdown_tx))]

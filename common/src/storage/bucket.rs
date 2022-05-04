@@ -12,7 +12,7 @@ use tokio::time::Instant;
 use crate::metrics::{Registry, BUCKETS};
 
 #[async_trait]
-pub trait Bucket {
+pub trait Bucket: Clone {
     async fn insert<'body, B>(
         &self,
         name: String,
@@ -62,6 +62,7 @@ struct Labels {
     method: Method,
 }
 
+#[derive(Clone)]
 pub struct Observed<N> {
     call_duration: Family<Labels, Histogram>,
     next: N,

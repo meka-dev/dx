@@ -315,6 +315,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "blocketl"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argh",
+ "axum",
+ "common",
+ "futures",
+ "params-derive",
+ "serde",
+ "serde_json",
+ "sha2 0.10.2",
+ "tendermint",
+ "tendermint-proto",
+ "tendermint-rpc",
+ "terrars",
+ "tokio",
+ "tokio-stream",
+]
+
+[[package]]
 name = "bstr"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -411,7 +432,6 @@ dependencies = [
  "chrono",
  "common",
  "hex",
- "hostname",
  "humantime",
  "hyper",
  "hyperlocal",
@@ -437,6 +457,7 @@ dependencies = [
  "axum-extra",
  "bytes",
  "futures-lite",
+ "hostname",
  "hyper",
  "lazy_static",
  "prometheus-client",
@@ -444,6 +465,7 @@ dependencies = [
  "tame-gcs",
  "tame-oauth",
  "tokio",
+ "tower-http",
  "tracing",
  "tracing-subscriber",
 ]
@@ -488,7 +510,7 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 [[package]]
 name = "cosmos-sdk-proto"
 version = "0.12.0"
-source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#bccb9d389c141379426f8024fd5c3ad4a850ce09"
+source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#52cb4c529ff5f715912051d042269a2ba1e30698"
 dependencies = [
  "prost 0.10.3",
  "prost-types 0.10.1",
@@ -498,7 +520,7 @@ dependencies = [
 [[package]]
 name = "cosmrs"
 version = "0.7.0"
-source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#bccb9d389c141379426f8024fd5c3ad4a850ce09"
+source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#52cb4c529ff5f715912051d042269a2ba1e30698"
 dependencies = [
  "cosmos-sdk-proto",
  "ecdsa 0.13.4",
@@ -3345,6 +3367,17 @@ dependencies = [
  "rustls 0.20.4",
  "tokio",
  "webpki 0.22.0",
+]
+
+[[package]]
+name = "tokio-stream"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50145484efff8818b5ccd256697f36863f587da82cf8b409c53adf1e840798e3"
+dependencies = [
+ "futures-core",
+ "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]

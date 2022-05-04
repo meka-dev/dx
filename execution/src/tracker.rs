@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
-    ops::Deref,
+    ops::Deref as _,
 };
 
 use anyhow::{Context as _, Result};

@@ -4,6 +4,7 @@ use address_book::AddressBook;
 use anyhow::Result;
 use common::{
     metrics::Registry,
+    spawn::flatten,
     tracing::{debug, error},
 };
 use cosmwasm_bignumber::Uint256;
@@ -15,7 +16,7 @@ use tendermint::block;
 use terrars::{dex::Token, lcd::Lcd};
 use tokio::sync::watch;
 
-use crate::{accounts, spawn::flatten};
+use crate::accounts;
 
 pub async fn run<L>(
     mut treasurer: Treasurer<L>,

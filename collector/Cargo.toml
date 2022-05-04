@@ -11,7 +11,6 @@ axum                = { version = "0.4",  default-features = false, features = [
 axum-extra          = { version = "0.1",  default-features = false }
 bytes               = { version = "1.1",  default-features = false }
 chrono              = { version = "0.4",  default-features = false }
-hostname            = { version = "0.3",  default-features = false }
 humantime           = { version = "2.1",  default-features = false }
 hyper               = { version = "0.14", default-features = false, features = [ "client", "http2" ] }
 hyperlocal          = { version = "0.8",  default-features = false, features = [ "client", "server" ] }
