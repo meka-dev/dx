@@ -52,7 +52,7 @@ impl Api {
         let router = Router::new()
             .nest("/v1", v1_routes(segments))
             .layer(TraceLayer::new_for_http())
-            .layer(axum_extra::middleware::from_fn({
+            .layer(axum::middleware::from_fn({
                 let request_duration = Arc::clone(&request_duration);
                 move |req, next| metrics::middleware(req, next, Arc::clone(&request_duration))
             }));
