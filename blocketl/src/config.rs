@@ -1,8 +1,13 @@
 use std::net::SocketAddr;
 
-use common::{CHAIN_ID, RPC_URL};
+use common::RPC_URL;
 use params_derive::params;
 use tendermint::chain;
+
+use crate::venue::Venue;
+
+const CHAIN_ID: &str = "osmosis-1";
+const VENUE: Venue = Venue::Osmosis;
 
 const BUCKET_NAME: &str = "blocks";
 const SERVICE_ACCOUNT_PATH: &str = "./service-account.json";
@@ -16,8 +21,11 @@ pub const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PK
 #[params]
 #[derive(argh::FromArgs, Debug)]
 pub struct Args {
-    /// terra chain identifier, should be static except on hard fork (Mainnet: columbus-5, Testnet:
-    /// bombay-12)
+    /// comsmos network.
+    #[argh(option, default = "VENUE")]
+    pub venue: Venue,
+
+    /// chain identifier, should be static except on hard fork.
     #[argh(option, default = "CHAIN_ID.parse().unwrap()")]
     pub chain_id: chain::Id,
 
@@ -25,7 +33,7 @@ pub struct Args {
     #[argh(option, default = "([127, 0, 0, 1], 4446).into()")]
     pub params_addr: SocketAddr,
 
-    /// websocket endpoint for Terra's tendermint RPC (ws://127.0.0.1:26657/websocket)
+    /// RPC endpoint serving Tendermint websocket (ws://127.0.0.1:26657/websocket)
     #[argh(option, default = "RPC_URL.to_string()")]
     pub rpc_url: String,
 

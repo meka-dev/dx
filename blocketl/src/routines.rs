@@ -22,7 +22,7 @@ use tendermint_rpc::{
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 
-use crate::tx;
+use crate::{tx, venue::Venue};
 
 pub type Events = Option<BTreeMap<String, Vec<String>>>;
 
@@ -31,11 +31,6 @@ pub struct File(String, Vec<u8>);
 #[derive(Serialize)]
 enum Stage {
     Extract,
-}
-
-#[derive(Clone, Copy, Debug, Serialize)]
-pub enum Venue {
-    Terra,
 }
 
 #[derive(Serialize)]
@@ -66,15 +61,16 @@ pub enum Extract {
 pub async fn extract(
     client: WebSocketClient,
     sender: mpsc::Sender<Extract>,
+    venue: Venue,
     network: chain::Id,
     max_parallel_requests: u64,
 ) -> Result<()> {
     debug!("init extract");
 
     let query = Query::from(EventType::NewBlock);
-    let mut terra_blocks = client.subscribe(query).await?;
+    let mut blocks = client.subscribe(query).await?;
 
-    while let Some(res) = terra_blocks.next().await {
+    while let Some(res) = blocks.next().await {
         match res {
             Ok(Event { data, events, .. }) => match data {
                 EventData::NewBlock {
@@ -109,10 +105,10 @@ pub async fn extract(
 
                     let msg = match res {
                         Err(err) | Ok(Err(err)) => {
-                            Extract::Deadletter(Venue::Terra, network.clone(), height, err)
+                            Extract::Deadletter(venue, network.clone(), height, err)
                         },
                         Ok(Ok(txs)) => Extract::Block {
-                            venue: Venue::Terra,
+                            venue,
                             network: network.clone(),
                             height: block.header.height,
                             block,
@@ -156,8 +152,8 @@ where
         .buffer_unordered(max_parallel_requests as usize)
         .for_each(|join| async {
             match join {
-                Ok(Err(err)) => error!("failed to store: {}", err),
-                Err(err) => error!("failed to execute task: {}", err),
+                Ok(Err(err)) => error!("failed to store: {:?}", err),
+                Err(err) => error!("failed to execute task: {:?}", err),
                 _ => {},
             }
         })

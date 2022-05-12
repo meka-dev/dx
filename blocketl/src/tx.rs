@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use anyhow::anyhow;
+use cosmrs::tx::SignatureBytes;
 use serde::Serialize;
 use tendermint::{
     abci::{self, responses, transaction::Hash, Code, Data, Gas, Info, Log},
@@ -14,7 +15,6 @@ use tendermint_rpc::{
     Order,
     WebSocketClient,
 };
-use terrars::tx::SignatureBytes;
 
 pub async fn get_info(client: WebSocketClient, hash: Hash) -> anyhow::Result<Tx> {
     let query = Query::from(EventType::Tx).and_eq("tx.hash", hash.to_string());
@@ -51,7 +51,7 @@ impl TryFrom<&Response> for Tx {
     type Error = anyhow::Error;
 
     fn try_from(input: &Response) -> Result<Self, Self::Error> {
-        let tx = terrars::Tx::from_bytes(input.tx.as_bytes())
+        let tx = cosmrs::Tx::from_bytes(input.tx.as_bytes())
             .map_err(|err| anyhow!("failed to parse tx body: {}", err))?;
 
         Ok(Self {
@@ -135,11 +135,11 @@ impl From<&abci::tag::Tag> for Tag {
 #[derive(Serialize)]
 struct AuthInfo {
     signer_infos: Vec<()>,
-    fee: terrars::tx::Fee,
+    fee: cosmrs::tx::Fee,
 }
 
-impl From<terrars::tx::AuthInfo> for AuthInfo {
-    fn from(input: terrars::tx::AuthInfo) -> Self {
+impl From<cosmrs::tx::AuthInfo> for AuthInfo {
+    fn from(input: cosmrs::tx::AuthInfo) -> Self {
         Self {
             signer_infos: vec![],
             fee: input.fee,
