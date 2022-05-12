@@ -7,6 +7,7 @@ use tokio::sync::mpsc;
 mod config;
 mod routines;
 mod tx;
+mod venue;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -36,6 +37,7 @@ async fn main() -> Result<()> {
     let mut extract_handle = tokio::spawn(routines::extract(
         client.clone(),
         extracts_sender,
+        args.venue,
         args.chain_id,
         args.max_parallel_requests,
     ))

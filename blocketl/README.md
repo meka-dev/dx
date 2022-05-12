@@ -8,16 +8,16 @@ a priority for this iteration. Therefore the system should be considered best
 effort.
 
 ```
-Usage: blocketl [--chain-id <chain-id>] [--params-addr <params-addr>] [--rpc-url <rpc-url>] [--bucket <bucket>] [--service-account <service-account>] [--max-parallel-requests <max-parallel-requests>]
+Usage: blocketl [--venue <venue>] [--chain-id <chain-id>] [--params-addr <params-addr>] [--rpc-url <rpc-url>] [--bucket <bucket>] [--service-account <service-account>] [--max-parallel-requests <max-parallel-requests>]
 
 ETL pipeline to extract block and transaction metadata.
 
 Options:
-  --chain-id        terra chain identifier, should be static except on hard fork
-                    (Mainnet: columbus-5, Testnet: bombay-12)
+  --venue           comsmos network.
+  --chain-id        chain identifier, should be static except on hard fork.
   --params-addr     HTTP server for params reading and manipulation.
                     (127.0.0.1:4445)
-  --rpc-url         websocket endpoint for Terra's tendermint RPC
+  --rpc-url         RPC endpoint serving Tendermint websocket
                     (ws://127.0.0.1:26657/websocket)
   --bucket          GCS bucket for metadata storage
   --service-account path to file containing GCS service account information

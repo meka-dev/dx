@@ -322,6 +322,7 @@ dependencies = [
  "argh",
  "axum",
  "common",
+ "cosmrs",
  "futures",
  "params-derive",
  "serde",
@@ -330,7 +331,6 @@ dependencies = [
  "tendermint",
  "tendermint-proto",
  "tendermint-rpc",
- "terrars",
  "tokio",
  "tokio-stream",
 ]
