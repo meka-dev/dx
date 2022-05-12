@@ -3,15 +3,16 @@ use std::{fmt, future::Future, net::SocketAddr, sync::Arc};
 use axum::{
     extract::{Extension, MatchedPath},
     http::Request,
-    response::{Headers, IntoResponse},
+    middleware,
+    middleware::Next,
+    response::IntoResponse,
     routing::get,
     Router,
     Server,
 };
-use axum_extra::{middleware, middleware::Next};
 use lazy_static::lazy_static;
 use prometheus_client::{
-    encoding::text::{encode, Encode, SendEncodeMetric},
+    encoding::text::{encode, Encode, SendSyncEncodeMetric},
     metrics::{family::Family, histogram::Histogram},
     registry::{self, Unit},
 };
@@ -97,8 +98,12 @@ impl Registry {
         }
     }
 
-    pub fn register<N, H>(&mut self, name: N, help: H, metric: Box<dyn SendEncodeMetric + 'static>)
-    where
+    pub fn register<N, H>(
+        &mut self,
+        name: N,
+        help: H,
+        metric: Box<dyn SendSyncEncodeMetric + 'static>,
+    ) where
         N: Into<String>,
         H: Into<String>,
     {
@@ -111,7 +116,7 @@ impl Registry {
         name: N,
         help: H,
         unit: Unit,
-        metric: Box<dyn SendEncodeMetric + 'static>,
+        metric: Box<dyn SendSyncEncodeMetric + 'static>,
     ) where
         N: Into<String>,
         H: Into<String>,
@@ -180,7 +185,7 @@ async fn handler(Extension(registry): Extension<Arc<Mutex<Registry>>>) -> impl I
     let mut encoded = Vec::new();
     encode(&mut encoded, &registry.lock().await.registry).unwrap();
 
-    (Headers(vec![("Content-Type", HEADER_OPENMETRICS)]), encoded)
+    ([("Content-Type", HEADER_OPENMETRICS)], encoded)
 }
 
 fn prefix<B: Into<String> + fmt::Display, S: Into<String>>(binary: B, suffix: S) -> String {
