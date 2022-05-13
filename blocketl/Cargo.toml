@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow            = { version = "1.0",  default-features = false }
 argh              = { version = "0.1",  default-features = false }
-axum              = { version = "0.5",  default-features = false, features = [ "headers", "http2", "tower-log" ] }
+axum              = { version = "0.5",  default-features = false, features = [ "headers", "http2", "json", "tower-log" ] }
 cosmrs            = { version = "0.7",  default-features = false, features = [ "cosmwasm" ], git = "https://github.com/meka-dev/cosmos-rust.git", branch = "xla/expand-types" }
 futures           = { version = "0.3",  default-features = false, features = [ "alloc", "async-await", "std" ] }
 serde             = { version = "1.0",  default-features = false, features = [ "derive", "rc" ] }
