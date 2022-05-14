@@ -8,7 +8,7 @@ use common::{
 };
 use cosmwasm_std::Addr;
 use futures::stream::BoxStream;
-use mekapi::{v1, v3};
+use mekapi::{pools, v1, v3};
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{family::Family, histogram::Histogram},
@@ -19,6 +19,7 @@ use terrars::dex;
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 enum Method {
+    PoolsV4,
     V1PoolResponses,
     V1EventsMemprolTx,
     V1EventsMemprolTxV2,
@@ -95,6 +96,21 @@ impl<N> Observed<N> {
                 err,
             ),
         }
+    }
+}
+
+#[async_trait]
+impl<M> pools::Api for Observed<M>
+where
+    M: pools::Api,
+{
+    async fn v4(&self, height: block::Height) -> Result<Vec<pools::Pool>> {
+        let start = Instant::now();
+        let res = self.next.v4(height).await;
+
+        self.observe(start, None, height, Method::PoolsV4, res.as_ref().err());
+
+        res
     }
 }
 
