@@ -9,7 +9,7 @@ use tendermint_rpc::{
     SubscriptionClient as _,
     WebSocketClient,
 };
-use terrars::{dex, lcd::Lcd, mekapi};
+use terrars::{dex, lcd::Lcd};
 use tokio::sync::{mpsc, watch, Mutex};
 
 use crate::{

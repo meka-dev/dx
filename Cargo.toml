@@ -7,6 +7,7 @@ members = [
   "common",
   "contracts/arby",
   "execution",
+  "mekapi",
   "osmosisrs",
   "params-derive",
   "proto-build",

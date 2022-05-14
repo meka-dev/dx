@@ -5,14 +5,13 @@ use cosmwasm_std::Addr;
 use futures::stream::{BoxStream, StreamExt as _};
 use reqwest::{header::HeaderValue, Client, ClientBuilder, StatusCode, Url};
 use reqwest_eventsource::{Event, RequestBuilderExt as _};
+use terrars::dex::Pool;
 use tracing::debug;
-
-use crate::dex::Pool;
 
 const HEADER_COUNT: &str = "Mekatek-Count";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
-use crate::mekapi::{v1, v3};
+use crate::{v1, v3};
 
 #[derive(Clone)]
 pub struct Http {
@@ -182,6 +181,7 @@ mod tests {
     use cosmwasm_std::{Addr, Uint128};
     use futures::TryStreamExt as _;
     use pretty_assertions::assert_eq;
+    use terrars::dex::{self, Token};
     use wiremock::{
         matchers::{method, path, query_param},
         Mock,
@@ -194,12 +194,11 @@ mod tests {
         v3::{self, Api as _},
         Http,
     };
-    use crate::dex::{self, Token};
 
     #[tokio::test]
     async fn v1_events_mempooltx() -> Result<()> {
         let response = ResponseTemplate::new(200).set_body_raw(
-            include_bytes!("../../fixtures/mekapi/v1_events_mempooltx.eventstream").to_vec(),
+            include_bytes!("../fixtures/v1_events_mempooltx.eventstream").to_vec(),
             "text/event-stream",
         );
 
@@ -225,7 +224,7 @@ mod tests {
     #[tokio::test]
     async fn v1_events_mempooltx_v2() -> Result<()> {
         let response = ResponseTemplate::new(200).set_body_raw(
-            include_bytes!("../../fixtures/mekapi/v1_events_mempooltx_v2.eventstream").to_vec(),
+            include_bytes!("../fixtures/v1_events_mempooltx_v2.eventstream").to_vec(),
             "text/event-stream",
         );
 
@@ -419,9 +418,8 @@ mod tests {
     async fn v3_pools_astroport() -> Result<()> {
         let factory = Addr::unchecked(dex::astroport::ADDRESS);
         let height = "6750103".parse::<block::Height>()?;
-        let response = ResponseTemplate::new(200).set_body_bytes(
-            include_bytes!("../../fixtures/mekapi/v3-pools_astroport.json").to_vec(),
-        );
+        let response = ResponseTemplate::new(200)
+            .set_body_bytes(include_bytes!("../fixtures/v3-pools_astroport.json").to_vec());
 
         let server = MockServer::start().await;
         Mock::given(method("GET"))
@@ -479,9 +477,8 @@ mod tests {
     async fn v3_pools_loopmarkets() -> Result<()> {
         let factory = Addr::unchecked(dex::loopmarkets::ADDRESS);
         let height = "6751891".parse::<block::Height>()?;
-        let response = ResponseTemplate::new(200).set_body_bytes(
-            include_bytes!("../../fixtures/mekapi/v3-pools_loopmarkets.json").to_vec(),
-        );
+        let response = ResponseTemplate::new(200)
+            .set_body_bytes(include_bytes!("../fixtures/v3-pools_loopmarkets.json").to_vec());
 
         let server = MockServer::start().await;
         Mock::given(method("GET"))
@@ -536,9 +533,8 @@ mod tests {
     async fn v3_pools_terraswap() -> Result<()> {
         let factory = Addr::unchecked(dex::terraswap::ADDRESS);
         let height = "6759772".parse::<block::Height>()?;
-        let response = ResponseTemplate::new(200).set_body_bytes(
-            include_bytes!("../../fixtures/mekapi/v3-pools_terraswap.json").to_vec(),
-        );
+        let response = ResponseTemplate::new(200)
+            .set_body_bytes(include_bytes!("../fixtures/v3-pools_terraswap.json").to_vec());
 
         let server = MockServer::start().await;
         Mock::given(method("GET"))

@@ -12,14 +12,11 @@ cosmrs              = { version = "0.7",  default-features = false, features = [
 cosmwasm-std        = { version = "0.16", default-features = false }
 cosmwasm-bignumber  = { version = "2.2",  default-features = false }
 cw20                = { version = "0.8",  default-features = false } # We need 0.8 because the terraswap contracts are still on that version
-cw20-base           = { version = "0.8",  default-features = false }
-eventsource-stream  = { version = "0.2",  default-features = false }
 futures             = { version = "0.3",  default-features = false, features = [ "alloc" ] }
 hex                 = { version = "0.4",  default-features = false }
 prost               = { version = "0.10", default-features = false }
 prost-types         = { version = "0.10", default-features = false }
 reqwest             = { version = "0.11", default-features = false, features = [ "default-tls", "json" ] }
-reqwest-eventsource = { version = "0.4",  default-features = false }
 serde               = { version = "1.0",  default-features = false }
 serde_json          = { version = "1.0",  default-features = false }
 serde-json-wasm     = { version = "0.4",  default-features = false }
@@ -28,7 +25,6 @@ tokio               = { version = "1.0",  default-features = false, features = [
 tracing             = { version = "0.1",  default-features = false }
 
 [dev-dependencies]
-pretty_assertions   = { version = "1.1",  default-features = false, features = [ "std" ] }
 prost-build         = { version = "0.10",  default-features = false }
 walkdir             = { version = "2.3",  default-features = false }
 wiremock            = { version = "0.5",  default-features = false }

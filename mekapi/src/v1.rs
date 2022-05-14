@@ -4,8 +4,7 @@ use cosmrs::{tendermint::block, Tx};
 use cosmwasm_std::Addr;
 use futures::stream::BoxStream;
 use serde::{de::Error as _, Deserialize, Deserializer};
-
-use crate::dex::Pool;
+use terrars::dex::Pool;
 
 #[async_trait]
 pub trait Api: Send + Sync {

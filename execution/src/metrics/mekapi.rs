@@ -8,16 +8,14 @@ use common::{
 };
 use cosmwasm_std::Addr;
 use futures::stream::BoxStream;
+use mekapi::{v1, v3};
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{family::Family, histogram::Histogram},
     registry::Unit,
 };
 use tendermint::block;
-use terrars::{
-    dex,
-    mekapi::{v1, v3},
-};
+use terrars::dex;
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 enum Method {

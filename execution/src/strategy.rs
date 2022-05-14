@@ -25,7 +25,7 @@ pub trait Strategy: Send {
         &mut self,
         height: block::Height,
         sender: &terrars::AccountId,
-        pools: &[terrars::mekapi::v3::Pool],
+        pools: &[mekapi::v3::Pool],
     ) -> Vec<Trade>;
 
     /// Given the current prices of dex pairs a strategy should produce an ordered list of messages
