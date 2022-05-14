@@ -13,7 +13,7 @@ use prometheus_client::{
     registry::Unit,
 };
 use tendermint::block::Height;
-use terrars::{dex, lcd::Lcd, mekapi, AccountId};
+use terrars::{dex, lcd::Lcd, AccountId};
 use tokio::time::Instant;
 
 use crate::accounts;

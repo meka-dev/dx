@@ -13,7 +13,6 @@ mod bank;
 pub mod base;
 pub mod dex;
 pub mod lcd;
-pub mod mekapi;
 pub mod proto;
 pub mod tx;
 pub mod wasm;

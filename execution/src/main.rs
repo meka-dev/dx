@@ -21,7 +21,6 @@ use futures::FutureExt as _;
 use tendermint_rpc::{Client as _, SubscriptionClient as _, WebSocketClient};
 use terrars::{
     lcd::{self, Lcd},
-    mekapi,
     BaseAccount,
 };
 use tokio::sync::{mpsc, watch, Mutex};

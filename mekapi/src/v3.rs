@@ -3,8 +3,7 @@ use async_trait::async_trait;
 use cosmrs::{tendermint::block, Denom};
 use cosmwasm_std::{Addr, Uint128};
 use serde::{de::Error as _, Deserialize, Deserializer};
-
-use crate::dex;
+use terrars::dex;
 
 #[async_trait]
 pub trait Api: Send + Sync {

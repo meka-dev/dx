@@ -884,22 +884,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw20-base"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe3791e0f6b4a0a82b86541d48dcc67c2d607da8e5691a91b40b2c06ddf09c52"
-dependencies = [
- "cosmwasm-std",
- "cw-storage-plus",
- "cw0",
- "cw2",
- "cw20",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "deadpool"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1128,6 +1112,7 @@ dependencies = [
  "hyper",
  "indexmap",
  "itertools",
+ "mekapi",
  "params-derive",
  "prometheus-client",
  "serde",
@@ -1829,6 +1814,29 @@ name = "matchit"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73cbba799671b762df5a175adf59ce145165747bb891505c43d09aefbbf38beb"
+
+[[package]]
+name = "mekapi"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cosmrs",
+ "cosmwasm-bignumber",
+ "cosmwasm-std",
+ "eventsource-stream",
+ "futures",
+ "hex",
+ "pretty_assertions",
+ "reqwest",
+ "reqwest-eventsource",
+ "serde",
+ "serde_json",
+ "terrars",
+ "tokio",
+ "tracing",
+ "wiremock",
+]
 
 [[package]]
 name = "memchr"
@@ -3302,16 +3310,12 @@ dependencies = [
  "cosmwasm-bignumber",
  "cosmwasm-std",
  "cw20",
- "cw20-base",
- "eventsource-stream",
  "futures",
  "hex",
- "pretty_assertions",
  "prost",
  "prost-build",
  "prost-types",
  "reqwest",
- "reqwest-eventsource",
  "serde",
  "serde-json-wasm 0.4.1",
  "serde_json",

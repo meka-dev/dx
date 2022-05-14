@@ -200,7 +200,7 @@ impl Strategy for MultiHop {
         &mut self,
         height: block::Height,
         sender: &terrars::AccountId,
-        pools: &[terrars::mekapi::v3::Pool],
+        pools: &[mekapi::v3::Pool],
     ) -> Vec<Trade> {
         if self.num_pools == 0 || self.sync_height < height.into() {
             // pools need to be loaded by block sync

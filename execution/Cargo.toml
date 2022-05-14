@@ -31,6 +31,7 @@ xxhash-rust         = { version = "0.8",  default-features = false, features = [
 address-book        = { version = "0.1",  default-features = false, path = "../address-book" }
 arby                = { version = "0.1",  default-features = false, path = "../contracts/arby" }
 common              = { version = "0.1",  default-features = false, path = "../common" }
+mekapi              = { version = "0.1",  default-features = false, path = "../mekapi" }
 params-derive       = { version = "0.1",  default-features = false, path = "../params-derive" }
 terrars             = { version = "0.1",  default-features = false, path = "../terrars" }
 
