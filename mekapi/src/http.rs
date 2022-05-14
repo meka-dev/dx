@@ -11,7 +11,7 @@ use tracing::debug;
 const HEADER_COUNT: &str = "Mekatek-Count";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
-use crate::{v1, v3};
+use crate::{pools, v1, v3};
 
 #[derive(Clone)]
 pub struct Http {
@@ -171,12 +171,39 @@ impl v3::Api for Http {
     }
 }
 
+#[async_trait]
+impl pools::Api for Http {
+    async fn v4(&self, height: block::Height) -> Result<Vec<pools::Pool>> {
+        let url = self.base_url.join("pools-v4")?;
+
+        let res = self.client.get(url).send().await?;
+        if res.status() != StatusCode::OK {
+            return Err(anyhow::anyhow!(
+                "unexpected response status code: {}",
+                res.status()
+            ));
+        }
+
+        let res = res.json::<pools::V4Response>().await?;
+
+        if res.height != height {
+            return Err(anyhow::anyhow!(
+                "returned height doesn't match input: {} != {}",
+                res.height,
+                height
+            ));
+        }
+
+        Ok(res.pools)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
     use anyhow::Result;
-    use cosmrs::{tendermint::block, Denom};
+    use cosmrs::{tendermint::block, AccountId, Denom};
     use cosmwasm_bignumber::Decimal256;
     use cosmwasm_std::{Addr, Uint128};
     use futures::TryStreamExt as _;
@@ -190,10 +217,78 @@ mod tests {
     };
 
     use super::{
+        pools::Api as _,
         v1::Api as _,
         v3::{self, Api as _},
         Http,
     };
+    use crate::pools;
+
+    #[tokio::test]
+    async fn pools_v4() -> Result<()> {
+        let height = block::Height::from_str("4382144")?;
+        let response = ResponseTemplate::new(200)
+            .set_body_bytes(include_bytes!("../fixtures/pools_v4.json").to_vec());
+
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("pools-v4"))
+            .respond_with(response)
+            .mount(&server)
+            .await;
+
+        let http = Http::new(server.uri())?;
+        let ps = http.v4(height).await?;
+
+        assert_eq!(ps.len(), 707);
+
+        let atom_osmo_addr =
+            AccountId::from_str("osmo1mw0ac6rwlp5r8wapwk3zs6g29h8fcscxqakdzw9emkne6c8wjp9q0t3v8t")
+                .unwrap();
+        let atom_osmos_pool = ps
+            .iter()
+            .find(|pool| pool.address == atom_osmo_addr)
+            .unwrap();
+
+        assert_eq!(
+            *atom_osmos_pool.assets.first().unwrap(),
+            pools::WeightedAsset {
+                token: pools::Asset {
+                    denom: Denom::from_str(
+                        "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2"
+                    )
+                    .unwrap(),
+                    amount: Uint128::from_str("6573484687793")?,
+                },
+                weight: Uint128::from_str("536870912000000")?,
+            },
+        );
+        assert_eq!(atom_osmos_pool.exit_fee, "0.000000000000000000".to_string(),);
+        assert_eq!(atom_osmos_pool.swap_fee, "0.003000000000000000".to_string(),);
+        assert_eq!(
+            *atom_osmos_pool.assets.get(1).unwrap(),
+            pools::WeightedAsset {
+                token: pools::Asset {
+                    denom: Denom::from_str("uosmo").unwrap(),
+                    amount: Uint128::from_str("46391479318305")?,
+                },
+                weight: Uint128::from_str("536870912000000")?,
+            },
+        );
+        assert_eq!(
+            atom_osmos_pool.total_shares,
+            pools::Asset {
+                denom: Denom::from_str("gamm/pool/1").unwrap(),
+                amount: Uint128::from_str("462769548931952263196555930")?,
+            },
+        );
+        assert_eq!(
+            atom_osmos_pool.total_weight,
+            Uint128::from_str("1073741824000000")?,
+        );
+
+        Ok(())
+    }
 
     #[tokio::test]
     async fn v1_events_mempooltx() -> Result<()> {
