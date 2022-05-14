@@ -1,7 +1,6 @@
 use std::{
     ffi::OsStr,
-    fs,
-    io,
+    fs, io,
     path::{Path, PathBuf},
     process,
     sync::atomic::{self, AtomicBool},
@@ -125,6 +124,29 @@ fn compile_osmosis_protos_and_services(out_dir: &Path) {
 
     // Paths
     let proto_paths = [
+        // cosmos
+        format!("{}/../proto/definitions/mock", root),
+        format!("{}/proto/cosmos/auth", sdk_dir.display()),
+        format!("{}/proto/cosmos/authz", sdk_dir.display()),
+        format!("{}/proto/cosmos/feegrant", sdk_dir.display()),
+        format!("{}/proto/cosmos/bank", sdk_dir.display()),
+        format!("{}/proto/cosmos/base", sdk_dir.display()),
+        format!("{}/proto/cosmos/base/tendermint", sdk_dir.display()),
+        format!("{}/proto/cosmos/capability", sdk_dir.display()),
+        format!("{}/proto/cosmos/crisis", sdk_dir.display()),
+        format!("{}/proto/cosmos/crypto", sdk_dir.display()),
+        format!("{}/proto/cosmos/distribution", sdk_dir.display()),
+        format!("{}/proto/cosmos/evidence", sdk_dir.display()),
+        format!("{}/proto/cosmos/genutil", sdk_dir.display()),
+        format!("{}/proto/cosmos/gov", sdk_dir.display()),
+        format!("{}/proto/cosmos/mint", sdk_dir.display()),
+        format!("{}/proto/cosmos/params", sdk_dir.display()),
+        format!("{}/proto/cosmos/slashing", sdk_dir.display()),
+        format!("{}/proto/cosmos/staking", sdk_dir.display()),
+        format!("{}/proto/cosmos/tx", sdk_dir.display()),
+        format!("{}/proto/cosmos/upgrade", sdk_dir.display()),
+        format!("{}/proto/cosmos/vesting", sdk_dir.display()),
+        // osmosis
         format!("{}/proto/osmosis/epochs", osmosis_dir.display()),
         format!("{}/proto/osmosis/gamm", osmosis_dir.display()),
         format!("{}/proto/osmosis/incentives", osmosis_dir.display()),
