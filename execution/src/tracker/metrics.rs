@@ -1,5 +1,7 @@
-use anyhow::Result;
-use common::metrics::{self, Registry};
+use common::{
+    metrics::{self, Registry},
+    Result,
+};
 use cosmwasm_std::Addr;
 use prometheus_client::{
     encoding::text::Encode,

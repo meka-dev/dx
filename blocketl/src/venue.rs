@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::{anyhow, Error};
+use common::{err, Report};
 use serde::Serialize;
 
 #[derive(Clone, Copy, Debug, Serialize)]
@@ -10,13 +10,13 @@ pub enum Venue {
 }
 
 impl FromStr for Venue {
-    type Err = Error;
+    type Err = Report;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "Osmosis" => Ok(Self::Osmosis),
             "Terra" => Ok(Self::Terra),
-            _ => Err(anyhow!("unknown venue: {}", s)),
+            _ => Err(err!("unknown venue: {}", s)),
         }
     }
 }

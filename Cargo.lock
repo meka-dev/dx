@@ -3,15 +3,6 @@
 version = 3
 
 [[package]]
-name = "addr2line"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9ecd88a8c8378ca913a680cd98f0f13ac67383d35993f86c90a70e3f137816b"
-dependencies = [
- "gimli",
-]
-
-[[package]]
 name = "address-book"
 version = "0.1.0"
 dependencies = [
@@ -20,12 +11,6 @@ dependencies = [
  "serde_json",
  "terrars",
 ]
-
-[[package]]
-name = "adler"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
 
 [[package]]
 name = "aho-corasick"
@@ -50,9 +35,6 @@ name = "anyhow"
 version = "1.0.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08f9b8508dccb7687a1d6c4ce66b2b0ecef467c94667de27d8d7fe1f8d2a9cdc"
-dependencies = [
- "backtrace",
-]
 
 [[package]]
 name = "arby"
@@ -269,21 +251,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "backtrace"
-version = "0.3.65"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11a17d453482a265fd5f8479f2a3f405566e6ca627837aaddb85af8b1ab8ef61"
-dependencies = [
- "addr2line",
- "cc",
- "cfg-if",
- "libc",
- "miniz_oxide",
- "object",
- "rustc-demangle",
-]
-
-[[package]]
 name = "base16ct"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -339,7 +306,6 @@ dependencies = [
 name = "blocketl"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "argh",
  "axum",
  "common",
@@ -453,7 +419,6 @@ dependencies = [
 name = "collector"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "argh",
  "assert_matches",
  "async-trait",
@@ -482,11 +447,11 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-trait",
  "axum",
  "axum-extra",
  "bytes",
+ "eyre",
  "futures-lite",
  "hostname",
  "hyper",
@@ -546,8 +511,8 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
 name = "cosmos-sdk-proto"
-version = "0.12.0"
-source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#52cb4c529ff5f715912051d042269a2ba1e30698"
+version = "0.12.1"
+source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#87cc03b1a4f545af0bde39238385391c5bc5157f"
 dependencies = [
  "prost",
  "prost-types",
@@ -557,7 +522,7 @@ dependencies = [
 [[package]]
 name = "cosmrs"
 version = "0.7.0"
-source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#52cb4c529ff5f715912051d042269a2ba1e30698"
+source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#87cc03b1a4f545af0bde39238385391c5bc5157f"
 dependencies = [
  "cosmos-sdk-proto",
  "ecdsa 0.13.4",
@@ -1096,7 +1061,6 @@ name = "execution"
 version = "0.1.0"
 dependencies = [
  "address-book",
- "anyhow",
  "arby",
  "argh",
  "async-trait",
@@ -1375,12 +1339,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gimli"
-version = "0.26.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78cc372d058dcf6d5ecd98510e7fbc9e5aec4d21de70f65fea8fecebcd881bd4"
-
-[[package]]
 name = "glob"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1423,7 +1381,7 @@ dependencies = [
  "indexmap",
  "slab",
  "tokio",
- "tokio-util 0.7.1",
+ "tokio-util 0.7.2",
  "tracing",
 ]
 
@@ -1614,7 +1572,7 @@ checksum = "d87c48c02e0dc5e3b849a2041db3029fd066650f8f717c07bf8ed78ccb895cac"
 dependencies = [
  "http",
  "hyper",
- "rustls 0.20.4",
+ "rustls 0.20.5",
  "tokio",
  "tokio-rustls 0.23.4",
 ]
@@ -1819,8 +1777,8 @@ checksum = "73cbba799671b762df5a175adf59ce145165747bb891505c43d09aefbbf38beb"
 name = "mekapi"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-trait",
+ "common",
  "cosmrs",
  "cosmwasm-bignumber",
  "cosmwasm-std",
@@ -1864,15 +1822,6 @@ name = "minimal-lexical"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
-
-[[package]]
-name = "miniz_oxide"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2b29bd4bc3f33391105ebee3589c19197c4271e3e5a9ec9bfe8127eeff8f082"
-dependencies = [
- "adler",
-]
 
 [[package]]
 name = "mio"
@@ -1973,15 +1922,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2819ce041d2ee131036f4fc9d6ae7ae125a3a40e97ba64d04fe799ad9dabbb44"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "object"
-version = "0.28.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e42c982f2d955fac81dd7e1d0e1426a7d702acd9c98d19ab01083a6a0328c424"
-dependencies = [
- "memchr",
 ]
 
 [[package]]
@@ -2607,7 +2547,7 @@ dependencies = [
  "native-tls",
  "percent-encoding",
  "pin-project-lite",
- "rustls 0.20.4",
+ "rustls 0.20.5",
  "rustls-pemfile",
  "serde",
  "serde_json",
@@ -2615,7 +2555,7 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tokio-rustls 0.23.4",
- "tokio-util 0.6.9",
+ "tokio-util 0.6.10",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -2684,12 +2624,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustc-demangle"
-version = "0.1.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ef03e0a2b150c7a90d01faf6254c9c48a41e95fb2a8c2ac1c6f0d2b9aefc342"
-
-[[package]]
 name = "rustc_version"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2713,9 +2647,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.20.4"
+version = "0.20.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fbfeb8d0ddb84706bc597a5574ab8912817c52a397f819e5b614e2265206921"
+checksum = "a024a432ae760ab3bff924ad91ce1cfa52cb57ed16e1ef32d0d249cfee1a6c13"
 dependencies = [
  "log",
  "ring",
@@ -3302,10 +3236,10 @@ dependencies = [
 name = "terrars"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "astroport",
  "async-trait",
  "base64",
+ "common",
  "cosmrs",
  "cosmwasm-bignumber",
  "cosmwasm-std",
@@ -3487,7 +3421,7 @@ version = "0.23.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c43ee83903113e03984cb9e5cebe6c04a5116269e900e3ddba8f068a62adda59"
 dependencies = [
- "rustls 0.20.4",
+ "rustls 0.20.5",
  "tokio",
  "webpki 0.22.0",
 ]
@@ -3505,9 +3439,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.6.9"
+version = "0.6.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e99e1983e5d376cd8eb4b66604d2e99e79f5bd988c3055891dcd8c9e2604cc0"
+checksum = "36943ee01a6d67977dd3f84a5a1d2efeb4ada3a1ae771cadfaa535d9d9fc6507"
 dependencies = [
  "bytes",
  "futures-core",
@@ -3519,9 +3453,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0edfdeb067411dba2044da6d1cb2df793dd35add7888d73c16e3381ded401764"
+checksum = "f988a1a1adc2fb21f9c12aa96441da33a1728193ae0b95d2be22dbd17fcb4e5c"
 dependencies = [
  "bytes",
  "futures-core",
@@ -3556,7 +3490,7 @@ dependencies = [
  "percent-encoding",
  "pin-project",
  "tokio-stream",
- "tokio-util 0.7.1",
+ "tokio-util 0.7.2",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -3586,7 +3520,7 @@ dependencies = [
  "pin-project",
  "pin-project-lite",
  "tokio",
- "tokio-util 0.7.1",
+ "tokio-util 0.7.2",
  "tower-layer",
  "tower-service",
  "tracing",

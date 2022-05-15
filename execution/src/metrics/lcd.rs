@@ -1,7 +1,9 @@
 use std::time::Instant;
 
-use anyhow::Result;
-use common::metrics::{Registry, ResultLabel, BUCKETS};
+use common::{
+    metrics::{Registry, ResultLabel, BUCKETS},
+    Result,
+};
 use cosmwasm_std::Addr;
 use prometheus_client::{
     encoding::text::Encode,

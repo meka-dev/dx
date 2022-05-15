@@ -1,5 +1,4 @@
-use anyhow::Result;
-use common::{metrics, params, signals, storage, tracing};
+use common::{err, metrics, params, signals, storage, tracing, Result};
 use futures::FutureExt as _;
 use tendermint_rpc::{SubscriptionClient as _, WebSocketClient};
 use tokio::sync::mpsc;
@@ -44,7 +43,7 @@ async fn main() -> Result<()> {
     .fuse();
     let mut transform_handle = tokio::spawn(routines::transform(
         config::BINARY.to_owned(),
-        common::host()?,
+        common::host().ok_or_else(|| err!("failed to get hostname"))?,
         extracts_receiver,
         files_sender,
     ))

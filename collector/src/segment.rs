@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
-use anyhow::Result;
 use chrono::{Datelike as _, Timelike as _, Utc};
+use common::{err, Result};
 use tokio::sync::mpsc;
 use tracing::instrument;
 use ulid::{Generator, Ulid};
@@ -95,7 +95,7 @@ impl Segment {
     #[instrument(level = "trace", skip(self), ret)]
     pub fn merge(&mut self, mut other: Segment) -> Result<(usize, usize)> {
         if Key::from(&*self) != Key::from(&other) {
-            return Err(anyhow::anyhow!("segments key mismatch"));
+            return Err(err!("segments key mismatch"));
         }
 
         self.events.append(&mut other.events);

@@ -1,10 +1,10 @@
 use std::fmt;
 
-use anyhow::Result;
 use common::{
     metrics::{Registry, ResultLabel, BUCKETS},
     spawn::flatten,
     tracing::{debug, error},
+    Result,
 };
 use cosmwasm_std::Addr;
 use prometheus_client::{

@@ -1,5 +1,5 @@
-use anyhow::Result;
 use async_trait::async_trait;
+use common::Result;
 use cosmrs::{tendermint::block, AccountId, Denom};
 use cosmwasm_std::Uint128;
 use serde::{

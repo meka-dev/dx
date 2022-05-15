@@ -1,9 +1,9 @@
-use anyhow::Result;
 use async_trait::async_trait;
 use common::{
     metrics::{self, Registry, BUCKETS, BYTE_BUCKETS},
     storage,
     tracing::{debug, error},
+    Result,
 };
 use prometheus_client::{
     encoding::text::Encode,

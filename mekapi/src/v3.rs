@@ -1,5 +1,5 @@
-use anyhow::Result;
 use async_trait::async_trait;
+use common::Result;
 use cosmrs::{tendermint::block, Denom};
 use cosmwasm_std::{Addr, Uint128};
 use serde::{de::Error as _, Deserialize, Deserializer};

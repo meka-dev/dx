@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Error};
+use common::{err, Report};
 
 #[derive(Debug, PartialEq)]
 pub struct Event(String);
@@ -14,18 +14,15 @@ impl Event {
 }
 
 impl TryFrom<String> for Event {
-    type Error = Error;
+    type Error = Report;
 
     fn try_from(input: String) -> Result<Self, Self::Error> {
         if input.len() % 2 != 0 {
-            return Err(anyhow!(
-                "incorrect length for hex encoding: {}",
-                input.len()
-            ));
+            return Err(err!("incorrect length for hex encoding: {}", input.len()));
         }
 
         if !input.bytes().all(is_hex) {
-            return Err(anyhow!("found invalid hex character"));
+            return Err(err!("found invalid hex character"));
         }
 
         Ok(Self(input))

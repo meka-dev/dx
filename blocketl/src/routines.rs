@@ -1,9 +1,12 @@
 use std::{collections::BTreeMap, ops::Deref as _};
 
-use anyhow::{anyhow, Context as _, Result};
 use common::{
+    err,
     storage,
     tracing::{debug, error},
+    Context as _,
+    Error,
+    Result,
 };
 use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use serde::Serialize;
@@ -43,7 +46,7 @@ struct Deadletter {
 
 #[allow(clippy::large_enum_variant)]
 pub enum Extract {
-    Deadletter(Venue, chain::Id, Height, anyhow::Error),
+    Deadletter(Venue, chain::Id, Height, Error),
     Block {
         venue: Venue,
         network: chain::Id,
@@ -96,11 +99,9 @@ pub async fn extract(
                         .buffer_unordered(max_parallel_requests as usize)
                         .try_collect::<Vec<_>>()
                         .await
-                        .map_err(|err| anyhow!("failed to complete task: {}", err))
+                        .map_err(|err| err!("failed to complete task: {}", err))
                         .map(|respones| {
-                            respones
-                                .into_iter()
-                                .collect::<Result<Vec<tx::Tx>, anyhow::Error>>()
+                            respones.into_iter().collect::<Result<Vec<tx::Tx>, Error>>()
                         });
 
                     let msg = match res {

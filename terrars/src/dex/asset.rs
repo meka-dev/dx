@@ -1,4 +1,4 @@
-use anyhow::Error;
+use common::Error;
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::Uint128;
 use serde::Deserialize;

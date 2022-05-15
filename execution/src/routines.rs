@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
-use anyhow::Result;
-use common::tracing::{debug, error};
+use common::{
+    tracing::{debug, error},
+    Result,
+};
 use futures::StreamExt as _;
 use tendermint::block;
 use tendermint_rpc::{

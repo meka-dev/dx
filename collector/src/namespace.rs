@@ -1,6 +1,6 @@
 use std::ops;
 
-use anyhow::{anyhow, Error};
+use common::{err, Report};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Namespace(String);
@@ -15,14 +15,14 @@ impl ops::Deref for Namespace {
 }
 
 impl TryFrom<String> for Namespace {
-    type Error = Error;
+    type Error = Report;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         if !value
             .chars()
             .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
         {
-            return Err(anyhow!("invalid producer: {}", value));
+            return Err(err!("invalid producer: {}", value));
         }
 
         Ok(Self(value))

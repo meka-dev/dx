@@ -1,11 +1,11 @@
 use std::sync::{Arc, RwLock};
 
 use address_book::AddressBook;
-use anyhow::Result;
 use common::{
     metrics::Registry,
     spawn::flatten,
     tracing::{debug, error},
+    Result,
 };
 use cosmwasm_bignumber::Uint256;
 use prometheus_client::{

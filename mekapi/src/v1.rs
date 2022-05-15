@@ -1,5 +1,5 @@
-use anyhow::Result;
 use async_trait::async_trait;
+use common::Result;
 use cosmrs::{tendermint::block, Tx};
 use cosmwasm_std::Addr;
 use futures::stream::BoxStream;
