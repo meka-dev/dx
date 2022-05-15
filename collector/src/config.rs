@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, time::Duration};
 
-use anyhow::Result;
+use common::Result;
 
 const API_SOCKET_PATH: &str = "/tmp/mtek-collector.sock";
 

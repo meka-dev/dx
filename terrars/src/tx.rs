@@ -1,6 +1,6 @@
 use std::str::FromStr as _;
 
-use anyhow::Result;
+use common::{err, Result};
 pub use cosmrs::tx::{AuthInfo, Fee, SignatureBytes};
 use cosmrs::{
     crypto::secp256k1::SigningKey,
@@ -63,11 +63,11 @@ pub fn sign(
 
     let auth_info = signer_info.auth_info(fee);
     let doc = SignDoc::new(&body, &auth_info, &chain_id, account_number)
-        .map_err(|err| anyhow::anyhow!("SignDoc creation failed: {}", err))?;
+        .map_err(|err| err!("SignDoc creation failed: {}", err))?;
     let signed = doc
         .sign(private_key)
-        .map_err(|err| anyhow::anyhow!("signign failed: {}", err))?;
+        .map_err(|err| err!("signign failed: {}", err))?;
     signed
         .to_bytes()
-        .map_err(|err| anyhow::anyhow!("conversion to bytes failed: {}", err))
+        .map_err(|err| err!("conversion to bytes failed: {}", err))
 }

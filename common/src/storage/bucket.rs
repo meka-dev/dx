@@ -1,6 +1,5 @@
 use std::io;
 
-use anyhow::Result;
 use async_trait::async_trait;
 use prometheus_client::{
     encoding::text::Encode,
@@ -9,7 +8,10 @@ use prometheus_client::{
 };
 use tokio::time::Instant;
 
-use crate::metrics::{Registry, BUCKETS};
+use crate::{
+    metrics::{Registry, BUCKETS},
+    Result,
+};
 
 #[async_trait]
 pub trait Bucket: Clone {

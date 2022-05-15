@@ -1,13 +1,16 @@
 use std::{io::BufRead as _, sync::Arc};
 
-use anyhow::{Context as _, Result};
 use axum::{
     extract::{Extension, Path, TypedHeader},
     routing::post,
     Router,
 };
 use bytes::Bytes;
-use common::metrics::{self, Registry, RequestDuration};
+use common::{
+    metrics::{self, Registry, RequestDuration},
+    Context as _,
+    Result,
+};
 use hyper::{server::accept::Accept, Server, StatusCode};
 use prometheus_client::registry::Unit;
 use tokio::{
@@ -118,9 +121,8 @@ async fn v1_events_handler(
 
 #[cfg(test)]
 mod tests {
-    use anyhow::Result;
     use assert_matches::assert_matches;
-    use common::metrics::Registry;
+    use common::{metrics::Registry, Result};
     use hyper::{Body, Client, Request, StatusCode};
     use hyperlocal::{SocketIncoming, UnixClientExt as _, Uri};
     use lazy_static::lazy_static;

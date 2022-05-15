@@ -1,10 +1,11 @@
 use std::time::Instant;
 
-use anyhow::{Error, Result};
 use async_trait::async_trait;
 use common::{
     metrics::{Registry, ResultLabel, BUCKETS},
     tracing::{debug, error},
+    Report,
+    Result,
 };
 use cosmwasm_std::Addr;
 use futures::stream::BoxStream;
@@ -63,7 +64,7 @@ impl<N> Observed<N> {
         factory: Option<Addr>,
         height: block::Height,
         method: Method,
-        err: Option<&Error>,
+        err: Option<&Report>,
     ) {
         let elapsed = start.elapsed();
         let factory = factory.unwrap_or_else(|| Addr::unchecked(""));

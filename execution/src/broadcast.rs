@@ -3,11 +3,13 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use anyhow::{Context as _, Result};
 use async_trait::async_trait;
 use common::{
+    err,
     metrics::{Registry, ResultLabel, BUCKETS},
     tracing::{debug, error, info},
+    Context as _,
+    Result,
 };
 use prometheus_client::{
     encoding::text::Encode,
@@ -138,9 +140,8 @@ impl Broadcaster for Rpc {
             .collect::<Vec<_>>();
         let tx = terrars::tx::sign(
             self.chain_id.clone(),
-            &SigningKey::from_bytes(&self.signing_key_bytes).map_err(|err| {
-                anyhow::anyhow!("failed to craft signing key from bytes: {}", err)
-            })?,
+            &SigningKey::from_bytes(&self.signing_key_bytes)
+                .map_err(|err| err!("failed to craft signing key from bytes: {}", err))?,
             self.account.account_number,
             self.sequence,
             // NB(xla): Using fixed gas prices here, could diverge.

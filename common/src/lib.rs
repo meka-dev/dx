@@ -1,4 +1,4 @@
-use anyhow::{Context as _, Result};
+pub use eyre::{eyre as err, Context, Error, Report, Result};
 
 pub mod metrics;
 pub mod params;
@@ -14,10 +14,8 @@ pub const LCD_URL: &str = "http://127.0.0.1:1317";
 pub const MEKAPI_URL: &str = "http://127.0.0.1:4401";
 pub const RPC_URL: &str = "ws://127.0.0.1:26657/websocket";
 
-pub fn host() -> Result<String> {
-    Ok(hostname::get()
-        .context("failed to read hostname")?
-        .to_str()
-        .expect("hostname not present")
-        .to_owned())
+pub fn host() -> Option<String> {
+    hostname::get()
+        .ok()
+        .and_then(|host| host.to_str().map(ToString::to_string))
 }

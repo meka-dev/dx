@@ -1,6 +1,5 @@
 use std::{fs, io, sync::Arc};
 
-use anyhow::{anyhow, Context as _, Error, Result};
 use axum::http::HeaderValue;
 use bytes::BufMut as _;
 use futures_lite::stream::StreamExt as _;
@@ -13,7 +12,13 @@ use tame_gcs::{
 };
 use tame_oauth::gcp::{self as oauth, TokenProvider as _};
 
-use crate::storage::bucket::{Backend, Bucket, Id, Labeled, Metadata};
+use crate::{
+    err,
+    storage::bucket::{Backend, Bucket, Id, Labeled, Metadata},
+    Context as _,
+    Error,
+    Result,
+};
 
 #[derive(Clone)]
 pub struct Gcs<'bucket> {
@@ -163,7 +168,7 @@ impl<'bucket> Gcs<'bucket> {
 
         let headers = builder
             .headers_mut()
-            .ok_or_else(|| anyhow!("failed to convert response headers"))?;
+            .ok_or_else(|| err!("failed to convert response headers"))?;
 
         headers.extend(
             res.headers()
@@ -201,7 +206,7 @@ impl<'bucket> Gcs<'bucket> {
             http::Method::DELETE => self.client.delete(&uri),
             http::Method::PATCH => self.client.patch(&uri),
             http::Method::PUT => self.client.put(&uri),
-            method => return Err(anyhow!("{} not implemented", method)),
+            method => return Err(err!("{} not implemented", method)),
         };
 
         let content_len = tame_gcs::util::get_content_length(&parts.headers).unwrap_or(0);

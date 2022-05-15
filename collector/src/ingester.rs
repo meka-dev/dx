@@ -3,10 +3,11 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{anyhow, Result};
 use common::{
+    err,
     metrics::{Registry, BUCKETS},
     tracing::{error, trace, warn},
+    Result,
 };
 use prometheus_client::{
     encoding::text::Encode,
@@ -60,7 +61,7 @@ where
                         },
                         Err(TrySendError::Closed(_)) => {
                             error!(branch = "flush", msg = "emitter is gone");
-                            return Err(anyhow!("emitter is gone"));
+                            return Err(err!("emitter is gone"));
                         }
                     }
                 }

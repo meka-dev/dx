@@ -1,5 +1,4 @@
-use anyhow::Result;
-use common::{metrics, storage, tracing};
+use common::{err, metrics, storage, tracing, Result};
 use hyperlocal::SocketIncoming;
 use tokio::{select, sync::mpsc};
 
@@ -53,7 +52,11 @@ async fn main() -> Result<()> {
         emitter::Observed::new(
             &mut registry,
             args.bucket,
-            emitter::Gcs::new(config::BINARY.to_string(), common::host()?, bucket),
+            emitter::Gcs::new(
+                config::BINARY.to_string(),
+                common::host().ok_or_else(|| err!("failed to get hostname"))?,
+                bucket,
+            ),
         ),
         flush_receiver,
     ));

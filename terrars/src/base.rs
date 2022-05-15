@@ -1,6 +1,6 @@
 use std::str::FromStr as _;
 
-use anyhow::{Error, Result};
+use common::{err, Report, Result};
 use cosmrs::Denom;
 use cosmwasm_bignumber::Uint256;
 use serde::{Deserialize, Serialize};
@@ -65,7 +65,7 @@ impl From<&cosmrs::Coin> for Coin {
 }
 
 impl TryFrom<proto::cosmos::base::v1beta1::Coin> for Coin {
-    type Error = cosmrs::ErrorReport;
+    type Error = Report;
 
     fn try_from(input: proto::cosmos::base::v1beta1::Coin) -> cosmrs::Result<Self> {
         Coin::try_from(&input)
@@ -73,7 +73,7 @@ impl TryFrom<proto::cosmos::base::v1beta1::Coin> for Coin {
 }
 
 impl TryFrom<&proto::cosmos::base::v1beta1::Coin> for Coin {
-    type Error = cosmrs::ErrorReport;
+    type Error = Report;
 
     fn try_from(input: &proto::cosmos::base::v1beta1::Coin) -> cosmrs::Result<Self> {
         Ok(Self {
@@ -121,7 +121,7 @@ impl From<&Coin> for CoinJson {
 }
 
 impl TryFrom<CoinJson> for Coin {
-    type Error = Error;
+    type Error = Report;
 
     fn try_from(json: CoinJson) -> Result<Coin> {
         Coin::try_from(&json)
@@ -129,13 +129,13 @@ impl TryFrom<CoinJson> for Coin {
 }
 
 impl TryFrom<&CoinJson> for Coin {
-    type Error = Error;
+    type Error = Report;
 
     fn try_from(json: &CoinJson) -> Result<Self, Self::Error> {
         Ok(Coin {
             amount: u128::from_str(&json.amount)?.into(),
             denom: Denom::from_str(&json.denom)
-                .map_err(|err| anyhow::anyhow!("unable to parse Denom: {}", err))?,
+                .map_err(|err| err!("unable to parse Denom: {}", err))?,
         })
     }
 }

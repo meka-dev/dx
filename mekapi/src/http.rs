@@ -1,5 +1,5 @@
-use anyhow::{Context as _, Result};
 use async_trait::async_trait;
+use common::{err, Context as _, Result};
 use cosmrs::tendermint::block;
 use cosmwasm_std::Addr;
 use futures::stream::{BoxStream, StreamExt as _};
@@ -125,7 +125,7 @@ impl v1::Api for Http {
 
                 pools
             },
-            code => return Err(anyhow::anyhow!("unexpected response status code: {}", code)),
+            code => return Err(err!("unexpected response status code: {}", code)),
         };
 
         Ok(pools)
@@ -143,16 +143,13 @@ impl v3::Api for Http {
 
         let res = self.client.get(url).send().await?;
         if res.status() != StatusCode::OK {
-            return Err(anyhow::anyhow!(
-                "unexpected response status code: {}",
-                res.status()
-            ));
+            return Err(err!("unexpected response status code: {}", res.status()));
         }
 
         let res = res.json::<v3::PoolsResponse>().await?;
 
         if res.factory != factory {
-            return Err(anyhow::anyhow!(
+            return Err(err!(
                 "returned factory doesn't match input: {} != {}",
                 res.factory,
                 factory
@@ -160,7 +157,7 @@ impl v3::Api for Http {
         }
 
         if res.height != height {
-            return Err(anyhow::anyhow!(
+            return Err(err!(
                 "returned height doesn't match input: {} != {}",
                 res.height,
                 height
@@ -178,16 +175,13 @@ impl pools::Api for Http {
 
         let res = self.client.get(url).send().await?;
         if res.status() != StatusCode::OK {
-            return Err(anyhow::anyhow!(
-                "unexpected response status code: {}",
-                res.status()
-            ));
+            return Err(err!("unexpected response status code: {}", res.status()));
         }
 
         let res = res.json::<pools::V4Response>().await?;
 
         if res.height != height {
-            return Err(anyhow::anyhow!(
+            return Err(err!(
                 "returned height doesn't match input: {} != {}",
                 res.height,
                 height
@@ -202,7 +196,7 @@ impl pools::Api for Http {
 mod tests {
     use std::str::FromStr;
 
-    use anyhow::Result;
+    use common::Result;
     use cosmrs::{tendermint::block, AccountId, Denom};
     use cosmwasm_bignumber::Decimal256;
     use cosmwasm_std::{Addr, Uint128};

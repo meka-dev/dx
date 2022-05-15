@@ -1,11 +1,11 @@
 use core::fmt;
 use std::ops::Deref;
 
-use anyhow::{anyhow, Context, Error};
 use axum::{
     headers,
     http::header::{HeaderName, HeaderValue},
 };
+use common::{err, Error};
 use lazy_static::lazy_static;
 
 pub const HEADER_NAME: &str = "mekatek-producer";
@@ -42,10 +42,10 @@ impl headers::Header for Producer {
     {
         values
             .next()
-            .context("missing header value")
+            .ok_or_else(|| err!("missing header value"))
             .and_then(|val| {
                 val.to_str()
-                    .context("failed to convert header value to str")
+                    .map_err(|err| err!("failed to convert header value to str: {}", err))
             })
             .and_then(Self::try_from)
             .map_err(|_| headers::Error::invalid())
@@ -64,7 +64,7 @@ impl TryFrom<&str> for Producer {
             .chars()
             .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
         {
-            return Err(anyhow!("invalid producer: {}", value));
+            return Err(err!("invalid producer: {}", value));
         }
 
         Ok(Self(value.to_owned()))

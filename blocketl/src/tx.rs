@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use anyhow::anyhow;
+use common::{err, Report, Result};
 use cosmrs::tx::SignatureBytes;
 use serde::Serialize;
 use tendermint::{
@@ -16,7 +16,7 @@ use tendermint_rpc::{
     WebSocketClient,
 };
 
-pub async fn get_info(client: WebSocketClient, hash: Hash) -> anyhow::Result<Tx> {
+pub async fn get_info(client: WebSocketClient, hash: Hash) -> Result<Tx> {
     let query = Query::from(EventType::Tx).and_eq("tx.hash", hash.to_string());
     let res = client
         .tx_search(query, false, 1, 30, Order::Ascending)
@@ -24,7 +24,7 @@ pub async fn get_info(client: WebSocketClient, hash: Hash) -> anyhow::Result<Tx>
 
     res.txs
         .first()
-        .ok_or_else(|| anyhow!("failed to get tx: {}", hash))
+        .ok_or_else(|| err!("failed to get tx: {}", hash))
         .and_then(Tx::try_from)
 }
 
@@ -48,11 +48,11 @@ pub struct Tx {
 }
 
 impl TryFrom<&Response> for Tx {
-    type Error = anyhow::Error;
+    type Error = Report;
 
     fn try_from(input: &Response) -> Result<Self, Self::Error> {
         let tx = cosmrs::Tx::from_bytes(input.tx.as_bytes())
-            .map_err(|err| anyhow!("failed to parse tx body: {}", err))?;
+            .map_err(|err| err!("failed to parse tx body: {}", err))?;
 
         Ok(Self {
             hash: input.hash,

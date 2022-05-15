@@ -1,4 +1,4 @@
-use anyhow::Result;
+use common::Result;
 use cosmrs::tx::{Msg, MsgProto};
 pub use cosmwasm_std::Addr;
 use serde::{Deserialize, Serialize};

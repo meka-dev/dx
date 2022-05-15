@@ -1,5 +1,4 @@
-use anyhow::{Context as _, Result};
-use common::{metrics::Registry, VERSION};
+use common::{metrics::Registry, Context as _, Result, VERSION};
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{family::Family, gauge::Gauge},

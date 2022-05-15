@@ -1,5 +1,5 @@
-use anyhow::Result;
 use async_trait::async_trait;
+use common::{err, Result};
 use cosmrs::{
     auth::{BaseAccount, QueryAccountReponse},
     AccountId,
@@ -103,7 +103,7 @@ impl Lcd for Http {
         let res = match raw.status() {
             StatusCode::OK => Response::Ok(raw.json::<tx::ComputeTaxResponse>().await?.tax_amount),
             StatusCode::BAD_REQUEST => Response::Error(raw.json::<Error>().await?),
-            code => return Err(anyhow::anyhow!("unexpected response status code: {}", code)),
+            code => return Err(err!("unexpected response status code: {}", code)),
         };
 
         Ok(res)
@@ -122,7 +122,7 @@ impl Lcd for Http {
         let res = match raw.status() {
             StatusCode::OK => Response::Ok(raw.json::<tx::SimulateResponse>().await?),
             StatusCode::BAD_REQUEST => Response::Error(raw.json::<Error>().await?),
-            code => return Err(anyhow::anyhow!("unexpected response status code: {}", code)),
+            code => return Err(err!("unexpected response status code: {}", code)),
         };
 
         Ok(res)
@@ -135,7 +135,7 @@ impl Lcd for Http {
         &self,
         contract_address: &Addr,
         query_msg: &Q,
-    ) -> anyhow::Result<T> {
+    ) -> Result<T> {
         let mut url = self.base_url.join(&format!(
             "terra/wasm/v1beta1/contracts/{}/store",
             contract_address,

@@ -1,11 +1,12 @@
 use std::{fs, sync::Arc};
 
-use anyhow::Result;
 use common::{
+    err,
     metrics,
     params,
     signals,
     tracing::{self, error},
+    Result,
 };
 use execution::{
     accounts,
@@ -43,7 +44,7 @@ async fn main() -> Result<()> {
     let status = client.status().await?;
     if status.sync_info.catching_up {
         error!("Node status: {:?}", status);
-        return Err(anyhow::anyhow!("node still catching up"));
+        return Err(err!("node still catching up"));
     }
 
     let (shutdown_sender, _shutdown_receiver) = mpsc::channel::<()>(1);
