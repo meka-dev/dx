@@ -3,12 +3,12 @@
 members = [
   "address-book",
   "blocketl",
+  "chainrs",
   "collector",
   "common",
   "contracts/arby",
   "execution",
   "mekapi",
-  "osmosisrs",
   "params-derive",
   "proto-build",
   "terrars"

@@ -1,10 +1,12 @@
 [submodule "osmosis-cosmos-sdk-go"]
 	path = osmosis-cosmos-sdk-go
 	url = https://github.com/osmosis-labs/cosmos-sdk.git
-[submodule "osmosis-go"]
-	path = osmosis-go
-	url = https://github.com/osmosis-labs/osmosis.git
-  branch = mattverse/msg-defined-twice
 [submodule "terrars/terrad"]
 	path = terrars/terrad
 	url = https://github.com/terra-money/core.git
+[submodule "osmosis-ibc-go"]
+	path = osmosis-ibc-go
+	url = https://github.com/osmosis-labs/ibc-go
+[submodule "osmosis-go"]
+	path = osmosis-go
+	url = https://github.com/meka-dev/osmosis

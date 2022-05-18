@@ -12,19 +12,23 @@ use prost_wkt_build::{FileDescriptorSet, Message as _};
 use regex::Regex;
 use walkdir::WalkDir;
 
+/// The tag to be cloned for the osmosis repo.
+const OSMOSIS_REV: &str = "v8.x-fixed-proto";
 /// The tag to be cloned for the osmosis-labs fork of cosmos-sdk.
 const OSMOSIS_COSMOS_SDK_REV: &str = "v0.45.1";
-/// The tag to be cloned for the osmosis repo.
-const OSMOSIS_REV: &str = "mattverse/msg-defined-twice";
+/// The tag to be cloned for the osmosis-labs fork of ibc-go.
+const OSMOSIS_IBC_REV: &str = "v2.0.2-osmo";
 
+/// Directory where the osmosis submodule is located
+const OSMOSIS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../osmosis-go");
 /// Directory where the osmosis cosmos-sdk submodule is located
 const OSMOSIS_COSMOS_SDK_DIR: &str =
     concat!(env!("CARGO_MANIFEST_DIR"), "/../osmosis-cosmos-sdk-go");
-/// Directory where the cosmos-sdk submodule is located
-const OSMOSIS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../osmosis-go");
+/// Directory where the osmosis ibc submodule is located
+const OSMOSIS_IBC_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../osmosis-ibc-go");
 
 /// The directory generated osmosis proto files go into in this repo
-const OSMOSIS_PROTO_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../osmosisrs/src/proto/");
+const PROTO_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../chainrs/src/proto/");
 
 /// A temporary directory for proto building
 const TMP_BUILD_DIR: &str = "/tmp/tmp-protobuf/";
@@ -49,7 +53,7 @@ static QUIET: AtomicBool = AtomicBool::new(false);
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::init();
 
-    let proto_dir: PathBuf = OSMOSIS_PROTO_DIR.parse()?;
+    let proto_dir: PathBuf = PROTO_DIR.parse()?;
     let tmp_build_dir: PathBuf = TMP_BUILD_DIR.parse()?;
 
     if tmp_build_dir.exists() {
@@ -59,8 +63,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir(tmp_build_dir.clone())?;
 
     update_submodules();
-    output_osmosis_cosmos_sdk_version(&tmp_build_dir);
     output_osmosis_version(&tmp_build_dir);
+    output_osmosis_cosmos_sdk_version(&tmp_build_dir);
+    output_osmosis_ibc_version(&tmp_build_dir);
     compile_osmosis_protos_and_services(&tmp_build_dir);
     copy_generated_files(&tmp_build_dir, &proto_dir);
 
@@ -90,10 +95,30 @@ fn run_git(args: impl IntoIterator<Item = impl AsRef<OsStr>>) {
 }
 
 fn update_submodules() {
-    info!("Updating osmosis-labls/osmosis submodule...");
     run_git(&["submodule", "update", "--init"]);
+
+    info!("Updating osmosis-labls/osmosis submodule...");
     run_git(&["-C", OSMOSIS_DIR, "fetch"]);
     run_git(&["-C", OSMOSIS_DIR, "reset", "--hard", OSMOSIS_REV]);
+
+    info!("Updating osmosis-labls/cosmos-sdk submodule...");
+    run_git(&["-C", OSMOSIS_COSMOS_SDK_DIR, "fetch"]);
+    run_git(&[
+        "-C",
+        OSMOSIS_COSMOS_SDK_DIR,
+        "reset",
+        "--hard",
+        OSMOSIS_COSMOS_SDK_REV,
+    ]);
+
+    info!("Updating osmosis-labls/ibc-go submodule...");
+    run_git(&["-C", OSMOSIS_IBC_DIR, "fetch"]);
+    run_git(&["-C", OSMOSIS_IBC_DIR, "reset", "--hard", OSMOSIS_IBC_REV]);
+}
+
+fn output_osmosis_version(out_dir: &Path) {
+    let path = out_dir.join("OSMOSIS_COMMIT");
+    fs::write(path, OSMOSIS_REV).unwrap();
 }
 
 fn output_osmosis_cosmos_sdk_version(out_dir: &Path) {
@@ -101,9 +126,9 @@ fn output_osmosis_cosmos_sdk_version(out_dir: &Path) {
     fs::write(path, OSMOSIS_COSMOS_SDK_REV).unwrap();
 }
 
-fn output_osmosis_version(out_dir: &Path) {
-    let path = out_dir.join("OSMOSIS_COMMIT");
-    fs::write(path, OSMOSIS_REV).unwrap();
+fn output_osmosis_ibc_version(out_dir: &Path) {
+    let path = out_dir.join("OSMOSIS_IBC_COMMIT");
+    fs::write(path, OSMOSIS_IBC_REV).unwrap();
 }
 
 fn compile_osmosis_protos_and_services(out_dir: &Path) {
@@ -112,19 +137,53 @@ fn compile_osmosis_protos_and_services(out_dir: &Path) {
         out_dir.display()
     );
 
-    let root = env!("CARGO_MANIFEST_DIR");
+    let ibc_dir = Path::new(OSMOSIS_IBC_DIR);
     let osmosis_dir = Path::new(OSMOSIS_DIR);
     let sdk_dir = Path::new(OSMOSIS_COSMOS_SDK_DIR);
 
-    let proto_includes_paths = [
-        format!("{}/../proto", root),
+    let proto_includes_paths = vec![
         format!("{}/proto", sdk_dir.display()),
         format!("{}/third_party/proto", sdk_dir.display()),
+        format!("{}/proto", ibc_dir.display()),
+        format!("{}/third_party/proto", ibc_dir.display()),
         format!("{}/proto", osmosis_dir.display()),
     ];
 
     // Paths
-    let proto_paths = [
+    let proto_paths = vec![
+        // cosmos
+        format!("{}/proto/cosmos/auth", sdk_dir.display()),
+        format!("{}/proto/cosmos/authz", sdk_dir.display()),
+        format!("{}/proto/cosmos/bank", sdk_dir.display()),
+        format!("{}/proto/cosmos/base", sdk_dir.display()),
+        format!("{}/proto/cosmos/base/tendermint", sdk_dir.display()),
+        format!("{}/proto/cosmos/capability", sdk_dir.display()),
+        format!("{}/proto/cosmos/crisis", sdk_dir.display()),
+        format!("{}/proto/cosmos/crypto", sdk_dir.display()),
+        format!("{}/proto/cosmos/distribution", sdk_dir.display()),
+        format!("{}/proto/cosmos/evidence", sdk_dir.display()),
+        format!("{}/proto/cosmos/feegrant", sdk_dir.display()),
+        format!("{}/proto/cosmos/genutil", sdk_dir.display()),
+        format!("{}/proto/cosmos/gov", sdk_dir.display()),
+        format!("{}/proto/cosmos/mint", sdk_dir.display()),
+        format!("{}/proto/cosmos/params", sdk_dir.display()),
+        format!("{}/proto/cosmos/slashing", sdk_dir.display()),
+        format!("{}/proto/cosmos/staking", sdk_dir.display()),
+        format!("{}/proto/cosmos/tx", sdk_dir.display()),
+        format!("{}/proto/cosmos/upgrade", sdk_dir.display()),
+        format!("{}/proto/cosmos/vesting", sdk_dir.display()),
+        // ibc
+        format!("{}/proto/ibc/applications/transfer", ibc_dir.display()),
+        format!("{}/proto/ibc/core/channel", ibc_dir.display()),
+        format!("{}/proto/ibc/core/client", ibc_dir.display()),
+        format!("{}/proto/ibc/core/commitment", ibc_dir.display()),
+        format!("{}/proto/ibc/core/connection", ibc_dir.display()),
+        format!("{}/proto/ibc/core/port", ibc_dir.display()),
+        format!("{}/proto/ibc/core/types", ibc_dir.display()),
+        format!("{}/proto/ibc/lightclients/localhost", ibc_dir.display()),
+        format!("{}/proto/ibc/lightclients/solomachine", ibc_dir.display()),
+        format!("{}/proto/ibc/lightclients/tendermint", ibc_dir.display()),
+        // osmosis
         format!("{}/proto/osmosis/epochs", osmosis_dir.display()),
         format!("{}/proto/osmosis/gamm", osmosis_dir.display()),
         format!("{}/proto/osmosis/incentives", osmosis_dir.display()),
@@ -135,6 +194,7 @@ fn compile_osmosis_protos_and_services(out_dir: &Path) {
         format!("{}/proto/osmosis/superfluid", osmosis_dir.display()),
         format!("{}/proto/osmosis/tokenfactory", osmosis_dir.display()),
         format!("{}/proto/osmosis/txfees", osmosis_dir.display()),
+        // tendermint
     ];
 
     // List available proto files
@@ -148,22 +208,37 @@ fn compile_osmosis_protos_and_services(out_dir: &Path) {
 
     // Compile all of the proto files, along with grpc service clients
     info!("Compiling proto definitions and clients for GRPC services!");
-    tonic_build::configure()
+    // tonic_build::configure()
+    let res = prost_build::Config::new()
         .extern_path(".tendermint", "::tendermint_proto")
         .extern_path(".google.protobuf.Any", "::prost_wkt_types::Any")
         .extern_path(".google.protobuf.Duration", "::prost_wkt_types::Duration")
         .extern_path(".google.protobuf.Timestamp", "::prost_wkt_types::Timestamp")
+        .extern_path(".google.protobuf.Value", "::prost_wkt_types::Value")
+        .field_attribute(".cosmos.base.abci.v1beta1.Result.events", "#[serde(skip)]")
+        .field_attribute(
+            ".cosmos.base.abci.v1beta1.TxResponse.events",
+            "#[serde(skip)]",
+        )
+        .field_attribute(
+            ".cosmos.base.tendermint.v1beta1.GetNodeInfoResponse.default_node_info",
+            "#[serde(skip)]",
+        )
         .type_attribute(".", "#[derive(serde::Deserialize, serde::Serialize)]")
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
-        .build_client(true)
-        .build_server(false)
+        // .build_client(true)
+        // .build_server(false)
         .file_descriptor_set_path(&descriptor_file)
         .out_dir(out_dir)
-        .compile(&protos, &includes)
-        .unwrap();
+        // .compile(&protos, &includes)
+        .compile_protos(&protos, &includes);
+
+    if let Err(err) = res {
+        println!("{}", err);
+        process::exit(1);
+    }
 
     let descriptor_bytes = std::fs::read(descriptor_file).unwrap();
-
     let descriptor = FileDescriptorSet::decode(&descriptor_bytes[..]).unwrap();
 
     prost_wkt_build::add_serde(out_dir.to_path_buf(), descriptor);
@@ -242,6 +317,30 @@ fn copy_and_patch(src: impl AsRef<Path>, dest: impl AsRef<Path>) -> io::Result<(
     let contents = Regex::new(TENDERMINT_PROTO_REGEX)
         .unwrap()
         .replace_all(&contents, "tendermint_proto");
+    let contents = Regex::new(r"Option<Result>")
+        .unwrap()
+        .replace_all(&contents, "Option<ResponseResult>");
+    let contents = Regex::new(r"struct Result")
+        .unwrap()
+        .replace_all(&contents, "struct ResponseResult");
+    let contents = Regex::new(r"for Result")
+        .unwrap()
+        .replace_all(&contents, "for ResponseResult");
+    let contents = Regex::new(r"v1beta1::Result")
+        .unwrap()
+        .replace_all(&contents, "v1beta1::ResponseResult");
+    let contents = Regex::new(r"struct Validators")
+        .unwrap()
+        .replace_all(&contents, "struct StakeAuthorizationValidators");
+    let contents = Regex::new(r"AllowList\(Validators\)")
+        .unwrap()
+        .replace_all(&contents, "AllowList(StakeAuthorizationValidators)");
+    let contents = Regex::new(r"DenyList\(Validators\)")
+        .unwrap()
+        .replace_all(&contents, "DenyList(StakeAuthorizationValidators)");
+    let contents = Regex::new(r"type.googleapis.com")
+        .unwrap()
+        .replace_all(&contents, "");
 
     // Patch each service definition with a feature attribute
     let patched_contents =
