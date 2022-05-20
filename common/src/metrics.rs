@@ -1,4 +1,4 @@
-use std::{fmt, future::Future, net::SocketAddr, sync::Arc};
+use std::{fmt, sync::Arc};
 
 use axum::{
     extract::{Extension, MatchedPath},
@@ -8,7 +8,6 @@ use axum::{
     response::IntoResponse,
     routing::get,
     Router,
-    Server,
 };
 use lazy_static::lazy_static;
 use prometheus_client::{
@@ -126,11 +125,7 @@ impl Registry {
     }
 }
 
-pub fn bind<S: Into<String> + fmt::Display>(
-    addr: impl Into<SocketAddr>,
-    binary: S,
-    mut registry: Registry,
-) -> impl Future<Output = Result<(), hyper::Error>> {
+pub fn routes<S: Into<String> + fmt::Display>(mut registry: Registry, binary: S) -> Router {
     let request_duration = new_request_duration();
     registry.registry.register_with_unit(
         prefix(binary, "metrics_http_duration"),
@@ -142,15 +137,13 @@ pub fn bind<S: Into<String> + fmt::Display>(
     let request_duration = Arc::new(Mutex::new(request_duration));
     let registry = Arc::new(Mutex::new(registry));
 
-    let router = Router::new()
-        .route("/metrics", get(handler))
+    Router::new()
+        .route("/", get(handler))
         .layer(Extension(registry))
         .layer(middleware::from_fn({
             let request_duration = Arc::clone(&request_duration);
             move |req, next| middleware(req, next, Arc::clone(&request_duration))
-        }));
-
-    Server::bind(&addr.into()).serve(router.into_make_service())
+        }))
 }
 
 pub async fn middleware<B>(

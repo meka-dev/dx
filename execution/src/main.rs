@@ -1,5 +1,6 @@
 use std::{fs, sync::Arc};
 
+use axum::{Router, Server};
 use common::{
     err,
     metrics,
@@ -26,13 +27,11 @@ use terrars::{
 };
 use tokio::sync::{mpsc, watch, Mutex};
 
-const BINARY_NAMESPACE: &str = "execution";
-
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing::init();
 
-    let (args, args_router) = argh::from_env::<config::Args>().router();
+    let (args, args_routes) = argh::from_env::<config::Args>().router();
     let addresses = &(*address_book::CURRENT);
 
     // Set up RPC client.
@@ -59,7 +58,7 @@ async fn main() -> Result<()> {
         mpsc::channel::<mekapi::v1::MempoolTxV2Message>(1024);
     let (trade_sender, trade_receiver) = mpsc::channel::<Trade>(100);
 
-    let mut registry = metrics::Registry::new(BINARY_NAMESPACE);
+    let mut registry = metrics::Registry::new(config::BINARY);
 
     let emitter =
         block_emitter::Observed::new(&mut registry, block_emitter::Rpc::new(latest_block_sender));
@@ -115,11 +114,11 @@ async fn main() -> Result<()> {
 
     let mut signals_handle = tokio::spawn(signals::routine(shutdown_sender)).fuse();
 
-    let params_server = params::bind(&mut registry, args.params_addr, args_router);
-    let mut params_server_handle = tokio::spawn(params_server).fuse();
-
-    let metrics_server = metrics::bind(args.metrics_addr, BINARY_NAMESPACE, registry);
-    let mut metrics_server_handle = tokio::spawn(metrics_server).fuse();
+    let router = Router::new()
+        .nest("/params", params::routes(&mut registry, args_routes))
+        .nest("/metrics", metrics::routes(registry, config::BINARY));
+    let mut op_server_handle =
+        tokio::spawn(Server::bind(&args.op_addr).serve(router.into_make_service())).fuse();
 
     let mut treasurer_handle =
         tokio::spawn(treasurer::run(treasurer, latest_block_receiver.clone())).fuse();
@@ -158,8 +157,7 @@ async fn main() -> Result<()> {
                 join??;
                 break;
             },
-            join = &mut params_server_handle => join??,
-            join = &mut metrics_server_handle => join??,
+            join = &mut op_server_handle => join??,
             join = &mut driver_handle => join??,
             join = &mut treasurer_handle => join??,
             join = &mut latest_block_handle => join??,

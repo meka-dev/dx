@@ -1,7 +1,8 @@
+use axum::{Router, Server};
 use common::{err, metrics, params, signals, storage, tracing, Result};
 use futures::FutureExt as _;
 use tendermint_rpc::{SubscriptionClient as _, WebSocketClient};
-use tokio::sync::mpsc;
+use tokio::{select, sync::mpsc};
 
 mod config;
 mod routines;
@@ -12,7 +13,7 @@ mod venue;
 async fn main() -> Result<()> {
     tracing::init();
 
-    let (args, args_router) = argh::from_env::<config::Args>().router();
+    let (args, args_routes) = argh::from_env::<config::Args>().router();
 
     let (shutdown_sender, shutdown_receiver) = mpsc::channel::<()>(1);
     let mut signals_handle = tokio::spawn(signals::routine(shutdown_sender)).fuse();
@@ -30,8 +31,11 @@ async fn main() -> Result<()> {
     let (client, driver) = WebSocketClient::new(args.rpc_url.as_str()).await?;
     let mut driver_handle = tokio::spawn(driver.run()).fuse();
 
-    let params_server = params::bind(&mut registry, args.params_addr, args_router);
-    let mut params_server_handle = tokio::spawn(params_server).fuse();
+    let router = Router::new()
+        .nest("/params", params::routes(&mut registry, args_routes))
+        .nest("/metrics", metrics::routes(registry, config::BINARY));
+    let mut op_server_handle =
+        tokio::spawn(Server::bind(&args.op_addr).serve(router.into_make_service())).fuse();
 
     let mut extract_handle = tokio::spawn(routines::extract(
         client.clone(),
@@ -57,12 +61,12 @@ async fn main() -> Result<()> {
     .fuse();
 
     loop {
-        tokio::select! {
+        select! {
             join = &mut signals_handle => {
                 join??;
                 break;
             },
-            join = &mut params_server_handle => join??,
+            join = &mut op_server_handle => join??,
             join = &mut driver_handle => join??,
 
             join = &mut extract_handle => join??,
