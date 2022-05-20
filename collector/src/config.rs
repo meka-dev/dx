@@ -1,6 +1,7 @@
 use std::{net::SocketAddr, time::Duration};
 
 use common::Result;
+use params_derive::params;
 
 const API_SOCKET_PATH: &str = "/tmp/mtek-collector.sock";
 
@@ -18,6 +19,7 @@ pub const BINARY: &str = env!("CARGO_PKG_NAME");
 pub const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 /// General purpose event sink which shuttles of to a storage backend.
+#[params]
 #[derive(argh::FromArgs, Debug)]
 pub struct Args {
     /// HTTP api server.  (127.0.0.1:4430)
@@ -44,9 +46,9 @@ pub struct Args {
     #[argh(option, default = "SEGMENT_COUNT_LIMIT")]
     pub segment_count_limit: usize,
 
-    /// HTTP server for metrics. (127.0.0.1:4431)
-    #[argh(option, default = "([127, 0, 0, 1], 4431).into()")]
-    pub metrics_addr: SocketAddr,
+    /// HTTP server for operational endpoints. (127.0.0.1:4431)
+    #[argh(option, default = "([127, 0, 0, 1], 4445).into()")]
+    pub op_addr: SocketAddr,
 
     /// GCS bucket for event storage
     #[argh(option, default = "BUCKET_NAME.to_string()")]

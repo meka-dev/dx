@@ -8,6 +8,8 @@ use common::{CHAIN_ID, LCD_URL, MEKAPI_URL, RPC_URL};
 use params_derive::params;
 use tendermint::chain;
 
+pub const BINARY: &str = "execution";
+
 /// Execution environemnt for Mekatek strategies.
 #[params]
 #[derive(argh::FromArgs, Debug)]
@@ -34,13 +36,9 @@ pub struct Args {
     #[argh(option, default = "MEKAPI_URL.to_string()")]
     pub mekapi_url: String,
 
-    /// HTTP server for metrics. (127.0.0.1:4444)
+    /// HTTP server for operational endpoints. (127.0.0.1:4444)
     #[argh(option, default = "([127, 0, 0, 1], 4444).into()")]
-    pub metrics_addr: SocketAddr,
-
-    /// HTTP server for params reading and manipulation. (127.0.0.1:4445)
-    #[argh(option, default = "([127, 0, 0, 1], 4445).into()")]
-    pub params_addr: SocketAddr,
+    pub op_addr: SocketAddr,
 
     /// WS endpoint for Terra's tendermint RPC (ws://127.0.0.1:26657/websocket)
     #[argh(option, default = "RPC_URL.to_string()")]

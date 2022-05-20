@@ -29,9 +29,9 @@ pub struct Args {
     #[argh(option, default = "CHAIN_ID.parse().unwrap()")]
     pub chain_id: chain::Id,
 
-    /// HTTP server for params reading and manipulation. (127.0.0.1:4445)
+    /// HTTP server for operational endpoints. (127.0.0.1:4445)
     #[argh(option, default = "([127, 0, 0, 1], 4446).into()")]
-    pub params_addr: SocketAddr,
+    pub op_addr: SocketAddr,
 
     /// RPC endpoint serving Tendermint websocket (ws://127.0.0.1:26657/websocket)
     #[argh(option, default = "RPC_URL.to_string()")]
