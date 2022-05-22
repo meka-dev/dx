@@ -8,12 +8,13 @@ use common::{
     Result,
 };
 use cosmwasm_bignumber::Uint256;
+use lcd::Lcd;
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{family::Family, gauge::Gauge},
 };
 use tendermint::block;
-use terrars::{dex::Token, lcd::Lcd};
+use terrars::dex::Token;
 use tokio::sync::watch;
 
 use crate::accounts;

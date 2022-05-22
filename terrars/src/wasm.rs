@@ -1,9 +1,12 @@
+use std::str::FromStr;
+
 use common::Result;
+// use chainrs::{ Any as Msg, MsgProto};
 use cosmrs::tx::{Msg, MsgProto};
 pub use cosmwasm_std::Addr;
 use serde::{Deserialize, Serialize};
 
-use crate::{base, proto};
+use crate::proto;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct QueryContractStoreResponse<T> {
@@ -12,7 +15,7 @@ pub struct QueryContractStoreResponse<T> {
 
 #[derive(Clone, Debug)]
 pub struct MsgExecuteContract {
-    pub coins: Vec<base::Coin>,
+    pub coins: Vec<chainrs::cosmos::base::Coin>,
     pub contract_address: Addr,
     pub execute_msg: Vec<u8>,
     pub sender: String,
@@ -20,6 +23,26 @@ pub struct MsgExecuteContract {
 
 impl Msg for MsgExecuteContract {
     type Proto = proto::terra::wasm::v1beta1::MsgExecuteContract;
+}
+
+impl From<&chainrs::cosmos::base::Coin> for proto::cosmos::base::v1beta1::Coin {
+    fn from(value: &chainrs::cosmos::base::Coin) -> proto::cosmos::base::v1beta1::Coin {
+        proto::cosmos::base::v1beta1::Coin {
+            amount: value.amount.to_string(),
+            denom: value.denom.to_string(),
+        }
+    }
+}
+
+impl TryFrom<&proto::cosmos::base::v1beta1::Coin> for chainrs::cosmos::base::Coin {
+    type Error = cosmrs::ErrorReport;
+
+    fn try_from(input: &proto::cosmos::base::v1beta1::Coin) -> Result<chainrs::cosmos::base::Coin> {
+        Ok(chainrs::cosmos::base::Coin {
+            amount: input.amount.parse::<cosmrs::Decimal>()?,
+            denom: chainrs::cosmos::base::Denom::from_str(&input.denom)?,
+        })
+    }
 }
 
 impl TryFrom<crate::proto::terra::wasm::v1beta1::MsgExecuteContract> for MsgExecuteContract {

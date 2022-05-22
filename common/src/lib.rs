@@ -1,4 +1,4 @@
-pub use eyre::{eyre as err, Context, Error, Report, Result};
+pub use eyre::{eyre as err, Context, Error, Report, Result, WrapErr};
 
 pub mod metrics;
 pub mod params;

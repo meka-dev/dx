@@ -5,7 +5,7 @@ use std::{
 };
 
 use astroport::asset::AssetInfo;
-use cosmrs::Denom;
+use chainrs::cosmos::base::{AccountId, Coin, Denom};
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{to_binary, Addr, Decimal, Uint128};
 use cw20::Cw20ExecuteMsg;
@@ -14,10 +14,8 @@ use terraswap::pair::Cw20HookMsg;
 use tracing::trace;
 
 use crate::{
-    base::Coin,
     dex::{Asset, Token, TokenPair},
     wasm::MsgExecuteContract,
-    AccountId,
 };
 
 pub type TokenIndex = HashMap<Token, Vec<usize>>;
@@ -207,7 +205,7 @@ pub fn swap(
         Token::Native { denom } => (
             contract_address,
             vec![Coin {
-                amount,
+                amount: cosmrs::Decimal::from(amount.0.as_u64()),
                 denom: Denom::from_str(denom).unwrap(),
             }],
             serde_json::to_vec(&pair::ExecuteMsg::Swap {
@@ -290,12 +288,13 @@ pub fn assert_max_spread(
 mod tests {
     use std::str::FromStr;
 
+    use chainrs::cosmos::base::AccountId;
     use cosmwasm_bignumber::{Decimal256, Uint256};
     use cosmwasm_std::Addr;
     use terraswap::pair::ExecuteMsg;
 
     use super::Token;
-    use crate::{dex::swap, AccountId};
+    use crate::dex::swap;
 
     #[test]
     fn swap_number_integrity() {
@@ -309,7 +308,10 @@ mod tests {
         let ms = Decimal256::from_str("0.005").unwrap();
 
         let s = swap(addr, &sender, &token, amount, bp, ms);
-        assert_eq!(s.coins.first().unwrap().amount, amount);
+        assert_eq!(
+            s.coins.first().unwrap().amount.to_string(),
+            amount.to_string()
+        );
 
         let exec: ExecuteMsg = serde_json::from_slice(&s.execute_msg).unwrap();
         if let ExecuteMsg::Swap {

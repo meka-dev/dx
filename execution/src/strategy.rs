@@ -1,5 +1,5 @@
+use chainrs::cosmos::base::AccountId;
 use cosmwasm_bignumber::Uint256;
-use cosmwasm_std::Addr;
 use tendermint::block::{self};
 use terrars::{dex::Pools, wasm::MsgExecuteContract};
 
@@ -9,7 +9,7 @@ pub mod fetcher;
 pub mod metrics;
 pub mod multi_dex;
 
-pub type Route = Vec<Addr>;
+pub type Route = Vec<AccountId>;
 
 #[derive(Clone, Debug)]
 pub struct Trade {
@@ -24,7 +24,7 @@ pub trait Strategy: Send {
     async fn execute_mempool_tx(
         &mut self,
         height: block::Height,
-        sender: &terrars::AccountId,
+        sender: &AccountId,
         pools: &[mekapi::v3::Pool],
     ) -> Vec<Trade>;
 
@@ -33,7 +33,7 @@ pub trait Strategy: Send {
     async fn execute_pools(
         &mut self,
         height: block::Height,
-        sender: &terrars::AccountId,
+        sender: &AccountId,
         funds: &accounts::Balances,
         pools: &Pools,
     ) -> Vec<Trade>;

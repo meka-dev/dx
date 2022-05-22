@@ -4,6 +4,11 @@ use std::{
 };
 
 use async_trait::async_trait;
+use chainrs::{
+    cosmos::{auth::BaseAccount, base::AccountId},
+    proto::cosmos::base::abci::v1beta1::GasInfo,
+    tx,
+};
 use common::{
     err,
     metrics::{Registry, ResultLabel, BUCKETS},
@@ -11,6 +16,7 @@ use common::{
     Context as _,
     Result,
 };
+use cosmrs::{crypto::secp256k1::SigningKey, tx::Msg};
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{counter::Counter, family::Family, histogram::Histogram},
@@ -18,7 +24,6 @@ use prometheus_client::{
 };
 use tendermint::{abci::Transaction, block::Height, chain};
 use tendermint_rpc::{endpoint::broadcast, Client as _, WebSocketClient};
-use terrars::{base::abci::GasInfo, wasm::Addr, AccountId, BaseAccount, Msg as _, SigningKey};
 use tokio::{
     sync::{mpsc, Mutex},
     time::Instant,
@@ -138,7 +143,7 @@ impl Broadcaster for Rpc {
             .into_iter()
             .map(|msg| msg.to_any().unwrap())
             .collect::<Vec<_>>();
-        let tx = terrars::tx::sign(
+        let tx = tx::sign(
             self.chain_id.clone(),
             &SigningKey::from_bytes(&self.signing_key_bytes)
                 .map_err(|err| err!("failed to craft signing key from bytes: {}", err))?,
@@ -193,20 +198,21 @@ impl Broadcaster for Rpc {
     }
 }
 
-fn gas_estimator(addr: &Addr) -> u64 {
+// NB(pm): needs rework
+fn gas_estimator(addr: &AccountId) -> u64 {
     let expensive = HashSet::from([
-        Addr::unchecked("terra1qpd9n7afwf45rkjlpujrrdfh83pldec8rpujgn"), // bLuna/ust
-        Addr::unchecked("terra18r6rdnkgrg74zew3d8l9nhk0m4xanpeukw3e20"), // bLuna/ust
-        Addr::unchecked("terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p"), // bLuna/luna
-        Addr::unchecked("terra1v93ll6kqp33unukuwls3pslquehnazudu653au"), // bLuna/luna
-        Addr::unchecked("terra1x8h5gan6vey5cz2xfyst74mtqsj7746fqj2hze"), // bLuna/lunax
-        Addr::unchecked("terra10lv5wz84kpwxys7jeqkfxx299drs3vnw0lj8mz"), // nLuna/psi
-        Addr::unchecked("terra1zvn8z6y8u2ndwvsjhtpsjsghk6pa6ugwzxp6vx"), // nLuna/psi
-        Addr::unchecked("terra1c5swgtnuunpf75klq5uztynurazuwqf0mmmcyy"), // beth/meth
-        Addr::unchecked("terra1myl709y74vrdcyuxy6g9wv5l2sgah4e9lstnwe"), // beth/ust
+        "terra1qpd9n7afwf45rkjlpujrrdfh83pldec8rpujgn".to_owned(), // bLuna/ust
+        "terra18r6rdnkgrg74zew3d8l9nhk0m4xanpeukw3e20".to_owned(), // bLuna/ust
+        "terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p".to_owned(), // bLuna/luna
+        "terra1v93ll6kqp33unukuwls3pslquehnazudu653au".to_owned(), // bLuna/luna
+        "terra1x8h5gan6vey5cz2xfyst74mtqsj7746fqj2hze".to_owned(), // bLuna/lunax
+        "terra10lv5wz84kpwxys7jeqkfxx299drs3vnw0lj8mz".to_owned(), // nLuna/psi
+        "terra1zvn8z6y8u2ndwvsjhtpsjsghk6pa6ugwzxp6vx".to_owned(), // nLuna/psi
+        "terra1c5swgtnuunpf75klq5uztynurazuwqf0mmmcyy".to_owned(), // beth/meth
+        "terra1myl709y74vrdcyuxy6g9wv5l2sgah4e9lstnwe".to_owned(), // beth/ust
     ]);
 
-    if expensive.contains(addr) {
+    if expensive.contains(&addr.to_string()) {
         625000
     } else {
         350000

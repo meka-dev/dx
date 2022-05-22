@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
+use chainrs::cosmos::base::AccountId;
 use common::Result;
 use cosmwasm_bignumber::Uint256;
-use terrars::{dex, lcd::Lcd, AccountId};
+use lcd::Lcd;
+use terrars::dex;
 
 pub const PREFIX: &str = "terra";
 
@@ -20,7 +22,7 @@ where
             dex::Token::Native {
                 denom: coin.denom.to_string(),
             },
-            coin.amount,
+            Uint256::from(coin.amount.0),
         );
     }
 

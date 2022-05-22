@@ -1,17 +1,19 @@
 use std::sync::Arc;
 
+use chainrs::cosmos::base::AccountId;
 use common::{
     tracing::{debug, error},
     Result,
 };
 use futures::StreamExt as _;
+use lcd::Lcd;
 use tendermint::block;
 use tendermint_rpc::{
     query::{EventType, Query},
     SubscriptionClient as _,
     WebSocketClient,
 };
-use terrars::{dex, lcd::Lcd};
+use terrars::dex;
 use tokio::sync::{mpsc, watch, Mutex};
 
 use crate::{
@@ -38,8 +40,8 @@ pub async fn execution<F, L, M, T>(
     mut latest_block_receiver: watch::Receiver<block::Block>,
     mut mempool_tx_receiver: mpsc::Receiver<mekapi::v1::MempoolTxV2Message>,
     trade_sender: mpsc::Sender<Trade>,
-    proxy_addr: terrars::AccountId,
-    account_id: terrars::AccountId,
+    proxy_addr: AccountId,
+    account_id: AccountId,
     mut strategies: Vec<Box<dyn Strategy + Sync>>,
 ) -> Result<()>
 where

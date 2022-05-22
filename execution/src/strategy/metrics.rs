@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use chainrs::cosmos::base::AccountId;
 use common::{
     metrics::{Registry, BUCKETS},
     tracing::debug,
@@ -253,7 +254,7 @@ where
     async fn execute_mempool_tx(
         &mut self,
         height: block::Height,
-        sender: &terrars::AccountId,
+        sender: &AccountId,
         pools: &[mekapi::v3::Pool],
     ) -> Vec<Trade> {
         let start = Instant::now();
@@ -267,7 +268,7 @@ where
     async fn execute_pools(
         &mut self,
         height: block::Height,
-        sender: &terrars::AccountId,
+        sender: &AccountId,
         funds: &accounts::Balances,
         pools: &dex::Pools,
     ) -> Vec<Trade> {

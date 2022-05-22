@@ -1,5 +1,6 @@
 use std::fmt;
 
+use chainrs::cosmos::base::AccountId;
 use common::{
     metrics::{Registry, ResultLabel, BUCKETS},
     spawn::flatten,
@@ -7,13 +8,14 @@ use common::{
     Result,
 };
 use cosmwasm_std::Addr;
+use lcd::Lcd;
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{family::Family, histogram::Histogram},
     registry::Unit,
 };
 use tendermint::block::Height;
-use terrars::{dex, lcd::Lcd, AccountId};
+use terrars::dex;
 use tokio::time::Instant;
 
 use crate::accounts;
