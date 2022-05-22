@@ -1,8 +1,8 @@
+use chainrs::cosmos::base::AccountId;
 use common::{
     metrics::{self, Registry},
     Result,
 };
-use cosmwasm_std::Addr;
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{family::Family, histogram::Histogram},
@@ -62,7 +62,7 @@ impl<T> Tracker for Observed<T>
 where
     T: Tracker,
 {
-    fn is_tracked(&self, route: &Route) -> Option<Addr> {
+    fn is_tracked(&self, route: &Route) -> Option<AccountId> {
         let start = Instant::now();
         let res = self.next.is_tracked(route);
         self.observe(start, Method::IsTracked);

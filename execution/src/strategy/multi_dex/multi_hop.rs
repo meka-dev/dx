@@ -4,6 +4,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use arby::msg::ExecuteMsg;
 use bigint::U256;
+use chainrs::cosmos::base::AccountId;
 use common::tracing::{debug, error, trace};
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Addr, Decimal256 as StdDecimal256, Fraction, Uint128, Uint256 as StdUint256};
@@ -13,7 +14,6 @@ use tendermint::block;
 use terrars::{
     dex::{self, max_spread, Pool, Token},
     wasm::MsgExecuteContract,
-    AccountId,
 };
 use xxhash_rust::xxh3::Xxh3Builder;
 
@@ -26,19 +26,19 @@ use crate::{
 type XxIndexSet<K> = IndexSet<K, Xxh3Builder>;
 
 // Adjacency map for token -> pools
-type TokenAdjacencyMap = HashMap<Token, HashSet<Addr>>;
+type TokenAdjacencyMap = HashMap<Token, HashSet<AccountId>>;
 
 // Mapping to allow efficient pool data look-up
-type PoolMap = HashMap<Addr, Pool>;
+type PoolMap = HashMap<AccountId, Pool>;
 
 #[derive(Default)]
 pub struct MultiHop {
     num_pools: usize,
     sync_height: u64,
     funds: accounts::Balances,
-    pools: HashMap<Addr, Pool>,
-    paths: Vec<Vec<Addr>>,
-    pool_paths: HashMap<Addr, Vec<Vec<Addr>>>,
+    pools: HashMap<AccountId, Pool>,
+    paths: Vec<Vec<AccountId>>,
+    pool_paths: HashMap<AccountId, Vec<Vec<AccountId>>>,
     proxy: String,
 }
 
@@ -62,11 +62,11 @@ impl MultiHop {
         start: &Token,
         pool_map: &PoolMap,
         token_adjacencies: &TokenAdjacencyMap,
-    ) -> Vec<Vec<Addr>> {
-        let mut pool_paths: Vec<Vec<Addr>> = vec![];
-        let mut pool_trail: XxIndexSet<&Addr> = XxIndexSet::with_hasher(Xxh3Builder::new());
+    ) -> Vec<Vec<AccountId>> {
+        let mut pool_paths: Vec<Vec<AccountId>> = vec![];
+        let mut pool_trail: XxIndexSet<&AccountId> = XxIndexSet::with_hasher(Xxh3Builder::new());
         // a queue for every level/node in the tree, e.g. a queue of queues
-        let mut pool_q: VecDeque<VecDeque<&Addr>> = VecDeque::new();
+        let mut pool_q: VecDeque<VecDeque<&AccountId>> = VecDeque::new();
 
         let mut src = start.clone();
         let mut dst: Token;
@@ -120,7 +120,8 @@ impl MultiHop {
             // If the new destination is our starting point, then we found a cycle and
             // we can push it to the valid trade paths.
             if dst == *start && !pool_trail.is_empty() {
-                let mut p: Vec<Addr> = pool_trail.clone().iter().map(|e| (*e).clone()).collect();
+                let mut p: Vec<AccountId> =
+                    pool_trail.clone().iter().map(|e| (*e).clone()).collect();
                 p.push((*pool).clone());
                 pool_paths.push(p);
 
@@ -165,13 +166,29 @@ impl MultiHop {
             token_adjacencies
                 .entry(left.clone())
                 .or_insert_with(HashSet::new)
-                .insert(pool.contract_address.clone());
+                .insert(
+                    pool.contract_address
+                        .to_string()
+                        .parse::<AccountId>()
+                        .unwrap(),
+                );
             token_adjacencies
                 .entry(right.clone())
                 .or_insert_with(HashSet::new)
-                .insert(pool.contract_address.clone());
+                .insert(
+                    pool.contract_address
+                        .to_string()
+                        .parse::<AccountId>()
+                        .unwrap(),
+                );
 
-            pool_map.insert(pool.contract_address.clone(), pool.clone());
+            pool_map.insert(
+                pool.contract_address
+                    .to_string()
+                    .parse::<AccountId>()
+                    .unwrap(),
+                pool.clone(),
+            );
         }
 
         // XXX: do I care about cleaning up the graph to remove unused pairs?
@@ -179,7 +196,7 @@ impl MultiHop {
         // token_adjacencies.retain(|_, v| v.len() > 1);
 
         self.paths = self.dfs(&start, &pool_map, &token_adjacencies);
-        let mut pps: HashMap<Addr, Vec<Vec<Addr>>> = HashMap::new();
+        let mut pps: HashMap<AccountId, Vec<Vec<AccountId>>> = HashMap::new();
         for path in &self.paths {
             for step in path {
                 // pps.entry(step.clone()).or_insert(XxIndexSet::with_hasher(Xxh3Builder::new())).
@@ -199,7 +216,7 @@ impl Strategy for MultiHop {
     async fn execute_mempool_tx(
         &mut self,
         height: block::Height,
-        sender: &terrars::AccountId,
+        sender: &AccountId,
         pools: &[mekapi::v3::Pool],
     ) -> Vec<Trade> {
         if self.num_pools == 0 || self.sync_height < height.into() {
@@ -207,12 +224,17 @@ impl Strategy for MultiHop {
             return vec![];
         }
 
-        let mut touched: Vec<&Addr> = vec![];
+        let mut touched: Vec<AccountId> = vec![];
         {
             for ps in pools {
-                if let Some(p) = self.pools.get_mut(&ps.contract_address) {
+                let ca = ps
+                    .contract_address
+                    .to_string()
+                    .parse::<AccountId>()
+                    .unwrap();
+                if let Some(p) = self.pools.get_mut(&ca) {
                     *p = (*ps).clone().into();
-                    touched.push(&ps.contract_address);
+                    touched.push(ca);
                 }
             }
         }
@@ -225,7 +247,7 @@ impl Strategy for MultiHop {
             return vec![];
         }
 
-        let paths = HashSet::<Vec<Addr>>::from_iter(
+        let paths = HashSet::<Vec<AccountId>>::from_iter(
             touched
                 .iter()
                 .flat_map(|t| (*self.pool_paths.get(t).unwrap_or(&vec![])).clone()),
@@ -240,7 +262,7 @@ impl Strategy for MultiHop {
                     &start,
                     sender,
                     bal,
-                    Addr::unchecked(self.proxy.clone()),
+                    self.proxy.parse::<AccountId>().unwrap(),
                 )
             })
             .collect::<Vec<_>>();
@@ -256,7 +278,7 @@ impl Strategy for MultiHop {
     async fn execute_pools(
         &mut self,
         height: block::Height,
-        _sender: &terrars::AccountId,
+        _sender: &AccountId,
         funds: &accounts::Balances,
         pools: &dex::Pools,
     ) -> Vec<Trade> {
@@ -265,12 +287,12 @@ impl Strategy for MultiHop {
         let p = if self.num_pools == pools.0.len() {
             // No need to rebuild paths, just update liq
             debug!("num_pools unchanged, no need to build graph");
-            HashMap::from_iter(
-                pools
-                    .0
-                    .iter()
-                    .map(|p| (p.contract_address.clone(), (*p).clone())),
-            )
+            HashMap::from_iter(pools.0.iter().map(|p| {
+                (
+                    p.contract_address.to_string().parse::<AccountId>().unwrap(),
+                    (*p).clone(),
+                )
+            }))
         } else {
             self.num_pools = pools.0.len();
             self.prepare_paths(start, pools)
@@ -301,12 +323,12 @@ impl Strategy for MultiHop {
 
 // Check if a given path can generate a profitable trade (ignoring tx fee)
 fn find_trade(
-    path: &[Addr],
-    spools: &HashMap<Addr, Pool>,
+    path: &[AccountId],
+    spools: &HashMap<AccountId, Pool>,
     start: &Token,
     sender: &AccountId,
     bal: Uint256,
-    proxy: Addr,
+    proxy: AccountId,
 ) -> Option<Trade> {
     // debug!("path: {:#?}", path);
     let ppath = path
@@ -341,7 +363,7 @@ fn find_trade(
 // asset0 is always bid and asset1 is the ask.
 pub fn trade_path<'a, T: Iterator<Item = &'a Pool>>(
     sender: &AccountId,
-    proxy: Addr,
+    proxy: AccountId,
     pools: T,
     start: &Token,
     amount: Uint256,
@@ -349,7 +371,7 @@ pub fn trade_path<'a, T: Iterator<Item = &'a Pool>>(
     let mut cb = amount;
     let mut bid_token = start.clone();
     let mut path = vec![];
-    let mut route = vec![];
+    let mut route: Vec<AccountId> = vec![];
 
     for p in pools {
         let ask_token = p.ask_token(&bid_token);
@@ -369,7 +391,7 @@ pub fn trade_path<'a, T: Iterator<Item = &'a Pool>>(
                 p.contract_address,
             );
             path.push(p.swap_arby(&bid_token));
-            route.push(p.contract_address.clone());
+            route.push(p.contract_address.to_string().parse::<AccountId>().unwrap());
 
             cb = swap_ret;
             bid_token = ask_token;
@@ -387,7 +409,7 @@ pub fn trade_path<'a, T: Iterator<Item = &'a Pool>>(
 
     let msg = MsgExecuteContract {
         coins: vec![],
-        contract_address: proxy,
+        contract_address: Addr::unchecked(proxy.to_string()),
         execute_msg: serde_json::to_vec(&ExecuteMsg::Sprint {
             input: amount.into(),
             min_out: Uint128::new(0u128),
@@ -495,7 +517,7 @@ fn sd256_to_d256(d: StdDecimal256) -> Decimal256 {
 
 fn get_tokens(
     start: &Token,
-    trail: &XxIndexSet<&Addr>,
+    trail: &XxIndexSet<&AccountId>,
     pool_map: &PoolMap,
 ) -> Option<(Token, Token)> {
     if trail.is_empty() {

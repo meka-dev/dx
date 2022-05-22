@@ -2,7 +2,7 @@ use std::ops;
 
 use common::{err, Report};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Namespace(String);
 
 impl ops::Deref for Namespace {

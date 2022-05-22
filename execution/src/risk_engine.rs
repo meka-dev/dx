@@ -365,10 +365,8 @@ mod tests {
 
     use cosmwasm_bignumber::Decimal256;
     use cosmwasm_std::{Addr, Uint128};
-    use terrars::{
-        dex::{Asset, Pool, Token},
-        lcd::{self, Lcd},
-    };
+    use lcd::{self, Lcd};
+    use terrars::dex::{Asset, Pool, Token};
 
     use super::*;
 

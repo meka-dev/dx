@@ -1,8 +1,16 @@
 use serde::{Deserialize, Serialize};
 
-use super::{serialize_bytes_as_base64, serialize_field_as_string};
+use crate::{
+    json::{serialize_bytes_as_base64, serialize_field_as_string},
+    proto::cosmos::base::abci,
+    MsgProto,
+};
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+impl MsgProto for abci::v1beta1::MsgData {
+    const TYPE_URL: &'static str = "/cosmos.base.abci.v1beta1.MsgData";
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct GasInfo {
     #[serde(with = "serialize_field_as_string")]
     pub gas_wanted: u64,

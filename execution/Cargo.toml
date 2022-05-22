@@ -9,6 +9,7 @@ async-trait         = { version = "0.1",  default-features = false }
 axum                = { version = "0.5",  default-features = false, features = [ "headers", "http2", "json", "tower-log" ] }
 axum-extra          = { version = "0.3",  default-features = false }
 bigint              = { version = "4.4",  default-features = false }
+cosmrs              = { version = "0.7",  default-features = false, features = [ "cosmwasm" ], git = "https://github.com/meka-dev/cosmos-rust.git", branch = "xla/expand-types" }
 cosmwasm-std        = { version = "0.16", default-features = false }
 cosmwasm-bignumber  = { version = "2.2",  default-features = false }
 futures             = { version = "0.3",  default-features = false, features = [ "async-await", "std" ] }
@@ -29,7 +30,9 @@ xxhash-rust         = { version = "0.8",  default-features = false, features = [
 
 address-book        = { version = "0.1",  default-features = false, path = "../address-book" }
 arby                = { version = "0.1",  default-features = false, path = "../contracts/arby" }
+chainrs             = { version = "0.1",  default-features = false, path = "../chainrs" }
 common              = { version = "0.1",  default-features = false, path = "../common" }
+lcd                 = { version = "0.1",  default-features = false, path = "../lcd" }
 mekapi              = { version = "0.1",  default-features = false, path = "../mekapi" }
 params-derive       = { version = "0.1",  default-features = false, path = "../params-derive" }
 terrars             = { version = "0.1",  default-features = false, path = "../terrars" }

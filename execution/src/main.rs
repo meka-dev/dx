@@ -1,6 +1,7 @@
-use std::{fs, sync::Arc};
+use std::{fs, str::FromStr, sync::Arc};
 
 use axum::{Router, Server};
+use chainrs::cosmos::{auth::BaseAccount, base::AccountId};
 use common::{
     err,
     metrics,
@@ -9,6 +10,7 @@ use common::{
     tracing::{self, error},
     Result,
 };
+use cosmrs::crypto::secp256k1::SigningKey;
 use execution::{
     accounts,
     block_emitter,
@@ -20,11 +22,8 @@ use execution::{
     treasurer,
 };
 use futures::FutureExt as _;
+use lcd::{self, Lcd};
 use tendermint_rpc::{Client as _, SubscriptionClient as _, WebSocketClient};
-use terrars::{
-    lcd::{self, Lcd},
-    BaseAccount,
-};
 use tokio::sync::{mpsc, watch, Mutex};
 
 #[tokio::main]
@@ -67,11 +66,14 @@ async fn main() -> Result<()> {
         let raw = fs::read(args.secret_key_file.clone())?;
         hex::decode(&raw)?
     };
-    let account_id = terrars::SigningKey::from_bytes(&signing_key_bytes)
-        .unwrap()
-        .public_key()
-        .account_id(accounts::PREFIX)
-        .unwrap();
+    let account_id = AccountId::from_str(
+        SigningKey::from_bytes(&signing_key_bytes)
+            .unwrap()
+            .public_key()
+            .account_id(accounts::PREFIX)
+            .unwrap()
+            .as_ref(),
+    )?;
     // Get latest account information to ensure sequence is consistent.
     let account = lcd.auth_account(&account_id).await?.unwrap_or(BaseAccount {
         account_number: 0,

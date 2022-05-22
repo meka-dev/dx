@@ -28,7 +28,7 @@ pub struct Pool {
     pub total_weight: Uint128,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Asset {
     #[serde(deserialize_with = "denom_from_str")]
@@ -36,7 +36,7 @@ pub struct Asset {
     pub amount: Uint128,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct WeightedAsset {
     pub token: Asset,

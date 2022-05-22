@@ -32,7 +32,7 @@ impl From<Pool> for dex::Pool {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Asset {
     Cw20 {

@@ -1,13 +1,19 @@
 use std::str::FromStr;
 
 use common::{err, Result};
+pub use cosmrs::tendermint;
 pub use prost_types::Any;
 use serde::Serialize;
+
+mod json;
+mod prost_ext;
 
 pub mod cosmos;
 pub mod ibc;
 pub mod osmosis;
+pub mod tx;
 
+#[allow(clippy::derive_partial_eq_without_eq)]
 pub mod proto {
     pub const OSMOSIS_VERSION: &str = include_str!("proto/OSMOSIS_COMMIT");
 

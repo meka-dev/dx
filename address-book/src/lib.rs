@@ -1,6 +1,6 @@
+use chainrs::cosmos::base::AccountId;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use terrars::AccountId;
 
 const CURRENT_JSON: &str = include_str!("../library/current.json");
 
@@ -34,8 +34,8 @@ pub struct Sprinter {
 mod tests {
     use std::str::FromStr as _;
 
+    use chainrs::cosmos::base::AccountId;
     use serde_json::json;
-    use terrars::AccountId;
 
     use super::{AddressBook, Feegrant};
 

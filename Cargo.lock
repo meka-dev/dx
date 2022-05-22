@@ -6,10 +6,10 @@ version = 3
 name = "address-book"
 version = "0.1.0"
 dependencies = [
+ "chainrs",
  "lazy_static",
  "serde",
  "serde_json",
- "terrars",
 ]
 
 [[package]]
@@ -383,6 +383,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "chainrs"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "common",
  "cosmrs",
  "prost",
@@ -391,7 +392,9 @@ dependencies = [
  "prost-wkt-types",
  "serde",
  "serde_json",
+ "subtle-encoding",
  "tendermint-proto",
+ "thiserror",
 ]
 
 [[package]]
@@ -529,7 +532,7 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 [[package]]
 name = "cosmos-sdk-proto"
 version = "0.12.1"
-source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#87cc03b1a4f545af0bde39238385391c5bc5157f"
+source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#8975df55ad99ddaed925def666800fee596999b5"
 dependencies = [
  "prost",
  "prost-types",
@@ -539,7 +542,7 @@ dependencies = [
 [[package]]
 name = "cosmrs"
 version = "0.7.0"
-source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#87cc03b1a4f545af0bde39238385391c5bc5157f"
+source = "git+https://github.com/meka-dev/cosmos-rust.git?branch=xla/expand-types#8975df55ad99ddaed925def666800fee596999b5"
 dependencies = [
  "cosmos-sdk-proto",
  "ecdsa 0.13.4",
@@ -1084,7 +1087,9 @@ dependencies = [
  "axum",
  "axum-extra",
  "bigint",
+ "chainrs",
  "common",
+ "cosmrs",
  "cosmwasm-bignumber",
  "cosmwasm-std",
  "criterion",
@@ -1093,6 +1098,7 @@ dependencies = [
  "hyper",
  "indexmap",
  "itertools",
+ "lcd",
  "mekapi",
  "params-derive",
  "prometheus-client",
@@ -1747,6 +1753,25 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+
+[[package]]
+name = "lcd"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base64",
+ "chainrs",
+ "common",
+ "cosmrs",
+ "prost-build",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "walkdir",
+ "wiremock",
+]
 
 [[package]]
 name = "libc"
@@ -3244,6 +3269,7 @@ dependencies = [
  "astroport",
  "async-trait",
  "base64",
+ "chainrs",
  "common",
  "cosmrs",
  "cosmwasm-bignumber",
@@ -3251,6 +3277,7 @@ dependencies = [
  "cw20",
  "futures",
  "hex",
+ "lcd",
  "prost",
  "prost-build",
  "prost-types",

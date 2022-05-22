@@ -9,10 +9,6 @@ pub use cosmrs::{
     Denom,
 };
 
-mod bank;
-pub mod base;
 pub mod dex;
-pub mod lcd;
 pub mod proto;
-pub mod tx;
 pub mod wasm;
