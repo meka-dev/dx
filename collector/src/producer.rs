@@ -13,7 +13,7 @@ lazy_static! {
     pub static ref HEADER: HeaderName = HeaderName::from_static(HEADER_NAME);
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Producer(String);
 
 impl Deref for Producer {

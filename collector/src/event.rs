@@ -1,6 +1,6 @@
 use common::{err, Report};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Event(String);
 
 impl Event {
