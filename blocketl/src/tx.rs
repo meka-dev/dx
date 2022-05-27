@@ -11,12 +11,14 @@ use tendermint_proto::types::TxProof;
 use tendermint_rpc::{
     endpoint::tx::Response,
     query::{EventType, Query},
-    Client as _,
+    Client,
     Order,
-    WebSocketClient,
 };
 
-pub async fn get_info(client: WebSocketClient, hash: Hash) -> Result<Tx> {
+pub async fn get_info<C>(client: C, hash: Hash) -> Result<Tx>
+where
+    C: Client + Send + Sync,
+{
     let query = Query::from(EventType::Tx).and_eq("tx.hash", hash.to_string());
     let res = client
         .tx_search(query, false, 1, 30, Order::Ascending)

@@ -1,7 +1,7 @@
 use axum::{Router, Server};
 use common::{err, metrics, params, signals, storage, tracing, Result};
 use futures::FutureExt as _;
-use tendermint_rpc::{SubscriptionClient as _, WebSocketClient};
+use tendermint_rpc::HttpClient;
 use tokio::{select, sync::mpsc};
 
 mod config;
@@ -25,11 +25,11 @@ async fn main() -> Result<()> {
         storage::Gcs::new(args.bucket, args.service_account, config::USER_AGENT)?,
     );
 
+    let (heights_sender, heights_receiver) = mpsc::channel(1024);
     let (extracts_sender, extracts_receiver) = mpsc::channel(1024);
     let (files_sender, files_receiver) = mpsc::channel(4096);
 
-    let (client, driver) = WebSocketClient::new(args.rpc_url.as_str()).await?;
-    let mut driver_handle = tokio::spawn(driver.run()).fuse();
+    let client = HttpClient::new(args.rpc_url.as_str())?;
 
     let router = Router::new()
         .nest("/params", params::routes(&mut registry, args_routes))
@@ -37,8 +37,11 @@ async fn main() -> Result<()> {
     let mut op_server_handle =
         tokio::spawn(Server::bind(&args.op_addr).serve(router.into_make_service())).fuse();
 
+    let mut latest_height_handle =
+        tokio::spawn(routines::latest_height(client.clone(), heights_sender)).fuse();
     let mut extract_handle = tokio::spawn(routines::extract(
         client.clone(),
+        heights_receiver,
         extracts_sender,
         args.venue,
         args.chain_id,
@@ -67,8 +70,8 @@ async fn main() -> Result<()> {
                 break;
             },
             join = &mut op_server_handle => join??,
-            join = &mut driver_handle => join??,
 
+            join = &mut latest_height_handle => join??,
             join = &mut extract_handle => join??,
             join = &mut transform_handle => join??,
             join = &mut load_handle => join??,
@@ -77,5 +80,5 @@ async fn main() -> Result<()> {
         }
     }
 
-    Ok(client.close()?)
+    Ok(())
 }

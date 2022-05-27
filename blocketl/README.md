@@ -27,8 +27,9 @@ Options:
 ```
 
 Internally the program is structure as a three part pipeline. `Extract` which
-receives the latest block and for every transaction in the block calls
-`tx_search` to get per transaction metadata (most notable events). `Transform`
+receives `block::Heght`s and for every one of them retrieves the `block`,
+`block_results` and all metadata data for all transactions in the block via calls
+to `tx_search` to get per transaction metadata (most notable events). `Transform`
 which translates the metadata into files and their content. Lastly `Load` which
 operates over a stream of files and insert each of them into the storage bucket
 
