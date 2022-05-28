@@ -161,6 +161,190 @@ pub struct Module {
     #[prost(string, tag="3")]
     pub sum: ::prost::alloc::string::String,
 }
+/// Generated client implementations.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod service_client {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    /// Service defines the gRPC querier service for tendermint queries.
+    #[derive(Debug, Clone)]
+    pub struct ServiceClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl<T> ServiceClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> ServiceClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+            >>::Error: Into<StdError> + Send + Sync,
+        {
+            ServiceClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with `gzip`.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        /// Enable decompressing responses with `gzip`.
+        #[must_use]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
+        }
+        /// GetNodeInfo queries the current node info.
+        pub async fn get_node_info(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetNodeInfoRequest>,
+        ) -> Result<tonic::Response<super::GetNodeInfoResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.base.tendermint.v1beta1.Service/GetNodeInfo",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// GetSyncing queries node syncing.
+        pub async fn get_syncing(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetSyncingRequest>,
+        ) -> Result<tonic::Response<super::GetSyncingResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.base.tendermint.v1beta1.Service/GetSyncing",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// GetLatestBlock returns the latest block.
+        pub async fn get_latest_block(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetLatestBlockRequest>,
+        ) -> Result<tonic::Response<super::GetLatestBlockResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.base.tendermint.v1beta1.Service/GetLatestBlock",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// GetBlockByHeight queries block for given height.
+        pub async fn get_block_by_height(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetBlockByHeightRequest>,
+        ) -> Result<tonic::Response<super::GetBlockByHeightResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.base.tendermint.v1beta1.Service/GetBlockByHeight",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// GetLatestValidatorSet queries latest validator-set.
+        pub async fn get_latest_validator_set(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetLatestValidatorSetRequest>,
+        ) -> Result<
+                tonic::Response<super::GetLatestValidatorSetResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.base.tendermint.v1beta1.Service/GetLatestValidatorSet",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// GetValidatorSetByHeight queries validator-set at a given height.
+        pub async fn get_validator_set_by_height(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetValidatorSetByHeightRequest>,
+        ) -> Result<
+                tonic::Response<super::GetValidatorSetByHeightResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.base.tendermint.v1beta1.Service/GetValidatorSetByHeight",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+    }
+}
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_GET_VALIDATOR_SET_BY_HEIGHT_REQUEST : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.base.tendermint.v1beta1.GetValidatorSetByHeightRequest")] impl :: prost_wkt :: MessageSerde for GetValidatorSetByHeightRequest { fn package_name (& self) -> & 'static str { "cosmos.base.tendermint.v1beta1" } fn message_name (& self) -> & 'static str { "GetValidatorSetByHeightRequest" } fn type_url (& self) -> & 'static str { "/cosmos.base.tendermint.v1beta1.GetValidatorSetByHeightRequest" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 

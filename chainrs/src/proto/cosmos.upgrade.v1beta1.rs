@@ -155,6 +155,154 @@ pub struct QueryModuleVersionsResponse {
     #[prost(message, repeated, tag="1")]
     pub module_versions: ::prost::alloc::vec::Vec<ModuleVersion>,
 }
+/// Generated client implementations.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod query_client {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    /// Query defines the gRPC upgrade querier service.
+    #[derive(Debug, Clone)]
+    pub struct QueryClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl<T> QueryClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> QueryClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+            >>::Error: Into<StdError> + Send + Sync,
+        {
+            QueryClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with `gzip`.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        /// Enable decompressing responses with `gzip`.
+        #[must_use]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
+        }
+        /// CurrentPlan queries the current upgrade plan.
+        pub async fn current_plan(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryCurrentPlanRequest>,
+        ) -> Result<tonic::Response<super::QueryCurrentPlanResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.upgrade.v1beta1.Query/CurrentPlan",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// AppliedPlan queries a previously applied upgrade plan by its name.
+        pub async fn applied_plan(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryAppliedPlanRequest>,
+        ) -> Result<tonic::Response<super::QueryAppliedPlanResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.upgrade.v1beta1.Query/AppliedPlan",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// UpgradedConsensusState queries the consensus state that will serve
+        /// as a trusted kernel for the next version of this chain. It will only be
+        /// stored at the last height of this chain.
+        /// UpgradedConsensusState RPC not supported with legacy querier
+        /// This rpc is deprecated now that IBC has its own replacement
+        /// (https://github.com/cosmos/ibc-go/blob/2c880a22e9f9cc75f62b527ca94aa75ce1106001/proto/ibc/core/client/v1/query.proto#L54)
+        pub async fn upgraded_consensus_state(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryUpgradedConsensusStateRequest>,
+        ) -> Result<
+                tonic::Response<super::QueryUpgradedConsensusStateResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.upgrade.v1beta1.Query/UpgradedConsensusState",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// ModuleVersions queries the list of module versions from state.
+        ///
+        /// Since: cosmos-sdk 0.43
+        pub async fn module_versions(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryModuleVersionsRequest>,
+        ) -> Result<tonic::Response<super::QueryModuleVersionsResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.upgrade.v1beta1.Query/ModuleVersions",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+    }
+}
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_PLAN : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.upgrade.v1beta1.Plan")] impl :: prost_wkt :: MessageSerde for Plan { fn package_name (& self) -> & 'static str { "cosmos.upgrade.v1beta1" } fn message_name (& self) -> & 'static str { "Plan" } fn type_url (& self) -> & 'static str { "/cosmos.upgrade.v1beta1.Plan" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 

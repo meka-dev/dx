@@ -208,8 +208,8 @@ fn compile_osmosis_protos_and_services(out_dir: &Path) {
 
     // Compile all of the proto files, along with grpc service clients
     info!("Compiling proto definitions and clients for GRPC services!");
-    // tonic_build::configure()
-    let res = prost_build::Config::new()
+    let res = tonic_build::configure()
+        // let res = prost_build::Config::new()
         .extern_path(".tendermint", "::tendermint_proto")
         .extern_path(".google.protobuf.Any", "::prost_wkt_types::Any")
         .extern_path(".google.protobuf.Duration", "::prost_wkt_types::Duration")
@@ -226,12 +226,12 @@ fn compile_osmosis_protos_and_services(out_dir: &Path) {
         )
         .type_attribute(".", "#[derive(serde::Deserialize, serde::Serialize)]")
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]")
-        // .build_client(true)
-        // .build_server(false)
+        .build_client(true)
+        .build_server(false)
         .file_descriptor_set_path(&descriptor_file)
         .out_dir(out_dir)
-        // .compile(&protos, &includes)
-        .compile_protos(&protos, &includes);
+        .compile(&protos, &includes);
+    // .compile_protos(&protos, &includes);
 
     if let Err(err) = res {
         println!("{}", err);

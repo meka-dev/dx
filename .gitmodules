@@ -6,7 +6,7 @@
 	url = https://github.com/terra-money/core.git
 [submodule "osmosis-ibc-go"]
 	path = osmosis-ibc-go
-	url = https://github.com/osmosis-labs/ibc-go
+	url = https://github.com/osmosis-labs/ibc-go.git
 [submodule "osmosis-go"]
 	path = osmosis-go
 	url = https://github.com/meka-dev/osmosis

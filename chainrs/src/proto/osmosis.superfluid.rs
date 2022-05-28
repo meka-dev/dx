@@ -79,6 +79,275 @@ pub enum SuperfluidAssetType {
     /// SuperfluidAssetTypeLendingShare = 2; // for now not exist
     LpShare = 1,
 }
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgSuperfluidDelegate {
+    #[prost(string, tag="1")]
+    pub sender: ::prost::alloc::string::String,
+    #[prost(uint64, tag="2")]
+    pub lock_id: u64,
+    #[prost(string, tag="3")]
+    pub val_addr: ::prost::alloc::string::String,
+}
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgSuperfluidDelegateResponse {
+}
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgSuperfluidUndelegate {
+    #[prost(string, tag="1")]
+    pub sender: ::prost::alloc::string::String,
+    #[prost(uint64, tag="2")]
+    pub lock_id: u64,
+}
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgSuperfluidUndelegateResponse {
+}
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgSuperfluidUnbondLock {
+    #[prost(string, tag="1")]
+    pub sender: ::prost::alloc::string::String,
+    #[prost(uint64, tag="2")]
+    pub lock_id: u64,
+}
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgSuperfluidUnbondLockResponse {
+}
+// message MsgSuperfluidRedelegate {
+//   string sender = 1 [ (gogoproto.moretags) = "yaml:\"sender\"" ];
+//   uint64 lock_id = 2;
+//   string new_val_addr = 3;
+// }
+// message MsgSuperfluidRedelegateResponse {}
+
+/// MsgLockAndSuperfluidDelegate locks coins with the unbonding period duration,
+/// and then does a superfluid lock from the newly created lockup, to the
+/// specified validator addr.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgLockAndSuperfluidDelegate {
+    #[prost(string, tag="1")]
+    pub sender: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag="2")]
+    pub coins: ::prost::alloc::vec::Vec<super::super::cosmos::base::v1beta1::Coin>,
+    #[prost(string, tag="3")]
+    pub val_addr: ::prost::alloc::string::String,
+}
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgLockAndSuperfluidDelegateResponse {
+    #[prost(uint64, tag="1")]
+    pub id: u64,
+}
+/// MsgUnPoolWhitelistedPool Unpools every lock the sender has, that is
+/// associated with pool pool_id. If pool_id is not approved for unpooling by
+/// governance, this is a no-op. Unpooling takes the locked gamm shares, and runs
+/// "ExitPool" on it, to get the constituent tokens. e.g. z gamm/pool/1 tokens
+/// ExitPools into constituent tokens x uatom, y uosmo. Then it creates a new
+/// lock for every constituent token, with the duration associated with the lock.
+/// If the lock was unbonding, the new lockup durations should be the time left
+/// until unbond completion.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgUnPoolWhitelistedPool {
+    #[prost(string, tag="1")]
+    pub sender: ::prost::alloc::string::String,
+    #[prost(uint64, tag="2")]
+    pub pool_id: u64,
+}
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgUnPoolWhitelistedPoolResponse {
+    #[prost(uint64, repeated, tag="1")]
+    pub exited_lock_ids: ::prost::alloc::vec::Vec<u64>,
+}
+/// Generated client implementations.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod msg_client {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    /// Msg defines the Msg service.
+    #[derive(Debug, Clone)]
+    pub struct MsgClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl<T> MsgClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> MsgClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+            >>::Error: Into<StdError> + Send + Sync,
+        {
+            MsgClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with `gzip`.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        /// Enable decompressing responses with `gzip`.
+        #[must_use]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
+        }
+        /// Execute superfluid delegation for a lockup
+        pub async fn superfluid_delegate(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgSuperfluidDelegate>,
+        ) -> Result<
+                tonic::Response<super::MsgSuperfluidDelegateResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Msg/SuperfluidDelegate",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Execute superfluid undelegation for a lockup
+        pub async fn superfluid_undelegate(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgSuperfluidUndelegate>,
+        ) -> Result<
+                tonic::Response<super::MsgSuperfluidUndelegateResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Msg/SuperfluidUndelegate",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// For a given lock that is being superfluidly undelegated,
+        /// also unbond the underlying lock.
+        pub async fn superfluid_unbond_lock(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgSuperfluidUnbondLock>,
+        ) -> Result<
+                tonic::Response<super::MsgSuperfluidUnbondLockResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Msg/SuperfluidUnbondLock",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Execute lockup lock and superfluid delegation in a single msg
+        pub async fn lock_and_superfluid_delegate(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgLockAndSuperfluidDelegate>,
+        ) -> Result<
+                tonic::Response<super::MsgLockAndSuperfluidDelegateResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Msg/LockAndSuperfluidDelegate",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn un_pool_whitelisted_pool(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgUnPoolWhitelistedPool>,
+        ) -> Result<
+                tonic::Response<super::MsgUnPoolWhitelistedPoolResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Msg/UnPoolWhitelistedPool",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+    }
+}
 /// Params holds parameters for the superfluid module
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -88,22 +357,6 @@ pub struct Params {
     /// superfluid staking, default: 5%
     #[prost(string, tag="1")]
     pub minimum_risk_factor: ::prost::alloc::string::String,
-}
-/// GenesisState defines the module's genesis state.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GenesisState {
-    #[prost(message, optional, tag="1")]
-    pub params: ::core::option::Option<Params>,
-    #[prost(message, repeated, tag="2")]
-    pub superfluid_assets: ::prost::alloc::vec::Vec<SuperfluidAsset>,
-    #[prost(message, repeated, tag="3")]
-    pub osmo_equivalent_multipliers: ::prost::alloc::vec::Vec<OsmoEquivalentMultiplierRecord>,
-    #[prost(message, repeated, tag="4")]
-    pub intermediary_accounts: ::prost::alloc::vec::Vec<SuperfluidIntermediaryAccount>,
-    #[prost(message, repeated, tag="5")]
-    pub intemediary_account_connections: ::prost::alloc::vec::Vec<LockIdIntermediaryAccountConnection>,
 }
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -299,101 +552,357 @@ pub struct EstimateSuperfluidDelegatedAmountByValidatorDenomResponse {
     #[prost(message, repeated, tag="1")]
     pub total_delegated_coins: ::prost::alloc::vec::Vec<super::super::cosmos::base::v1beta1::Coin>,
 }
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSuperfluidDelegate {
-    #[prost(string, tag="1")]
-    pub sender: ::prost::alloc::string::String,
-    #[prost(uint64, tag="2")]
-    pub lock_id: u64,
-    #[prost(string, tag="3")]
-    pub val_addr: ::prost::alloc::string::String,
+/// Generated client implementations.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod query_client {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    /// Query defines the gRPC querier service.
+    #[derive(Debug, Clone)]
+    pub struct QueryClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl<T> QueryClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> QueryClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+            >>::Error: Into<StdError> + Send + Sync,
+        {
+            QueryClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with `gzip`.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        /// Enable decompressing responses with `gzip`.
+        #[must_use]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
+        }
+        /// Params returns the total set of minting parameters.
+        pub async fn params(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryParamsRequest>,
+        ) -> Result<tonic::Response<super::QueryParamsResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Query/Params",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Returns superfluid asset type
+        pub async fn asset_type(
+            &mut self,
+            request: impl tonic::IntoRequest<super::AssetTypeRequest>,
+        ) -> Result<tonic::Response<super::AssetTypeResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Query/AssetType",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Returns all superfluid asset types
+        pub async fn all_assets(
+            &mut self,
+            request: impl tonic::IntoRequest<super::AllAssetsRequest>,
+        ) -> Result<tonic::Response<super::AllAssetsResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Query/AllAssets",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Returns superfluid asset Multiplier
+        pub async fn asset_multiplier(
+            &mut self,
+            request: impl tonic::IntoRequest<super::AssetMultiplierRequest>,
+        ) -> Result<tonic::Response<super::AssetMultiplierResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Query/AssetMultiplier",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Returns all superfluid intermediary account
+        pub async fn all_intermediary_accounts(
+            &mut self,
+            request: impl tonic::IntoRequest<super::AllIntermediaryAccountsRequest>,
+        ) -> Result<
+                tonic::Response<super::AllIntermediaryAccountsResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Query/AllIntermediaryAccounts",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Returns intermediary account connected to a superfluid staked lock by id
+        pub async fn connected_intermediary_account(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ConnectedIntermediaryAccountRequest>,
+        ) -> Result<
+                tonic::Response<super::ConnectedIntermediaryAccountResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Query/ConnectedIntermediaryAccount",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Returns the total amount of osmo superfluidly staked
+        /// response denominated in uosmo
+        pub async fn total_superfluid_delegations(
+            &mut self,
+            request: impl tonic::IntoRequest<super::TotalSuperfluidDelegationsRequest>,
+        ) -> Result<
+                tonic::Response<super::TotalSuperfluidDelegationsResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Query/TotalSuperfluidDelegations",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Returns the coins superfluid delegated for a delegator, validator, denom
+        /// triplet
+        pub async fn superfluid_delegation_amount(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SuperfluidDelegationAmountRequest>,
+        ) -> Result<
+                tonic::Response<super::SuperfluidDelegationAmountResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Query/SuperfluidDelegationAmount",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Returns all the superfluid poistions for a specific delegator
+        pub async fn superfluid_delegations_by_delegator(
+            &mut self,
+            request: impl tonic::IntoRequest<
+                super::SuperfluidDelegationsByDelegatorRequest,
+            >,
+        ) -> Result<
+                tonic::Response<super::SuperfluidDelegationsByDelegatorResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Query/SuperfluidDelegationsByDelegator",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn superfluid_undelegations_by_delegator(
+            &mut self,
+            request: impl tonic::IntoRequest<
+                super::SuperfluidUndelegationsByDelegatorRequest,
+            >,
+        ) -> Result<
+                tonic::Response<super::SuperfluidUndelegationsByDelegatorResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Query/SuperfluidUndelegationsByDelegator",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Returns all the superfluid positions of a specific denom delegated to one
+        /// validator
+        pub async fn superfluid_delegations_by_validator_denom(
+            &mut self,
+            request: impl tonic::IntoRequest<
+                super::SuperfluidDelegationsByValidatorDenomRequest,
+            >,
+        ) -> Result<
+                tonic::Response<super::SuperfluidDelegationsByValidatorDenomResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Query/SuperfluidDelegationsByValidatorDenom",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Returns the amount of a specific denom delegated to a specific validator
+        /// This is labeled an estimate, because the way it calculates the amount can
+        /// lead rounding errors from the true delegated amount
+        pub async fn estimate_superfluid_delegated_amount_by_validator_denom(
+            &mut self,
+            request: impl tonic::IntoRequest<
+                super::EstimateSuperfluidDelegatedAmountByValidatorDenomRequest,
+            >,
+        ) -> Result<
+                tonic::Response<
+                    super::EstimateSuperfluidDelegatedAmountByValidatorDenomResponse,
+                >,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.superfluid.Query/EstimateSuperfluidDelegatedAmountByValidatorDenom",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+    }
 }
+/// GenesisState defines the module's genesis state.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSuperfluidDelegateResponse {
-}
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSuperfluidUndelegate {
-    #[prost(string, tag="1")]
-    pub sender: ::prost::alloc::string::String,
-    #[prost(uint64, tag="2")]
-    pub lock_id: u64,
-}
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSuperfluidUndelegateResponse {
-}
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSuperfluidUnbondLock {
-    #[prost(string, tag="1")]
-    pub sender: ::prost::alloc::string::String,
-    #[prost(uint64, tag="2")]
-    pub lock_id: u64,
-}
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSuperfluidUnbondLockResponse {
-}
-// message MsgSuperfluidRedelegate {
-//   string sender = 1 [ (gogoproto.moretags) = "yaml:\"sender\"" ];
-//   uint64 lock_id = 2;
-//   string new_val_addr = 3;
-// }
-// message MsgSuperfluidRedelegateResponse {}
-
-/// MsgLockAndSuperfluidDelegate locks coins with the unbonding period duration,
-/// and then does a superfluid lock from the newly created lockup, to the
-/// specified validator addr.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgLockAndSuperfluidDelegate {
-    #[prost(string, tag="1")]
-    pub sender: ::prost::alloc::string::String,
+pub struct GenesisState {
+    #[prost(message, optional, tag="1")]
+    pub params: ::core::option::Option<Params>,
     #[prost(message, repeated, tag="2")]
-    pub coins: ::prost::alloc::vec::Vec<super::super::cosmos::base::v1beta1::Coin>,
-    #[prost(string, tag="3")]
-    pub val_addr: ::prost::alloc::string::String,
-}
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgLockAndSuperfluidDelegateResponse {
-    #[prost(uint64, tag="1")]
-    pub id: u64,
-}
-/// MsgUnPoolWhitelistedPool Unpools every lock the sender has, that is
-/// associated with pool pool_id. If pool_id is not approved for unpooling by
-/// governance, this is a no-op. Unpooling takes the locked gamm shares, and runs
-/// "ExitPool" on it, to get the constituent tokens. e.g. z gamm/pool/1 tokens
-/// ExitPools into constituent tokens x uatom, y uosmo. Then it creates a new
-/// lock for every constituent token, with the duration associated with the lock.
-/// If the lock was unbonding, the new lockup durations should be the time left
-/// until unbond completion.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgUnPoolWhitelistedPool {
-    #[prost(string, tag="1")]
-    pub sender: ::prost::alloc::string::String,
-    #[prost(uint64, tag="2")]
-    pub pool_id: u64,
-}
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgUnPoolWhitelistedPoolResponse {
-    #[prost(uint64, repeated, tag="1")]
-    pub exited_lock_ids: ::prost::alloc::vec::Vec<u64>,
+    pub superfluid_assets: ::prost::alloc::vec::Vec<SuperfluidAsset>,
+    #[prost(message, repeated, tag="3")]
+    pub osmo_equivalent_multipliers: ::prost::alloc::vec::Vec<OsmoEquivalentMultiplierRecord>,
+    #[prost(message, repeated, tag="4")]
+    pub intermediary_accounts: ::prost::alloc::vec::Vec<SuperfluidIntermediaryAccount>,
+    #[prost(message, repeated, tag="5")]
+    pub intemediary_account_connections: ::prost::alloc::vec::Vec<LockIdIntermediaryAccountConnection>,
 }
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_SUPERFLUID_ASSET : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.SuperfluidAsset")] impl :: prost_wkt :: MessageSerde for SuperfluidAsset { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "SuperfluidAsset" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.SuperfluidAsset" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
@@ -408,9 +917,27 @@ pub struct MsgUnPoolWhitelistedPoolResponse {
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_UNPOOL_WHITELISTED_POOLS : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.UnpoolWhitelistedPools")] impl :: prost_wkt :: MessageSerde for UnpoolWhitelistedPools { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "UnpoolWhitelistedPools" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.UnpoolWhitelistedPools" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_PARAMS : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.Params")] impl :: prost_wkt :: MessageSerde for Params { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "Params" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.Params" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUPERFLUID_DELEGATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgSuperfluidDelegate")] impl :: prost_wkt :: MessageSerde for MsgSuperfluidDelegate { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgSuperfluidDelegate" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgSuperfluidDelegate" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_GENESIS_STATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.GenesisState")] impl :: prost_wkt :: MessageSerde for GenesisState { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "GenesisState" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.GenesisState" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUPERFLUID_DELEGATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgSuperfluidDelegateResponse")] impl :: prost_wkt :: MessageSerde for MsgSuperfluidDelegateResponse { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgSuperfluidDelegateResponse" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgSuperfluidDelegateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUPERFLUID_UNDELEGATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgSuperfluidUndelegate")] impl :: prost_wkt :: MessageSerde for MsgSuperfluidUndelegate { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgSuperfluidUndelegate" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgSuperfluidUndelegate" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUPERFLUID_UNDELEGATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgSuperfluidUndelegateResponse")] impl :: prost_wkt :: MessageSerde for MsgSuperfluidUndelegateResponse { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgSuperfluidUndelegateResponse" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgSuperfluidUndelegateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUPERFLUID_UNBOND_LOCK : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgSuperfluidUnbondLock")] impl :: prost_wkt :: MessageSerde for MsgSuperfluidUnbondLock { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgSuperfluidUnbondLock" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgSuperfluidUnbondLock" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUPERFLUID_UNBOND_LOCK_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgSuperfluidUnbondLockResponse")] impl :: prost_wkt :: MessageSerde for MsgSuperfluidUnbondLockResponse { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgSuperfluidUnbondLockResponse" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgSuperfluidUnbondLockResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_LOCK_AND_SUPERFLUID_DELEGATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgLockAndSuperfluidDelegate")] impl :: prost_wkt :: MessageSerde for MsgLockAndSuperfluidDelegate { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgLockAndSuperfluidDelegate" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgLockAndSuperfluidDelegate" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_LOCK_AND_SUPERFLUID_DELEGATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgLockAndSuperfluidDelegateResponse")] impl :: prost_wkt :: MessageSerde for MsgLockAndSuperfluidDelegateResponse { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgLockAndSuperfluidDelegateResponse" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgLockAndSuperfluidDelegateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UN_POOL_WHITELISTED_POOL : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgUnPoolWhitelistedPool")] impl :: prost_wkt :: MessageSerde for MsgUnPoolWhitelistedPool { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgUnPoolWhitelistedPool" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgUnPoolWhitelistedPool" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UN_POOL_WHITELISTED_POOL_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgUnPoolWhitelistedPoolResponse")] impl :: prost_wkt :: MessageSerde for MsgUnPoolWhitelistedPoolResponse { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgUnPoolWhitelistedPoolResponse" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgUnPoolWhitelistedPoolResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_PARAMS : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.Params")] impl :: prost_wkt :: MessageSerde for Params { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "Params" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.Params" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_QUERY_PARAMS_REQUEST : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.QueryParamsRequest")] impl :: prost_wkt :: MessageSerde for QueryParamsRequest { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "QueryParamsRequest" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.QueryParamsRequest" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
@@ -462,22 +989,4 @@ pub struct MsgUnPoolWhitelistedPoolResponse {
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_ESTIMATE_SUPERFLUID_DELEGATED_AMOUNT_BY_VALIDATOR_DENOM_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.EstimateSuperfluidDelegatedAmountByValidatorDenomResponse")] impl :: prost_wkt :: MessageSerde for EstimateSuperfluidDelegatedAmountByValidatorDenomResponse { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "EstimateSuperfluidDelegatedAmountByValidatorDenomResponse" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.EstimateSuperfluidDelegatedAmountByValidatorDenomResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUPERFLUID_DELEGATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgSuperfluidDelegate")] impl :: prost_wkt :: MessageSerde for MsgSuperfluidDelegate { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgSuperfluidDelegate" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgSuperfluidDelegate" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUPERFLUID_DELEGATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgSuperfluidDelegateResponse")] impl :: prost_wkt :: MessageSerde for MsgSuperfluidDelegateResponse { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgSuperfluidDelegateResponse" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgSuperfluidDelegateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUPERFLUID_UNDELEGATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgSuperfluidUndelegate")] impl :: prost_wkt :: MessageSerde for MsgSuperfluidUndelegate { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgSuperfluidUndelegate" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgSuperfluidUndelegate" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUPERFLUID_UNDELEGATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgSuperfluidUndelegateResponse")] impl :: prost_wkt :: MessageSerde for MsgSuperfluidUndelegateResponse { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgSuperfluidUndelegateResponse" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgSuperfluidUndelegateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUPERFLUID_UNBOND_LOCK : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgSuperfluidUnbondLock")] impl :: prost_wkt :: MessageSerde for MsgSuperfluidUnbondLock { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgSuperfluidUnbondLock" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgSuperfluidUnbondLock" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUPERFLUID_UNBOND_LOCK_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgSuperfluidUnbondLockResponse")] impl :: prost_wkt :: MessageSerde for MsgSuperfluidUnbondLockResponse { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgSuperfluidUnbondLockResponse" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgSuperfluidUnbondLockResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_LOCK_AND_SUPERFLUID_DELEGATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgLockAndSuperfluidDelegate")] impl :: prost_wkt :: MessageSerde for MsgLockAndSuperfluidDelegate { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgLockAndSuperfluidDelegate" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgLockAndSuperfluidDelegate" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_LOCK_AND_SUPERFLUID_DELEGATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgLockAndSuperfluidDelegateResponse")] impl :: prost_wkt :: MessageSerde for MsgLockAndSuperfluidDelegateResponse { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgLockAndSuperfluidDelegateResponse" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgLockAndSuperfluidDelegateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UN_POOL_WHITELISTED_POOL : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgUnPoolWhitelistedPool")] impl :: prost_wkt :: MessageSerde for MsgUnPoolWhitelistedPool { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgUnPoolWhitelistedPool" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgUnPoolWhitelistedPool" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UN_POOL_WHITELISTED_POOL_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.MsgUnPoolWhitelistedPoolResponse")] impl :: prost_wkt :: MessageSerde for MsgUnPoolWhitelistedPoolResponse { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "MsgUnPoolWhitelistedPoolResponse" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.MsgUnPoolWhitelistedPoolResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_GENESIS_STATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.superfluid.GenesisState")] impl :: prost_wkt :: MessageSerde for GenesisState { fn package_name (& self) -> & 'static str { "osmosis.superfluid" } fn message_name (& self) -> & 'static str { "GenesisState" } fn type_url (& self) -> & 'static str { "/osmosis.superfluid.GenesisState" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;

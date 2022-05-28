@@ -1,23 +1,3 @@
-/// StoreKVPair is a KVStore KVPair used for listening to state changes (Sets and Deletes)
-/// It optionally includes the StoreKey for the originating KVStore and a Boolean flag to distinguish between Sets and
-/// Deletes
-///
-/// Since: cosmos-sdk 0.43
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct StoreKvPair {
-    /// the store key for the KVStore this pair originates from
-    #[prost(string, tag="1")]
-    pub store_key: ::prost::alloc::string::String,
-    /// true indicates a delete operation, false indicates a set operation
-    #[prost(bool, tag="2")]
-    pub delete: bool,
-    #[prost(bytes="vec", tag="3")]
-    pub key: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="4")]
-    pub value: ::prost::alloc::vec::Vec<u8>,
-}
 /// CommitInfo defines commit information used by the multi-store when committing
 /// a version/height.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -95,8 +75,26 @@ pub struct SnapshotIavlItem {
     #[prost(int32, tag="4")]
     pub height: i32,
 }
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_STORE_KV_PAIR : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.base.store.v1beta1.StoreKVPair")] impl :: prost_wkt :: MessageSerde for StoreKvPair { fn package_name (& self) -> & 'static str { "cosmos.base.store.v1beta1" } fn message_name (& self) -> & 'static str { "StoreKVPair" } fn type_url (& self) -> & 'static str { "/cosmos.base.store.v1beta1.StoreKVPair" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+/// StoreKVPair is a KVStore KVPair used for listening to state changes (Sets and Deletes)
+/// It optionally includes the StoreKey for the originating KVStore and a Boolean flag to distinguish between Sets and
+/// Deletes
+///
+/// Since: cosmos-sdk 0.43
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StoreKvPair {
+    /// the store key for the KVStore this pair originates from
+    #[prost(string, tag="1")]
+    pub store_key: ::prost::alloc::string::String,
+    /// true indicates a delete operation, false indicates a set operation
+    #[prost(bool, tag="2")]
+    pub delete: bool,
+    #[prost(bytes="vec", tag="3")]
+    pub key: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes="vec", tag="4")]
+    pub value: ::prost::alloc::vec::Vec<u8>,
+}
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_COMMIT_INFO : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.base.store.v1beta1.CommitInfo")] impl :: prost_wkt :: MessageSerde for CommitInfo { fn package_name (& self) -> & 'static str { "cosmos.base.store.v1beta1" } fn message_name (& self) -> & 'static str { "CommitInfo" } fn type_url (& self) -> & 'static str { "/cosmos.base.store.v1beta1.CommitInfo" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
@@ -109,3 +107,5 @@ pub struct SnapshotIavlItem {
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_SNAPSHOT_STORE_ITEM : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.base.store.v1beta1.SnapshotStoreItem")] impl :: prost_wkt :: MessageSerde for SnapshotStoreItem { fn package_name (& self) -> & 'static str { "cosmos.base.store.v1beta1" } fn message_name (& self) -> & 'static str { "SnapshotStoreItem" } fn type_url (& self) -> & 'static str { "/cosmos.base.store.v1beta1.SnapshotStoreItem" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_SNAPSHOT_IAVL_ITEM : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.base.store.v1beta1.SnapshotIAVLItem")] impl :: prost_wkt :: MessageSerde for SnapshotIavlItem { fn package_name (& self) -> & 'static str { "cosmos.base.store.v1beta1" } fn message_name (& self) -> & 'static str { "SnapshotIAVLItem" } fn type_url (& self) -> & 'static str { "/cosmos.base.store.v1beta1.SnapshotIAVLItem" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_STORE_KV_PAIR : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.base.store.v1beta1.StoreKVPair")] impl :: prost_wkt :: MessageSerde for StoreKvPair { fn package_name (& self) -> & 'static str { "cosmos.base.store.v1beta1" } fn message_name (& self) -> & 'static str { "StoreKVPair" } fn type_url (& self) -> & 'static str { "/cosmos.base.store.v1beta1.StoreKVPair" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;

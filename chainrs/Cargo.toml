@@ -3,6 +3,10 @@ name    = "chainrs"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+grpc              = [ "tonic" ]
+grpc-transport    = [ "grpc", "tonic/transport" ]
+
 [dependencies]
 base64            = { version = "0.13", default-features = false }
 cosmrs            = { version = "0.7",  default-features = false, features = [ "cosmwasm" ], git = "https://github.com/meka-dev/cosmos-rust.git", branch = "xla/expand-types" }
@@ -12,8 +16,9 @@ prost-wkt         = { version = "0.3",  default-features = false }
 prost-wkt-types   = { version = "0.3",  default-features = false, features = [ "std" ] }
 serde             = { version = "1.0",  default-features = false, features = [ "derive", "rc" ] }
 serde_json        = { version = "1.0",  default-features = false }
-subtle-encoding   = { version = "0.5",  features = ["bech32-preview"] }
+subtle-encoding   = { version = "0.5",  default-features = false, features = ["bech32-preview"] }
 tendermint-proto  = { version = "0.23", default-features = false }
 thiserror         = { version = "1" }
+tonic             = { version = "0.7",  default-features = false, features = [ "codegen", "prost" ], optional = true }
 
 common            = { version = "0.1",  default-features = false, path = "../common" }

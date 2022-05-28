@@ -6,6 +6,7 @@ use common::{
     tracing::{debug, error},
     Context as _,
     Error,
+    Report,
     Result,
 };
 use futures::stream::{self, StreamExt as _, TryStreamExt as _};
@@ -74,7 +75,7 @@ struct Deadletter {
 
 #[allow(clippy::large_enum_variant)]
 pub enum Extract {
-    Deadletter(Venue, chain::Id, Height, Error),
+    Deadletter(Venue, chain::Id, Height, Report),
     Block {
         venue: Venue,
         network: chain::Id,
@@ -211,7 +212,7 @@ pub async fn transform(
                     hostname.clone(),
                     venue,
                     network,
-                    format!("deadletters/{}.json", height),
+                    format!("block-deadletters/{}.json", height),
                 );
                 let data = serde_json::to_vec(&Deadletter {
                     stage: Stage::Extract,
@@ -242,7 +243,7 @@ pub async fn transform(
                         hostname.clone(),
                         venue,
                         network.clone(),
-                        format!("{}/block.json", height),
+                        format!("blocks/{}/block.json", height),
                     ),
                     serde_json::to_vec(&block).unwrap(),
                 ));
@@ -252,7 +253,7 @@ pub async fn transform(
                         hostname.clone(),
                         venue,
                         network.clone(),
-                        format!("{}/begin_block.json", height),
+                        format!("blocks/{}/begin_block.json", height),
                     ),
                     serde_json::to_vec(&begin_block).unwrap(),
                 ));
@@ -262,7 +263,7 @@ pub async fn transform(
                         hostname.clone(),
                         venue,
                         network.clone(),
-                        format!("{}/end_block.json", height),
+                        format!("blocks/{}/end_block.json", height),
                     ),
                     serde_json::to_vec(&end_block).unwrap(),
                 ));
@@ -294,7 +295,7 @@ pub async fn transform(
                             hostname.clone(),
                             venue,
                             network.clone(),
-                            format!("{}/txs/{}.json", height, tx.hash),
+                            format!("blocks/{}/txs/{}.json", height, tx.hash),
                         ),
                         serde_json::to_vec(&tx).unwrap(),
                     ));
@@ -337,4 +338,5 @@ where
         )
         .await
         .map(|_| ())
+        .map_err(|err| err!("failed to insert into bucket: {}", err))
 }

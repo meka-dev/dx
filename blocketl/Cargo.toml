@@ -8,6 +8,7 @@ argh              = { version = "0.1",  default-features = false }
 axum              = { version = "0.5",  default-features = false, features = [ "headers", "http2", "json", "tower-log" ] }
 cosmrs            = { version = "0.7",  default-features = false, features = [ "cosmwasm" ], git = "https://github.com/meka-dev/cosmos-rust.git", branch = "xla/expand-types" }
 futures           = { version = "0.3",  default-features = false, features = [ "alloc", "async-await", "std" ] }
+prost             = { version = "0.10", default-features = false }
 serde             = { version = "1.0",  default-features = false, features = [ "derive", "rc" ] }
 serde_json        = { version = "1.0",  default-features = false }
 sha2              = { version = "0.10", default-features = false, features = [ "std" ] }
@@ -17,5 +18,6 @@ tendermint-proto  = { version = "0.23", default-features = false }
 tokio             = { version = "1.0",  default-features = false, features = [ "macros", "rt-multi-thread", "signal", "sync", "time" ] }
 tokio-stream      = { version = "0.1",  default-features = false }
 
+chainrs           = { version = "0.1",  default-features = false, path = "../chainrs", features = [ "grpc" ] }
 common            = { version = "0.1",  default-features = false, path = "../common" }
 params-derive     = { version = "0.1",  default-features = false, path = "../params-derive" }

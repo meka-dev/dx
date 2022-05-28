@@ -34,19 +34,6 @@ pub struct DistrRecord {
     #[prost(string, tag="2")]
     pub weight: ::prost::alloc::string::String,
 }
-/// GenesisState defines the pool incentives module's genesis state.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GenesisState {
-    /// params defines all the paramaters of the module.
-    #[prost(message, optional, tag="1")]
-    pub params: ::core::option::Option<Params>,
-    #[prost(message, repeated, tag="2")]
-    pub lockable_durations: ::prost::alloc::vec::Vec<::prost_wkt_types::Duration>,
-    #[prost(message, optional, tag="3")]
-    pub distr_info: ::core::option::Option<DistrInfo>,
-}
 /// ReplacePoolIncentivesProposal is a gov Content type for updating the pool
 /// incentives. If a ReplacePoolIncentivesProposal passes, the proposal’s records
 /// override the existing DistrRecords set in the module. Each record has a
@@ -188,6 +175,200 @@ pub struct QueryExternalIncentiveGaugesResponse {
     #[prost(message, repeated, tag="1")]
     pub data: ::prost::alloc::vec::Vec<super::super::incentives::Gauge>,
 }
+/// Generated client implementations.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod query_client {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    #[derive(Debug, Clone)]
+    pub struct QueryClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl<T> QueryClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> QueryClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+            >>::Error: Into<StdError> + Send + Sync,
+        {
+            QueryClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with `gzip`.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        /// Enable decompressing responses with `gzip`.
+        #[must_use]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
+        }
+        /// GaugeIds takes the pool id and returns the matching gauge ids and durations
+        pub async fn gauge_ids(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryGaugeIdsRequest>,
+        ) -> Result<tonic::Response<super::QueryGaugeIdsResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.poolincentives.v1beta1.Query/GaugeIds",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn distr_info(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryDistrInfoRequest>,
+        ) -> Result<tonic::Response<super::QueryDistrInfoResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.poolincentives.v1beta1.Query/DistrInfo",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn params(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryParamsRequest>,
+        ) -> Result<tonic::Response<super::QueryParamsResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.poolincentives.v1beta1.Query/Params",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn lockable_durations(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryLockableDurationsRequest>,
+        ) -> Result<
+                tonic::Response<super::QueryLockableDurationsResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.poolincentives.v1beta1.Query/LockableDurations",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn incentivized_pools(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryIncentivizedPoolsRequest>,
+        ) -> Result<
+                tonic::Response<super::QueryIncentivizedPoolsResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.poolincentives.v1beta1.Query/IncentivizedPools",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn external_incentive_gauges(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryExternalIncentiveGaugesRequest>,
+        ) -> Result<
+                tonic::Response<super::QueryExternalIncentiveGaugesResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/osmosis.poolincentives.v1beta1.Query/ExternalIncentiveGauges",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+    }
+}
+/// GenesisState defines the pool incentives module's genesis state.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GenesisState {
+    /// params defines all the paramaters of the module.
+    #[prost(message, optional, tag="1")]
+    pub params: ::core::option::Option<Params>,
+    #[prost(message, repeated, tag="2")]
+    pub lockable_durations: ::prost::alloc::vec::Vec<::prost_wkt_types::Duration>,
+    #[prost(message, optional, tag="3")]
+    pub distr_info: ::core::option::Option<DistrInfo>,
+}
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_PARAMS : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.poolincentives.v1beta1.Params")] impl :: prost_wkt :: MessageSerde for Params { fn package_name (& self) -> & 'static str { "osmosis.poolincentives.v1beta1" } fn message_name (& self) -> & 'static str { "Params" } fn type_url (& self) -> & 'static str { "/osmosis.poolincentives.v1beta1.Params" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
@@ -196,8 +377,6 @@ pub struct QueryExternalIncentiveGaugesResponse {
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_DISTR_INFO : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.poolincentives.v1beta1.DistrInfo")] impl :: prost_wkt :: MessageSerde for DistrInfo { fn package_name (& self) -> & 'static str { "osmosis.poolincentives.v1beta1" } fn message_name (& self) -> & 'static str { "DistrInfo" } fn type_url (& self) -> & 'static str { "/osmosis.poolincentives.v1beta1.DistrInfo" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_DISTR_RECORD : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.poolincentives.v1beta1.DistrRecord")] impl :: prost_wkt :: MessageSerde for DistrRecord { fn package_name (& self) -> & 'static str { "osmosis.poolincentives.v1beta1" } fn message_name (& self) -> & 'static str { "DistrRecord" } fn type_url (& self) -> & 'static str { "/osmosis.poolincentives.v1beta1.DistrRecord" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_GENESIS_STATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.poolincentives.v1beta1.GenesisState")] impl :: prost_wkt :: MessageSerde for GenesisState { fn package_name (& self) -> & 'static str { "osmosis.poolincentives.v1beta1" } fn message_name (& self) -> & 'static str { "GenesisState" } fn type_url (& self) -> & 'static str { "/osmosis.poolincentives.v1beta1.GenesisState" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_REPLACE_POOL_INCENTIVES_PROPOSAL : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.poolincentives.v1beta1.ReplacePoolIncentivesProposal")] impl :: prost_wkt :: MessageSerde for ReplacePoolIncentivesProposal { fn package_name (& self) -> & 'static str { "osmosis.poolincentives.v1beta1" } fn message_name (& self) -> & 'static str { "ReplacePoolIncentivesProposal" } fn type_url (& self) -> & 'static str { "/osmosis.poolincentives.v1beta1.ReplacePoolIncentivesProposal" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
@@ -228,3 +407,5 @@ pub struct QueryExternalIncentiveGaugesResponse {
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_QUERY_EXTERNAL_INCENTIVE_GAUGES_REQUEST : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.poolincentives.v1beta1.QueryExternalIncentiveGaugesRequest")] impl :: prost_wkt :: MessageSerde for QueryExternalIncentiveGaugesRequest { fn package_name (& self) -> & 'static str { "osmosis.poolincentives.v1beta1" } fn message_name (& self) -> & 'static str { "QueryExternalIncentiveGaugesRequest" } fn type_url (& self) -> & 'static str { "/osmosis.poolincentives.v1beta1.QueryExternalIncentiveGaugesRequest" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_QUERY_EXTERNAL_INCENTIVE_GAUGES_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.poolincentives.v1beta1.QueryExternalIncentiveGaugesResponse")] impl :: prost_wkt :: MessageSerde for QueryExternalIncentiveGaugesResponse { fn package_name (& self) -> & 'static str { "osmosis.poolincentives.v1beta1" } fn message_name (& self) -> & 'static str { "QueryExternalIncentiveGaugesResponse" } fn type_url (& self) -> & 'static str { "/osmosis.poolincentives.v1beta1.QueryExternalIncentiveGaugesResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_GENESIS_STATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/osmosis.poolincentives.v1beta1.GenesisState")] impl :: prost_wkt :: MessageSerde for GenesisState { fn package_name (& self) -> & 'static str { "osmosis.poolincentives.v1beta1" } fn message_name (& self) -> & 'static str { "GenesisState" } fn type_url (& self) -> & 'static str { "/osmosis.poolincentives.v1beta1.GenesisState" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
