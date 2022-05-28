@@ -346,6 +346,144 @@ pub enum BroadcastMode {
     /// immediately.
     Async = 3,
 }
+/// Generated client implementations.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod service_client {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    /// Service defines a gRPC service for interacting with transactions.
+    #[derive(Debug, Clone)]
+    pub struct ServiceClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl<T> ServiceClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> ServiceClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+            >>::Error: Into<StdError> + Send + Sync,
+        {
+            ServiceClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with `gzip`.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        /// Enable decompressing responses with `gzip`.
+        #[must_use]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
+        }
+        /// Simulate simulates executing a transaction for estimating gas usage.
+        pub async fn simulate(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SimulateRequest>,
+        ) -> Result<tonic::Response<super::SimulateResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.tx.v1beta1.Service/Simulate",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// GetTx fetches a tx by hash.
+        pub async fn get_tx(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetTxRequest>,
+        ) -> Result<tonic::Response<super::GetTxResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.tx.v1beta1.Service/GetTx",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// BroadcastTx broadcast transaction.
+        pub async fn broadcast_tx(
+            &mut self,
+            request: impl tonic::IntoRequest<super::BroadcastTxRequest>,
+        ) -> Result<tonic::Response<super::BroadcastTxResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.tx.v1beta1.Service/BroadcastTx",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// GetTxsEvent fetches txs by event.
+        pub async fn get_txs_event(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetTxsEventRequest>,
+        ) -> Result<tonic::Response<super::GetTxsEventResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.tx.v1beta1.Service/GetTxsEvent",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+    }
+}
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_TX : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.tx.v1beta1.Tx")] impl :: prost_wkt :: MessageSerde for Tx { fn package_name (& self) -> & 'static str { "cosmos.tx.v1beta1" } fn message_name (& self) -> & 'static str { "Tx" } fn type_url (& self) -> & 'static str { "/cosmos.tx.v1beta1.Tx" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 

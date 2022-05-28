@@ -331,107 +331,279 @@ pub enum BondStatus {
     /// BONDED defines a validator that is bonded.
     Bonded = 3,
 }
-/// GenesisState defines the staking module's genesis state.
+/// MsgCreateValidator defines a SDK message for creating a new validator.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GenesisState {
-    /// params defines all the paramaters of related to deposit.
+pub struct MsgCreateValidator {
     #[prost(message, optional, tag="1")]
-    pub params: ::core::option::Option<Params>,
-    /// last_total_power tracks the total amounts of bonded tokens recorded during
-    /// the previous end block.
-    #[prost(bytes="vec", tag="2")]
-    pub last_total_power: ::prost::alloc::vec::Vec<u8>,
-    /// last_validator_powers is a special index that provides a historical list
-    /// of the last-block's bonded validators.
-    #[prost(message, repeated, tag="3")]
-    pub last_validator_powers: ::prost::alloc::vec::Vec<LastValidatorPower>,
-    /// delegations defines the validator set at genesis.
-    #[prost(message, repeated, tag="4")]
-    pub validators: ::prost::alloc::vec::Vec<Validator>,
-    /// delegations defines the delegations active at genesis.
-    #[prost(message, repeated, tag="5")]
-    pub delegations: ::prost::alloc::vec::Vec<Delegation>,
-    /// unbonding_delegations defines the unbonding delegations active at genesis.
-    #[prost(message, repeated, tag="6")]
-    pub unbonding_delegations: ::prost::alloc::vec::Vec<UnbondingDelegation>,
-    /// redelegations defines the redelegations active at genesis.
-    #[prost(message, repeated, tag="7")]
-    pub redelegations: ::prost::alloc::vec::Vec<Redelegation>,
-    #[prost(bool, tag="8")]
-    pub exported: bool,
+    pub description: ::core::option::Option<Description>,
+    #[prost(message, optional, tag="2")]
+    pub commission: ::core::option::Option<CommissionRates>,
+    #[prost(string, tag="3")]
+    pub min_self_delegation: ::prost::alloc::string::String,
+    #[prost(string, tag="4")]
+    pub delegator_address: ::prost::alloc::string::String,
+    #[prost(string, tag="5")]
+    pub validator_address: ::prost::alloc::string::String,
+    #[prost(message, optional, tag="6")]
+    pub pubkey: ::core::option::Option<::prost_wkt_types::Any>,
+    #[prost(message, optional, tag="7")]
+    pub value: ::core::option::Option<super::super::base::v1beta1::Coin>,
 }
-/// LastValidatorPower required for validator set update logic.
+/// MsgCreateValidatorResponse defines the Msg/CreateValidator response type.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct LastValidatorPower {
-    /// address is the address of the validator.
+pub struct MsgCreateValidatorResponse {
+}
+/// MsgEditValidator defines a SDK message for editing an existing validator.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgEditValidator {
+    #[prost(message, optional, tag="1")]
+    pub description: ::core::option::Option<Description>,
+    #[prost(string, tag="2")]
+    pub validator_address: ::prost::alloc::string::String,
+    /// We pass a reference to the new commission rate and min self delegation as
+    /// it's not mandatory to update. If not updated, the deserialized rate will be
+    /// zero with no way to distinguish if an update was intended.
+    /// REF: #2373
+    #[prost(string, tag="3")]
+    pub commission_rate: ::prost::alloc::string::String,
+    #[prost(string, tag="4")]
+    pub min_self_delegation: ::prost::alloc::string::String,
+}
+/// MsgEditValidatorResponse defines the Msg/EditValidator response type.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgEditValidatorResponse {
+}
+/// MsgDelegate defines a SDK message for performing a delegation of coins
+/// from a delegator to a validator.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgDelegate {
     #[prost(string, tag="1")]
-    pub address: ::prost::alloc::string::String,
-    /// power defines the power of the validator.
-    #[prost(int64, tag="2")]
-    pub power: i64,
+    pub delegator_address: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub validator_address: ::prost::alloc::string::String,
+    #[prost(message, optional, tag="3")]
+    pub amount: ::core::option::Option<super::super::base::v1beta1::Coin>,
 }
-/// StakeAuthorization defines authorization for delegate/undelegate/redelegate.
-///
-/// Since: cosmos-sdk 0.43
+/// MsgDelegateResponse defines the Msg/Delegate response type.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct StakeAuthorization {
-    /// max_tokens specifies the maximum amount of tokens can be delegate to a validator. If it is
-    /// empty, there is no spend limit and any amount of coins can be delegated.
-    #[prost(message, optional, tag="1")]
-    pub max_tokens: ::core::option::Option<super::super::base::v1beta1::Coin>,
-    /// authorization_type defines one of AuthorizationType.
-    #[prost(enumeration="AuthorizationType", tag="4")]
-    pub authorization_type: i32,
-    /// validators is the oneof that represents either allow_list or deny_list
-    #[prost(oneof="stake_authorization::Validators", tags="2, 3")]
-    pub validators: ::core::option::Option<stake_authorization::Validators>,
+pub struct MsgDelegateResponse {
 }
-/// Nested message and enum types in `StakeAuthorization`.
-pub mod stake_authorization {
-    /// Validators defines list of validator addresses.
-    #[derive(serde::Deserialize, serde::Serialize)]
-    #[serde(rename_all = "camelCase")]
-    #[derive(Clone, PartialEq, ::prost::Message)]
-    pub struct StakeAuthorizationValidators {
-        #[prost(string, repeated, tag="1")]
-        pub address: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    }
-    /// validators is the oneof that represents either allow_list or deny_list
-    #[derive(serde::Deserialize, serde::Serialize)]
-    #[serde(rename_all = "camelCase")]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum Validators {
-        /// allow_list specifies list of validator addresses to whom grantee can delegate tokens on behalf of granter's
-        /// account.
-        #[prost(message, tag="2")]
-        AllowList(StakeAuthorizationValidators),
-        /// deny_list specifies list of validator addresses to whom grantee can not delegate tokens.
-        #[prost(message, tag="3")]
-        DenyList(StakeAuthorizationValidators),
-    }
-}
-/// AuthorizationType defines the type of staking module authorization type
-///
-/// Since: cosmos-sdk 0.43
+/// MsgBeginRedelegate defines a SDK message for performing a redelegation
+/// of coins from a delegator and source validator to a destination validator.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-pub enum AuthorizationType {
-    /// AUTHORIZATION_TYPE_UNSPECIFIED specifies an unknown authorization type
-    Unspecified = 0,
-    /// AUTHORIZATION_TYPE_DELEGATE defines an authorization type for Msg/Delegate
-    Delegate = 1,
-    /// AUTHORIZATION_TYPE_UNDELEGATE defines an authorization type for Msg/Undelegate
-    Undelegate = 2,
-    /// AUTHORIZATION_TYPE_REDELEGATE defines an authorization type for Msg/BeginRedelegate
-    Redelegate = 3,
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgBeginRedelegate {
+    #[prost(string, tag="1")]
+    pub delegator_address: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub validator_src_address: ::prost::alloc::string::String,
+    #[prost(string, tag="3")]
+    pub validator_dst_address: ::prost::alloc::string::String,
+    #[prost(message, optional, tag="4")]
+    pub amount: ::core::option::Option<super::super::base::v1beta1::Coin>,
+}
+/// MsgBeginRedelegateResponse defines the Msg/BeginRedelegate response type.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgBeginRedelegateResponse {
+    #[prost(message, optional, tag="1")]
+    pub completion_time: ::core::option::Option<::prost_wkt_types::Timestamp>,
+}
+/// MsgUndelegate defines a SDK message for performing an undelegation from a
+/// delegate and a validator.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgUndelegate {
+    #[prost(string, tag="1")]
+    pub delegator_address: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub validator_address: ::prost::alloc::string::String,
+    #[prost(message, optional, tag="3")]
+    pub amount: ::core::option::Option<super::super::base::v1beta1::Coin>,
+}
+/// MsgUndelegateResponse defines the Msg/Undelegate response type.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgUndelegateResponse {
+    #[prost(message, optional, tag="1")]
+    pub completion_time: ::core::option::Option<::prost_wkt_types::Timestamp>,
+}
+/// Generated client implementations.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod msg_client {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    /// Msg defines the staking Msg service.
+    #[derive(Debug, Clone)]
+    pub struct MsgClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl<T> MsgClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> MsgClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+            >>::Error: Into<StdError> + Send + Sync,
+        {
+            MsgClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with `gzip`.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        /// Enable decompressing responses with `gzip`.
+        #[must_use]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
+        }
+        /// CreateValidator defines a method for creating a new validator.
+        pub async fn create_validator(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgCreateValidator>,
+        ) -> Result<tonic::Response<super::MsgCreateValidatorResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Msg/CreateValidator",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// EditValidator defines a method for editing an existing validator.
+        pub async fn edit_validator(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgEditValidator>,
+        ) -> Result<tonic::Response<super::MsgEditValidatorResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Msg/EditValidator",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Delegate defines a method for performing a delegation of coins
+        /// from a delegator to a validator.
+        pub async fn delegate(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgDelegate>,
+        ) -> Result<tonic::Response<super::MsgDelegateResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Msg/Delegate",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// BeginRedelegate defines a method for performing a redelegation
+        /// of coins from a delegator and source validator to a destination validator.
+        pub async fn begin_redelegate(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgBeginRedelegate>,
+        ) -> Result<tonic::Response<super::MsgBeginRedelegateResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Msg/BeginRedelegate",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Undelegate defines a method for performing an undelegation from a
+        /// delegate and a validator.
+        pub async fn undelegate(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgUndelegate>,
+        ) -> Result<tonic::Response<super::MsgUndelegateResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Msg/Undelegate",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+    }
 }
 /// QueryValidatorsRequest is request type for Query/Validators RPC method.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -750,118 +922,474 @@ pub struct QueryParamsResponse {
     #[prost(message, optional, tag="1")]
     pub params: ::core::option::Option<Params>,
 }
-/// MsgCreateValidator defines a SDK message for creating a new validator.
+/// Generated client implementations.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod query_client {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    /// Query defines the gRPC querier service.
+    #[derive(Debug, Clone)]
+    pub struct QueryClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl<T> QueryClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> QueryClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+            >>::Error: Into<StdError> + Send + Sync,
+        {
+            QueryClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with `gzip`.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        /// Enable decompressing responses with `gzip`.
+        #[must_use]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
+        }
+        /// Validators queries all validators that match the given status.
+        pub async fn validators(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryValidatorsRequest>,
+        ) -> Result<tonic::Response<super::QueryValidatorsResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/Validators",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Validator queries validator info for given validator address.
+        pub async fn validator(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryValidatorRequest>,
+        ) -> Result<tonic::Response<super::QueryValidatorResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/Validator",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// ValidatorDelegations queries delegate info for given validator.
+        pub async fn validator_delegations(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryValidatorDelegationsRequest>,
+        ) -> Result<
+                tonic::Response<super::QueryValidatorDelegationsResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/ValidatorDelegations",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// ValidatorUnbondingDelegations queries unbonding delegations of a validator.
+        pub async fn validator_unbonding_delegations(
+            &mut self,
+            request: impl tonic::IntoRequest<
+                super::QueryValidatorUnbondingDelegationsRequest,
+            >,
+        ) -> Result<
+                tonic::Response<super::QueryValidatorUnbondingDelegationsResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/ValidatorUnbondingDelegations",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Delegation queries delegate info for given validator delegator pair.
+        pub async fn delegation(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryDelegationRequest>,
+        ) -> Result<tonic::Response<super::QueryDelegationResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/Delegation",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// UnbondingDelegation queries unbonding info for given validator delegator
+        /// pair.
+        pub async fn unbonding_delegation(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryUnbondingDelegationRequest>,
+        ) -> Result<
+                tonic::Response<super::QueryUnbondingDelegationResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/UnbondingDelegation",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// DelegatorDelegations queries all delegations of a given delegator address.
+        pub async fn delegator_delegations(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryDelegatorDelegationsRequest>,
+        ) -> Result<
+                tonic::Response<super::QueryDelegatorDelegationsResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/DelegatorDelegations",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// DelegatorUnbondingDelegations queries all unbonding delegations of a given
+        /// delegator address.
+        pub async fn delegator_unbonding_delegations(
+            &mut self,
+            request: impl tonic::IntoRequest<
+                super::QueryDelegatorUnbondingDelegationsRequest,
+            >,
+        ) -> Result<
+                tonic::Response<super::QueryDelegatorUnbondingDelegationsResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/DelegatorUnbondingDelegations",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Redelegations queries redelegations of given address.
+        pub async fn redelegations(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryRedelegationsRequest>,
+        ) -> Result<tonic::Response<super::QueryRedelegationsResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/Redelegations",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// DelegatorValidators queries all validators info for given delegator
+        /// address.
+        pub async fn delegator_validators(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryDelegatorValidatorsRequest>,
+        ) -> Result<
+                tonic::Response<super::QueryDelegatorValidatorsResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/DelegatorValidators",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// DelegatorValidator queries validator info for given delegator validator
+        /// pair.
+        pub async fn delegator_validator(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryDelegatorValidatorRequest>,
+        ) -> Result<
+                tonic::Response<super::QueryDelegatorValidatorResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/DelegatorValidator",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// HistoricalInfo queries the historical info for given height.
+        pub async fn historical_info(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryHistoricalInfoRequest>,
+        ) -> Result<tonic::Response<super::QueryHistoricalInfoResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/HistoricalInfo",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Pool queries the pool info.
+        pub async fn pool(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryPoolRequest>,
+        ) -> Result<tonic::Response<super::QueryPoolResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/Pool",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Parameters queries the staking parameters.
+        pub async fn params(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryParamsRequest>,
+        ) -> Result<tonic::Response<super::QueryParamsResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.staking.v1beta1.Query/Params",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+    }
+}
+/// StakeAuthorization defines authorization for delegate/undelegate/redelegate.
+///
+/// Since: cosmos-sdk 0.43
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgCreateValidator {
+pub struct StakeAuthorization {
+    /// max_tokens specifies the maximum amount of tokens can be delegate to a validator. If it is
+    /// empty, there is no spend limit and any amount of coins can be delegated.
     #[prost(message, optional, tag="1")]
-    pub description: ::core::option::Option<Description>,
-    #[prost(message, optional, tag="2")]
-    pub commission: ::core::option::Option<CommissionRates>,
-    #[prost(string, tag="3")]
-    pub min_self_delegation: ::prost::alloc::string::String,
-    #[prost(string, tag="4")]
-    pub delegator_address: ::prost::alloc::string::String,
-    #[prost(string, tag="5")]
-    pub validator_address: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="6")]
-    pub pubkey: ::core::option::Option<::prost_wkt_types::Any>,
-    #[prost(message, optional, tag="7")]
-    pub value: ::core::option::Option<super::super::base::v1beta1::Coin>,
+    pub max_tokens: ::core::option::Option<super::super::base::v1beta1::Coin>,
+    /// authorization_type defines one of AuthorizationType.
+    #[prost(enumeration="AuthorizationType", tag="4")]
+    pub authorization_type: i32,
+    /// validators is the oneof that represents either allow_list or deny_list
+    #[prost(oneof="stake_authorization::Validators", tags="2, 3")]
+    pub validators: ::core::option::Option<stake_authorization::Validators>,
 }
-/// MsgCreateValidatorResponse defines the Msg/CreateValidator response type.
+/// Nested message and enum types in `StakeAuthorization`.
+pub mod stake_authorization {
+    /// Validators defines list of validator addresses.
+    #[derive(serde::Deserialize, serde::Serialize)]
+    #[serde(rename_all = "camelCase")]
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct StakeAuthorizationValidators {
+        #[prost(string, repeated, tag="1")]
+        pub address: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    }
+    /// validators is the oneof that represents either allow_list or deny_list
+    #[derive(serde::Deserialize, serde::Serialize)]
+    #[serde(rename_all = "camelCase")]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Validators {
+        /// allow_list specifies list of validator addresses to whom grantee can delegate tokens on behalf of granter's
+        /// account.
+        #[prost(message, tag="2")]
+        AllowList(StakeAuthorizationValidators),
+        /// deny_list specifies list of validator addresses to whom grantee can not delegate tokens.
+        #[prost(message, tag="3")]
+        DenyList(StakeAuthorizationValidators),
+    }
+}
+/// AuthorizationType defines the type of staking module authorization type
+///
+/// Since: cosmos-sdk 0.43
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum AuthorizationType {
+    /// AUTHORIZATION_TYPE_UNSPECIFIED specifies an unknown authorization type
+    Unspecified = 0,
+    /// AUTHORIZATION_TYPE_DELEGATE defines an authorization type for Msg/Delegate
+    Delegate = 1,
+    /// AUTHORIZATION_TYPE_UNDELEGATE defines an authorization type for Msg/Undelegate
+    Undelegate = 2,
+    /// AUTHORIZATION_TYPE_REDELEGATE defines an authorization type for Msg/BeginRedelegate
+    Redelegate = 3,
+}
+/// GenesisState defines the staking module's genesis state.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgCreateValidatorResponse {
-}
-/// MsgEditValidator defines a SDK message for editing an existing validator.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgEditValidator {
+pub struct GenesisState {
+    /// params defines all the paramaters of related to deposit.
     #[prost(message, optional, tag="1")]
-    pub description: ::core::option::Option<Description>,
-    #[prost(string, tag="2")]
-    pub validator_address: ::prost::alloc::string::String,
-    /// We pass a reference to the new commission rate and min self delegation as
-    /// it's not mandatory to update. If not updated, the deserialized rate will be
-    /// zero with no way to distinguish if an update was intended.
-    /// REF: #2373
-    #[prost(string, tag="3")]
-    pub commission_rate: ::prost::alloc::string::String,
-    #[prost(string, tag="4")]
-    pub min_self_delegation: ::prost::alloc::string::String,
+    pub params: ::core::option::Option<Params>,
+    /// last_total_power tracks the total amounts of bonded tokens recorded during
+    /// the previous end block.
+    #[prost(bytes="vec", tag="2")]
+    pub last_total_power: ::prost::alloc::vec::Vec<u8>,
+    /// last_validator_powers is a special index that provides a historical list
+    /// of the last-block's bonded validators.
+    #[prost(message, repeated, tag="3")]
+    pub last_validator_powers: ::prost::alloc::vec::Vec<LastValidatorPower>,
+    /// delegations defines the validator set at genesis.
+    #[prost(message, repeated, tag="4")]
+    pub validators: ::prost::alloc::vec::Vec<Validator>,
+    /// delegations defines the delegations active at genesis.
+    #[prost(message, repeated, tag="5")]
+    pub delegations: ::prost::alloc::vec::Vec<Delegation>,
+    /// unbonding_delegations defines the unbonding delegations active at genesis.
+    #[prost(message, repeated, tag="6")]
+    pub unbonding_delegations: ::prost::alloc::vec::Vec<UnbondingDelegation>,
+    /// redelegations defines the redelegations active at genesis.
+    #[prost(message, repeated, tag="7")]
+    pub redelegations: ::prost::alloc::vec::Vec<Redelegation>,
+    #[prost(bool, tag="8")]
+    pub exported: bool,
 }
-/// MsgEditValidatorResponse defines the Msg/EditValidator response type.
+/// LastValidatorPower required for validator set update logic.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgEditValidatorResponse {
-}
-/// MsgDelegate defines a SDK message for performing a delegation of coins
-/// from a delegator to a validator.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgDelegate {
+pub struct LastValidatorPower {
+    /// address is the address of the validator.
     #[prost(string, tag="1")]
-    pub delegator_address: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub validator_address: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="3")]
-    pub amount: ::core::option::Option<super::super::base::v1beta1::Coin>,
-}
-/// MsgDelegateResponse defines the Msg/Delegate response type.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgDelegateResponse {
-}
-/// MsgBeginRedelegate defines a SDK message for performing a redelegation
-/// of coins from a delegator and source validator to a destination validator.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgBeginRedelegate {
-    #[prost(string, tag="1")]
-    pub delegator_address: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub validator_src_address: ::prost::alloc::string::String,
-    #[prost(string, tag="3")]
-    pub validator_dst_address: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="4")]
-    pub amount: ::core::option::Option<super::super::base::v1beta1::Coin>,
-}
-/// MsgBeginRedelegateResponse defines the Msg/BeginRedelegate response type.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgBeginRedelegateResponse {
-    #[prost(message, optional, tag="1")]
-    pub completion_time: ::core::option::Option<::prost_wkt_types::Timestamp>,
-}
-/// MsgUndelegate defines a SDK message for performing an undelegation from a
-/// delegate and a validator.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgUndelegate {
-    #[prost(string, tag="1")]
-    pub delegator_address: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub validator_address: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="3")]
-    pub amount: ::core::option::Option<super::super::base::v1beta1::Coin>,
-}
-/// MsgUndelegateResponse defines the Msg/Undelegate response type.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgUndelegateResponse {
-    #[prost(message, optional, tag="1")]
-    pub completion_time: ::core::option::Option<::prost_wkt_types::Timestamp>,
+    pub address: ::prost::alloc::string::String,
+    /// power defines the power of the validator.
+    #[prost(int64, tag="2")]
+    pub power: i64,
 }
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_HISTORICAL_INFO : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.HistoricalInfo")] impl :: prost_wkt :: MessageSerde for HistoricalInfo { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "HistoricalInfo" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.HistoricalInfo" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
@@ -904,11 +1432,25 @@ pub struct MsgUndelegateResponse {
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_POOL : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.Pool")] impl :: prost_wkt :: MessageSerde for Pool { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "Pool" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.Pool" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_GENESIS_STATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.GenesisState")] impl :: prost_wkt :: MessageSerde for GenesisState { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "GenesisState" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.GenesisState" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_CREATE_VALIDATOR : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgCreateValidator")] impl :: prost_wkt :: MessageSerde for MsgCreateValidator { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgCreateValidator" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgCreateValidator" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_LAST_VALIDATOR_POWER : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.LastValidatorPower")] impl :: prost_wkt :: MessageSerde for LastValidatorPower { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "LastValidatorPower" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.LastValidatorPower" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_CREATE_VALIDATOR_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgCreateValidatorResponse")] impl :: prost_wkt :: MessageSerde for MsgCreateValidatorResponse { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgCreateValidatorResponse" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgCreateValidatorResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_STAKE_AUTHORIZATION : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.StakeAuthorization")] impl :: prost_wkt :: MessageSerde for StakeAuthorization { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "StakeAuthorization" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.StakeAuthorization" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_EDIT_VALIDATOR : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgEditValidator")] impl :: prost_wkt :: MessageSerde for MsgEditValidator { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgEditValidator" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgEditValidator" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_EDIT_VALIDATOR_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgEditValidatorResponse")] impl :: prost_wkt :: MessageSerde for MsgEditValidatorResponse { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgEditValidatorResponse" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgEditValidatorResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_DELEGATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgDelegate")] impl :: prost_wkt :: MessageSerde for MsgDelegate { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgDelegate" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgDelegate" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_DELEGATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgDelegateResponse")] impl :: prost_wkt :: MessageSerde for MsgDelegateResponse { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgDelegateResponse" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgDelegateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_BEGIN_REDELEGATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgBeginRedelegate")] impl :: prost_wkt :: MessageSerde for MsgBeginRedelegate { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgBeginRedelegate" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgBeginRedelegate" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_BEGIN_REDELEGATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgBeginRedelegateResponse")] impl :: prost_wkt :: MessageSerde for MsgBeginRedelegateResponse { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgBeginRedelegateResponse" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgBeginRedelegateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UNDELEGATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgUndelegate")] impl :: prost_wkt :: MessageSerde for MsgUndelegate { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgUndelegate" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgUndelegate" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UNDELEGATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgUndelegateResponse")] impl :: prost_wkt :: MessageSerde for MsgUndelegateResponse { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgUndelegateResponse" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgUndelegateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_QUERY_VALIDATORS_REQUEST : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.QueryValidatorsRequest")] impl :: prost_wkt :: MessageSerde for QueryValidatorsRequest { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "QueryValidatorsRequest" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.QueryValidatorsRequest" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
@@ -966,22 +1508,8 @@ pub struct MsgUndelegateResponse {
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_QUERY_PARAMS_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.QueryParamsResponse")] impl :: prost_wkt :: MessageSerde for QueryParamsResponse { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "QueryParamsResponse" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.QueryParamsResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_CREATE_VALIDATOR : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgCreateValidator")] impl :: prost_wkt :: MessageSerde for MsgCreateValidator { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgCreateValidator" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgCreateValidator" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_STAKE_AUTHORIZATION : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.StakeAuthorization")] impl :: prost_wkt :: MessageSerde for StakeAuthorization { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "StakeAuthorization" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.StakeAuthorization" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_CREATE_VALIDATOR_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgCreateValidatorResponse")] impl :: prost_wkt :: MessageSerde for MsgCreateValidatorResponse { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgCreateValidatorResponse" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgCreateValidatorResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_GENESIS_STATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.GenesisState")] impl :: prost_wkt :: MessageSerde for GenesisState { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "GenesisState" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.GenesisState" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_EDIT_VALIDATOR : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgEditValidator")] impl :: prost_wkt :: MessageSerde for MsgEditValidator { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgEditValidator" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgEditValidator" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_EDIT_VALIDATOR_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgEditValidatorResponse")] impl :: prost_wkt :: MessageSerde for MsgEditValidatorResponse { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgEditValidatorResponse" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgEditValidatorResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_DELEGATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgDelegate")] impl :: prost_wkt :: MessageSerde for MsgDelegate { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgDelegate" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgDelegate" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_DELEGATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgDelegateResponse")] impl :: prost_wkt :: MessageSerde for MsgDelegateResponse { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgDelegateResponse" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgDelegateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_BEGIN_REDELEGATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgBeginRedelegate")] impl :: prost_wkt :: MessageSerde for MsgBeginRedelegate { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgBeginRedelegate" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgBeginRedelegate" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_BEGIN_REDELEGATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgBeginRedelegateResponse")] impl :: prost_wkt :: MessageSerde for MsgBeginRedelegateResponse { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgBeginRedelegateResponse" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgBeginRedelegateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UNDELEGATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgUndelegate")] impl :: prost_wkt :: MessageSerde for MsgUndelegate { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgUndelegate" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgUndelegate" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UNDELEGATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.MsgUndelegateResponse")] impl :: prost_wkt :: MessageSerde for MsgUndelegateResponse { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "MsgUndelegateResponse" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.MsgUndelegateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_LAST_VALIDATOR_POWER : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.staking.v1beta1.LastValidatorPower")] impl :: prost_wkt :: MessageSerde for LastValidatorPower { fn package_name (& self) -> & 'static str { "cosmos.staking.v1beta1" } fn message_name (& self) -> & 'static str { "LastValidatorPower" } fn type_url (& self) -> & 'static str { "/cosmos.staking.v1beta1.LastValidatorPower" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;

@@ -1,3 +1,108 @@
+/// MsgCreateVestingAccount defines a message that enables creating a vesting
+/// account.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgCreateVestingAccount {
+    #[prost(string, tag="1")]
+    pub from_address: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub to_address: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag="3")]
+    pub amount: ::prost::alloc::vec::Vec<super::super::base::v1beta1::Coin>,
+    #[prost(int64, tag="4")]
+    pub end_time: i64,
+    #[prost(bool, tag="5")]
+    pub delayed: bool,
+}
+/// MsgCreateVestingAccountResponse defines the Msg/CreateVestingAccount response type.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgCreateVestingAccountResponse {
+}
+/// Generated client implementations.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod msg_client {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    /// Msg defines the bank Msg service.
+    #[derive(Debug, Clone)]
+    pub struct MsgClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl<T> MsgClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> MsgClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+            >>::Error: Into<StdError> + Send + Sync,
+        {
+            MsgClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with `gzip`.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        /// Enable decompressing responses with `gzip`.
+        #[must_use]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
+        }
+        /// CreateVestingAccount defines a method that enables creating a vesting
+        /// account.
+        pub async fn create_vesting_account(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgCreateVestingAccount>,
+        ) -> Result<
+                tonic::Response<super::MsgCreateVestingAccountResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cosmos.vesting.v1beta1.Msg/CreateVestingAccount",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+    }
+}
 /// BaseVestingAccount implements the VestingAccount interface. It contains all
 /// the necessary fields needed for any vesting account implementation.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -71,29 +176,10 @@ pub struct PermanentLockedAccount {
     #[prost(message, optional, tag="1")]
     pub base_vesting_account: ::core::option::Option<BaseVestingAccount>,
 }
-/// MsgCreateVestingAccount defines a message that enables creating a vesting
-/// account.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgCreateVestingAccount {
-    #[prost(string, tag="1")]
-    pub from_address: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub to_address: ::prost::alloc::string::String,
-    #[prost(message, repeated, tag="3")]
-    pub amount: ::prost::alloc::vec::Vec<super::super::base::v1beta1::Coin>,
-    #[prost(int64, tag="4")]
-    pub end_time: i64,
-    #[prost(bool, tag="5")]
-    pub delayed: bool,
-}
-/// MsgCreateVestingAccountResponse defines the Msg/CreateVestingAccount response type.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgCreateVestingAccountResponse {
-}
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_CREATE_VESTING_ACCOUNT : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.vesting.v1beta1.MsgCreateVestingAccount")] impl :: prost_wkt :: MessageSerde for MsgCreateVestingAccount { fn package_name (& self) -> & 'static str { "cosmos.vesting.v1beta1" } fn message_name (& self) -> & 'static str { "MsgCreateVestingAccount" } fn type_url (& self) -> & 'static str { "/cosmos.vesting.v1beta1.MsgCreateVestingAccount" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_CREATE_VESTING_ACCOUNT_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.vesting.v1beta1.MsgCreateVestingAccountResponse")] impl :: prost_wkt :: MessageSerde for MsgCreateVestingAccountResponse { fn package_name (& self) -> & 'static str { "cosmos.vesting.v1beta1" } fn message_name (& self) -> & 'static str { "MsgCreateVestingAccountResponse" } fn type_url (& self) -> & 'static str { "/cosmos.vesting.v1beta1.MsgCreateVestingAccountResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_BASE_VESTING_ACCOUNT : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.vesting.v1beta1.BaseVestingAccount")] impl :: prost_wkt :: MessageSerde for BaseVestingAccount { fn package_name (& self) -> & 'static str { "cosmos.vesting.v1beta1" } fn message_name (& self) -> & 'static str { "BaseVestingAccount" } fn type_url (& self) -> & 'static str { "/cosmos.vesting.v1beta1.BaseVestingAccount" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
@@ -106,7 +192,3 @@ pub struct MsgCreateVestingAccountResponse {
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_PERIODIC_VESTING_ACCOUNT : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.vesting.v1beta1.PeriodicVestingAccount")] impl :: prost_wkt :: MessageSerde for PeriodicVestingAccount { fn package_name (& self) -> & 'static str { "cosmos.vesting.v1beta1" } fn message_name (& self) -> & 'static str { "PeriodicVestingAccount" } fn type_url (& self) -> & 'static str { "/cosmos.vesting.v1beta1.PeriodicVestingAccount" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_PERMANENT_LOCKED_ACCOUNT : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.vesting.v1beta1.PermanentLockedAccount")] impl :: prost_wkt :: MessageSerde for PermanentLockedAccount { fn package_name (& self) -> & 'static str { "cosmos.vesting.v1beta1" } fn message_name (& self) -> & 'static str { "PermanentLockedAccount" } fn type_url (& self) -> & 'static str { "/cosmos.vesting.v1beta1.PermanentLockedAccount" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_CREATE_VESTING_ACCOUNT : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.vesting.v1beta1.MsgCreateVestingAccount")] impl :: prost_wkt :: MessageSerde for MsgCreateVestingAccount { fn package_name (& self) -> & 'static str { "cosmos.vesting.v1beta1" } fn message_name (& self) -> & 'static str { "MsgCreateVestingAccount" } fn type_url (& self) -> & 'static str { "/cosmos.vesting.v1beta1.MsgCreateVestingAccount" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_CREATE_VESTING_ACCOUNT_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/cosmos.vesting.v1beta1.MsgCreateVestingAccountResponse")] impl :: prost_wkt :: MessageSerde for MsgCreateVestingAccountResponse { fn package_name (& self) -> & 'static str { "cosmos.vesting.v1beta1" } fn message_name (& self) -> & 'static str { "MsgCreateVestingAccountResponse" } fn type_url (& self) -> & 'static str { "/cosmos.vesting.v1beta1.MsgCreateVestingAccountResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;

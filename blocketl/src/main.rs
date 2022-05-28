@@ -22,7 +22,8 @@ async fn main() -> Result<()> {
 
     let bucket = storage::Observed::new(
         &mut registry,
-        storage::Gcs::new(args.bucket, args.service_account, config::USER_AGENT)?,
+        storage::Gcs::new(args.bucket, args.service_account, config::USER_AGENT)
+            .map_err(|err| err!("failed to setup storage bucket: {}", err))?,
     );
 
     let (heights_sender, heights_receiver) = mpsc::channel(1024);

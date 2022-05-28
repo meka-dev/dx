@@ -110,52 +110,245 @@ pub struct Params {
     #[prost(string, repeated, tag="1")]
     pub allowed_clients: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
-/// GenesisState defines the ibc client submodule's genesis state.
+/// MsgCreateClient defines a message to create an IBC client
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GenesisState {
-    /// client states with their corresponding identifiers
-    #[prost(message, repeated, tag="1")]
-    pub clients: ::prost::alloc::vec::Vec<IdentifiedClientState>,
-    /// consensus states from each client
-    #[prost(message, repeated, tag="2")]
-    pub clients_consensus: ::prost::alloc::vec::Vec<ClientConsensusStates>,
-    /// metadata from each client
-    #[prost(message, repeated, tag="3")]
-    pub clients_metadata: ::prost::alloc::vec::Vec<IdentifiedGenesisMetadata>,
-    #[prost(message, optional, tag="4")]
-    pub params: ::core::option::Option<Params>,
-    /// create localhost on initialization
-    #[prost(bool, tag="5")]
-    pub create_localhost: bool,
-    /// the sequence for the next generated client identifier
-    #[prost(uint64, tag="6")]
-    pub next_client_sequence: u64,
+pub struct MsgCreateClient {
+    /// light client state
+    #[prost(message, optional, tag="1")]
+    pub client_state: ::core::option::Option<::prost_wkt_types::Any>,
+    /// consensus state associated with the client that corresponds to a given
+    /// height.
+    #[prost(message, optional, tag="2")]
+    pub consensus_state: ::core::option::Option<::prost_wkt_types::Any>,
+    /// signer address
+    #[prost(string, tag="3")]
+    pub signer: ::prost::alloc::string::String,
 }
-/// GenesisMetadata defines the genesis type for metadata that clients may return
-/// with ExportMetadata
+/// MsgCreateClientResponse defines the Msg/CreateClient response type.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GenesisMetadata {
-    /// store key of metadata without clientID-prefix
-    #[prost(bytes="vec", tag="1")]
-    pub key: ::prost::alloc::vec::Vec<u8>,
-    /// metadata value
-    #[prost(bytes="vec", tag="2")]
-    pub value: ::prost::alloc::vec::Vec<u8>,
+pub struct MsgCreateClientResponse {
 }
-/// IdentifiedGenesisMetadata has the client metadata with the corresponding
-/// client id.
+/// MsgUpdateClient defines an sdk.Msg to update a IBC client state using
+/// the given header.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct IdentifiedGenesisMetadata {
+pub struct MsgUpdateClient {
+    /// client unique identifier
     #[prost(string, tag="1")]
     pub client_id: ::prost::alloc::string::String,
-    #[prost(message, repeated, tag="2")]
-    pub client_metadata: ::prost::alloc::vec::Vec<GenesisMetadata>,
+    /// header to update the light client
+    #[prost(message, optional, tag="2")]
+    pub header: ::core::option::Option<::prost_wkt_types::Any>,
+    /// signer address
+    #[prost(string, tag="3")]
+    pub signer: ::prost::alloc::string::String,
+}
+/// MsgUpdateClientResponse defines the Msg/UpdateClient response type.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgUpdateClientResponse {
+}
+/// MsgUpgradeClient defines an sdk.Msg to upgrade an IBC client to a new client
+/// state
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgUpgradeClient {
+    /// client unique identifier
+    #[prost(string, tag="1")]
+    pub client_id: ::prost::alloc::string::String,
+    /// upgraded client state
+    #[prost(message, optional, tag="2")]
+    pub client_state: ::core::option::Option<::prost_wkt_types::Any>,
+    /// upgraded consensus state, only contains enough information to serve as a
+    /// basis of trust in update logic
+    #[prost(message, optional, tag="3")]
+    pub consensus_state: ::core::option::Option<::prost_wkt_types::Any>,
+    /// proof that old chain committed to new client
+    #[prost(bytes="vec", tag="4")]
+    pub proof_upgrade_client: ::prost::alloc::vec::Vec<u8>,
+    /// proof that old chain committed to new consensus state
+    #[prost(bytes="vec", tag="5")]
+    pub proof_upgrade_consensus_state: ::prost::alloc::vec::Vec<u8>,
+    /// signer address
+    #[prost(string, tag="6")]
+    pub signer: ::prost::alloc::string::String,
+}
+/// MsgUpgradeClientResponse defines the Msg/UpgradeClient response type.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgUpgradeClientResponse {
+}
+/// MsgSubmitMisbehaviour defines an sdk.Msg type that submits Evidence for
+/// light client misbehaviour.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgSubmitMisbehaviour {
+    /// client unique identifier
+    #[prost(string, tag="1")]
+    pub client_id: ::prost::alloc::string::String,
+    /// misbehaviour used for freezing the light client
+    #[prost(message, optional, tag="2")]
+    pub misbehaviour: ::core::option::Option<::prost_wkt_types::Any>,
+    /// signer address
+    #[prost(string, tag="3")]
+    pub signer: ::prost::alloc::string::String,
+}
+/// MsgSubmitMisbehaviourResponse defines the Msg/SubmitMisbehaviour response
+/// type.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MsgSubmitMisbehaviourResponse {
+}
+/// Generated client implementations.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod msg_client {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    /// Msg defines the ibc/client Msg service.
+    #[derive(Debug, Clone)]
+    pub struct MsgClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl<T> MsgClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> MsgClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+            >>::Error: Into<StdError> + Send + Sync,
+        {
+            MsgClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with `gzip`.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        /// Enable decompressing responses with `gzip`.
+        #[must_use]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
+        }
+        /// CreateClient defines a rpc handler method for MsgCreateClient.
+        pub async fn create_client(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgCreateClient>,
+        ) -> Result<tonic::Response<super::MsgCreateClientResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.core.client.v1.Msg/CreateClient",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// UpdateClient defines a rpc handler method for MsgUpdateClient.
+        pub async fn update_client(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgUpdateClient>,
+        ) -> Result<tonic::Response<super::MsgUpdateClientResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.core.client.v1.Msg/UpdateClient",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// UpgradeClient defines a rpc handler method for MsgUpgradeClient.
+        pub async fn upgrade_client(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgUpgradeClient>,
+        ) -> Result<tonic::Response<super::MsgUpgradeClientResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.core.client.v1.Msg/UpgradeClient",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// SubmitMisbehaviour defines a rpc handler method for MsgSubmitMisbehaviour.
+        pub async fn submit_misbehaviour(
+            &mut self,
+            request: impl tonic::IntoRequest<super::MsgSubmitMisbehaviour>,
+        ) -> Result<
+                tonic::Response<super::MsgSubmitMisbehaviourResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.core.client.v1.Msg/SubmitMisbehaviour",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+    }
 }
 /// QueryClientStateRequest is the request type for the Query/ClientState RPC
 /// method
@@ -340,104 +533,281 @@ pub struct QueryUpgradedConsensusStateResponse {
     #[prost(message, optional, tag="1")]
     pub upgraded_consensus_state: ::core::option::Option<::prost_wkt_types::Any>,
 }
-/// MsgCreateClient defines a message to create an IBC client
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgCreateClient {
-    /// light client state
-    #[prost(message, optional, tag="1")]
-    pub client_state: ::core::option::Option<::prost_wkt_types::Any>,
-    /// consensus state associated with the client that corresponds to a given
-    /// height.
-    #[prost(message, optional, tag="2")]
-    pub consensus_state: ::core::option::Option<::prost_wkt_types::Any>,
-    /// signer address
-    #[prost(string, tag="3")]
-    pub signer: ::prost::alloc::string::String,
+/// Generated client implementations.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod query_client {
+    #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
+    use tonic::codegen::*;
+    /// Query provides defines the gRPC querier service
+    #[derive(Debug, Clone)]
+    pub struct QueryClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl<T> QueryClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::BoxBody>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> QueryClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::BoxBody>,
+            >>::Error: Into<StdError> + Send + Sync,
+        {
+            QueryClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with `gzip`.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_gzip(mut self) -> Self {
+            self.inner = self.inner.send_gzip();
+            self
+        }
+        /// Enable decompressing responses with `gzip`.
+        #[must_use]
+        pub fn accept_gzip(mut self) -> Self {
+            self.inner = self.inner.accept_gzip();
+            self
+        }
+        /// ClientState queries an IBC light client.
+        pub async fn client_state(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryClientStateRequest>,
+        ) -> Result<tonic::Response<super::QueryClientStateResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.core.client.v1.Query/ClientState",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// ClientStates queries all the IBC light clients of a chain.
+        pub async fn client_states(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryClientStatesRequest>,
+        ) -> Result<tonic::Response<super::QueryClientStatesResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.core.client.v1.Query/ClientStates",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// ConsensusState queries a consensus state associated with a client state at
+        /// a given height.
+        pub async fn consensus_state(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryConsensusStateRequest>,
+        ) -> Result<tonic::Response<super::QueryConsensusStateResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.core.client.v1.Query/ConsensusState",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// ConsensusStates queries all the consensus state associated with a given
+        /// client.
+        pub async fn consensus_states(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryConsensusStatesRequest>,
+        ) -> Result<
+                tonic::Response<super::QueryConsensusStatesResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.core.client.v1.Query/ConsensusStates",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// Status queries the status of an IBC client.
+        pub async fn client_status(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryClientStatusRequest>,
+        ) -> Result<tonic::Response<super::QueryClientStatusResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.core.client.v1.Query/ClientStatus",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// ClientParams queries all parameters of the ibc client.
+        pub async fn client_params(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryClientParamsRequest>,
+        ) -> Result<tonic::Response<super::QueryClientParamsResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.core.client.v1.Query/ClientParams",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// UpgradedClientState queries an Upgraded IBC light client.
+        pub async fn upgraded_client_state(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryUpgradedClientStateRequest>,
+        ) -> Result<
+                tonic::Response<super::QueryUpgradedClientStateResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.core.client.v1.Query/UpgradedClientState",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        /// UpgradedConsensusState queries an Upgraded IBC consensus state.
+        pub async fn upgraded_consensus_state(
+            &mut self,
+            request: impl tonic::IntoRequest<super::QueryUpgradedConsensusStateRequest>,
+        ) -> Result<
+                tonic::Response<super::QueryUpgradedConsensusStateResponse>,
+                tonic::Status,
+            > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/ibc.core.client.v1.Query/UpgradedConsensusState",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+    }
 }
-/// MsgCreateClientResponse defines the Msg/CreateClient response type.
+/// GenesisState defines the ibc client submodule's genesis state.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgCreateClientResponse {
+pub struct GenesisState {
+    /// client states with their corresponding identifiers
+    #[prost(message, repeated, tag="1")]
+    pub clients: ::prost::alloc::vec::Vec<IdentifiedClientState>,
+    /// consensus states from each client
+    #[prost(message, repeated, tag="2")]
+    pub clients_consensus: ::prost::alloc::vec::Vec<ClientConsensusStates>,
+    /// metadata from each client
+    #[prost(message, repeated, tag="3")]
+    pub clients_metadata: ::prost::alloc::vec::Vec<IdentifiedGenesisMetadata>,
+    #[prost(message, optional, tag="4")]
+    pub params: ::core::option::Option<Params>,
+    /// create localhost on initialization
+    #[prost(bool, tag="5")]
+    pub create_localhost: bool,
+    /// the sequence for the next generated client identifier
+    #[prost(uint64, tag="6")]
+    pub next_client_sequence: u64,
 }
-/// MsgUpdateClient defines an sdk.Msg to update a IBC client state using
-/// the given header.
+/// GenesisMetadata defines the genesis type for metadata that clients may return
+/// with ExportMetadata
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgUpdateClient {
-    /// client unique identifier
+pub struct GenesisMetadata {
+    /// store key of metadata without clientID-prefix
+    #[prost(bytes="vec", tag="1")]
+    pub key: ::prost::alloc::vec::Vec<u8>,
+    /// metadata value
+    #[prost(bytes="vec", tag="2")]
+    pub value: ::prost::alloc::vec::Vec<u8>,
+}
+/// IdentifiedGenesisMetadata has the client metadata with the corresponding
+/// client id.
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct IdentifiedGenesisMetadata {
     #[prost(string, tag="1")]
     pub client_id: ::prost::alloc::string::String,
-    /// header to update the light client
-    #[prost(message, optional, tag="2")]
-    pub header: ::core::option::Option<::prost_wkt_types::Any>,
-    /// signer address
-    #[prost(string, tag="3")]
-    pub signer: ::prost::alloc::string::String,
-}
-/// MsgUpdateClientResponse defines the Msg/UpdateClient response type.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgUpdateClientResponse {
-}
-/// MsgUpgradeClient defines an sdk.Msg to upgrade an IBC client to a new client
-/// state
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgUpgradeClient {
-    /// client unique identifier
-    #[prost(string, tag="1")]
-    pub client_id: ::prost::alloc::string::String,
-    /// upgraded client state
-    #[prost(message, optional, tag="2")]
-    pub client_state: ::core::option::Option<::prost_wkt_types::Any>,
-    /// upgraded consensus state, only contains enough information to serve as a
-    /// basis of trust in update logic
-    #[prost(message, optional, tag="3")]
-    pub consensus_state: ::core::option::Option<::prost_wkt_types::Any>,
-    /// proof that old chain committed to new client
-    #[prost(bytes="vec", tag="4")]
-    pub proof_upgrade_client: ::prost::alloc::vec::Vec<u8>,
-    /// proof that old chain committed to new consensus state
-    #[prost(bytes="vec", tag="5")]
-    pub proof_upgrade_consensus_state: ::prost::alloc::vec::Vec<u8>,
-    /// signer address
-    #[prost(string, tag="6")]
-    pub signer: ::prost::alloc::string::String,
-}
-/// MsgUpgradeClientResponse defines the Msg/UpgradeClient response type.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgUpgradeClientResponse {
-}
-/// MsgSubmitMisbehaviour defines an sdk.Msg type that submits Evidence for
-/// light client misbehaviour.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSubmitMisbehaviour {
-    /// client unique identifier
-    #[prost(string, tag="1")]
-    pub client_id: ::prost::alloc::string::String,
-    /// misbehaviour used for freezing the light client
-    #[prost(message, optional, tag="2")]
-    pub misbehaviour: ::core::option::Option<::prost_wkt_types::Any>,
-    /// signer address
-    #[prost(string, tag="3")]
-    pub signer: ::prost::alloc::string::String,
-}
-/// MsgSubmitMisbehaviourResponse defines the Msg/SubmitMisbehaviour response
-/// type.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSubmitMisbehaviourResponse {
+    #[prost(message, repeated, tag="2")]
+    pub client_metadata: ::prost::alloc::vec::Vec<GenesisMetadata>,
 }
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_IDENTIFIED_CLIENT_STATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.IdentifiedClientState")] impl :: prost_wkt :: MessageSerde for IdentifiedClientState { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "IdentifiedClientState" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.IdentifiedClientState" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
@@ -454,11 +824,21 @@ pub struct MsgSubmitMisbehaviourResponse {
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_PARAMS : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.Params")] impl :: prost_wkt :: MessageSerde for Params { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "Params" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.Params" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_GENESIS_STATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.GenesisState")] impl :: prost_wkt :: MessageSerde for GenesisState { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "GenesisState" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.GenesisState" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_CREATE_CLIENT : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgCreateClient")] impl :: prost_wkt :: MessageSerde for MsgCreateClient { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgCreateClient" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgCreateClient" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_GENESIS_METADATA : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.GenesisMetadata")] impl :: prost_wkt :: MessageSerde for GenesisMetadata { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "GenesisMetadata" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.GenesisMetadata" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_CREATE_CLIENT_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgCreateClientResponse")] impl :: prost_wkt :: MessageSerde for MsgCreateClientResponse { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgCreateClientResponse" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgCreateClientResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_IDENTIFIED_GENESIS_METADATA : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.IdentifiedGenesisMetadata")] impl :: prost_wkt :: MessageSerde for IdentifiedGenesisMetadata { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "IdentifiedGenesisMetadata" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.IdentifiedGenesisMetadata" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UPDATE_CLIENT : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgUpdateClient")] impl :: prost_wkt :: MessageSerde for MsgUpdateClient { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgUpdateClient" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgUpdateClient" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UPDATE_CLIENT_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgUpdateClientResponse")] impl :: prost_wkt :: MessageSerde for MsgUpdateClientResponse { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgUpdateClientResponse" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgUpdateClientResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UPGRADE_CLIENT : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgUpgradeClient")] impl :: prost_wkt :: MessageSerde for MsgUpgradeClient { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgUpgradeClient" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgUpgradeClient" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UPGRADE_CLIENT_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgUpgradeClientResponse")] impl :: prost_wkt :: MessageSerde for MsgUpgradeClientResponse { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgUpgradeClientResponse" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgUpgradeClientResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUBMIT_MISBEHAVIOUR : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgSubmitMisbehaviour")] impl :: prost_wkt :: MessageSerde for MsgSubmitMisbehaviour { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgSubmitMisbehaviour" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgSubmitMisbehaviour" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUBMIT_MISBEHAVIOUR_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgSubmitMisbehaviourResponse")] impl :: prost_wkt :: MessageSerde for MsgSubmitMisbehaviourResponse { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgSubmitMisbehaviourResponse" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgSubmitMisbehaviourResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_QUERY_CLIENT_STATE_REQUEST : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.QueryClientStateRequest")] impl :: prost_wkt :: MessageSerde for QueryClientStateRequest { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "QueryClientStateRequest" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.QueryClientStateRequest" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
@@ -492,18 +872,8 @@ pub struct MsgSubmitMisbehaviourResponse {
 
 # [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_QUERY_UPGRADED_CONSENSUS_STATE_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.QueryUpgradedConsensusStateResponse")] impl :: prost_wkt :: MessageSerde for QueryUpgradedConsensusStateResponse { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "QueryUpgradedConsensusStateResponse" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.QueryUpgradedConsensusStateResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_CREATE_CLIENT : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgCreateClient")] impl :: prost_wkt :: MessageSerde for MsgCreateClient { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgCreateClient" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgCreateClient" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_GENESIS_STATE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.GenesisState")] impl :: prost_wkt :: MessageSerde for GenesisState { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "GenesisState" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.GenesisState" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_CREATE_CLIENT_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgCreateClientResponse")] impl :: prost_wkt :: MessageSerde for MsgCreateClientResponse { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgCreateClientResponse" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgCreateClientResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_GENESIS_METADATA : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.GenesisMetadata")] impl :: prost_wkt :: MessageSerde for GenesisMetadata { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "GenesisMetadata" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.GenesisMetadata" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
 
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UPDATE_CLIENT : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgUpdateClient")] impl :: prost_wkt :: MessageSerde for MsgUpdateClient { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgUpdateClient" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgUpdateClient" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UPDATE_CLIENT_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgUpdateClientResponse")] impl :: prost_wkt :: MessageSerde for MsgUpdateClientResponse { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgUpdateClientResponse" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgUpdateClientResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UPGRADE_CLIENT : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgUpgradeClient")] impl :: prost_wkt :: MessageSerde for MsgUpgradeClient { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgUpgradeClient" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgUpgradeClient" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_UPGRADE_CLIENT_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgUpgradeClientResponse")] impl :: prost_wkt :: MessageSerde for MsgUpgradeClientResponse { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgUpgradeClientResponse" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgUpgradeClientResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUBMIT_MISBEHAVIOUR : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgSubmitMisbehaviour")] impl :: prost_wkt :: MessageSerde for MsgSubmitMisbehaviour { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgSubmitMisbehaviour" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgSubmitMisbehaviour" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
-
-# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_MSG_SUBMIT_MISBEHAVIOUR_RESPONSE : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.MsgSubmitMisbehaviourResponse")] impl :: prost_wkt :: MessageSerde for MsgSubmitMisbehaviourResponse { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "MsgSubmitMisbehaviourResponse" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.MsgSubmitMisbehaviourResponse" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
+# [allow (dead_code)] const IMPL_MESSAGE_SERDE_FOR_IDENTIFIED_GENESIS_METADATA : () = { use :: prost_wkt :: typetag ; # [typetag :: serde (name = "/ibc.core.client.v1.IdentifiedGenesisMetadata")] impl :: prost_wkt :: MessageSerde for IdentifiedGenesisMetadata { fn package_name (& self) -> & 'static str { "ibc.core.client.v1" } fn message_name (& self) -> & 'static str { "IdentifiedGenesisMetadata" } fn type_url (& self) -> & 'static str { "/ibc.core.client.v1.IdentifiedGenesisMetadata" } fn new_instance (& self , data : Vec < u8 >) -> Result < Box < dyn :: prost_wkt :: MessageSerde > , :: prost :: DecodeError > { let mut target = Self :: default () ; :: prost :: Message :: merge (& mut target , data . as_slice ()) ? ; let erased : Box < dyn :: prost_wkt :: MessageSerde > = Box :: new (target) ; Ok (erased) } fn encoded (& self) -> Vec < u8 > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) . expect ("Failed to encode message") ; buf } fn try_encoded (& self) -> Result < Vec < u8 > , :: prost :: EncodeError > { let mut buf = Vec :: new () ; buf . reserve (:: prost :: Message :: encoded_len (self)) ; :: prost :: Message :: encode (self , & mut buf) ? ; Ok (buf) } } } ;
