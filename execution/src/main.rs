@@ -37,7 +37,7 @@ async fn main() -> Result<()> {
         return Err(err!("node still catching up"));
     }
 
-    let (shutdown_sender, _shutdown_receiver) = mpsc::channel::<()>(1);
+    let (shutdown_sender, _shutdown_receiver) = watch::channel(false);
 
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.

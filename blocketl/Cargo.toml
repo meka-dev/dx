@@ -15,8 +15,8 @@ sha2              = { version = "0.10", default-features = false, features = [ "
 tendermint        = { version = "0.23", default-features = false }
 tendermint-rpc    = { version = "0.23", default-features = true,  features = [ "http-client" ] }
 tendermint-proto  = { version = "0.23", default-features = false }
-tokio             = { version = "1.0",  default-features = false, features = [ "macros", "rt-multi-thread", "signal", "sync", "time" ] }
-tokio-stream      = { version = "0.1",  default-features = false }
+tokio             = { version = "1.18", default-features = false, features = [ "macros", "rt-multi-thread", "signal", "sync", "time" ] }
+tokio-stream      = { version = "0.1",  default-features = false, features = [ "time" ] }
 
 chainrs           = { version = "0.1",  default-features = false, path = "../chainrs", features = [ "grpc" ] }
 common            = { version = "0.1",  default-features = false, path = "../common" }

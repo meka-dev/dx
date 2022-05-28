@@ -1,8 +1,10 @@
 use std::net::SocketAddr;
 
+use argh::FromArgs;
 use common::RPC_URL;
 use params_derive::params;
-use tendermint::chain;
+use serde::Serialize;
+use tendermint::{block, chain};
 
 use crate::venue::Venue;
 
@@ -17,9 +19,16 @@ const MAX_PARALLEL_REQUESTS: u64 = 32;
 pub const BINARY: &str = env!("CARGO_PKG_NAME");
 pub const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
+#[derive(FromArgs, Clone, Debug, Eq, PartialEq, Serialize)]
+#[argh(subcommand)]
+pub enum Mode {
+    Backfill(Backfill),
+    Realtime(Realtime),
+}
+
 /// ETL pipeline to extract block and transaction metadata.
 #[params]
-#[derive(argh::FromArgs, Debug)]
+#[derive(FromArgs, Debug)]
 pub struct Args {
     /// comsmos network.
     #[argh(option, default = "VENUE")]
@@ -48,4 +57,25 @@ pub struct Args {
     /// amount of parallel requests to other components
     #[argh(option, default = "MAX_PARALLEL_REQUESTS")]
     pub max_parallel_requests: u64,
+
+    #[argh(subcommand)]
+    pub mode: Mode,
 }
+
+/// Backfill given range of blocks..
+#[derive(Clone, Debug, Eq, PartialEq, FromArgs, Serialize)]
+#[argh(subcommand, name = "backfill")]
+pub struct Backfill {
+    /// lower bound of the backfill operation
+    #[argh(option, default = "block::Height::default()")]
+    pub start_height: block::Height,
+
+    /// upper bound of the backfill operation
+    #[argh(option, default = "block::Height::default()")]
+    pub end_height: block::Height,
+}
+
+/// Realtime ingestion of latest blocks.
+#[derive(Clone, Debug, Eq, PartialEq, FromArgs, Serialize)]
+#[argh(subcommand, name = "realtime")]
+pub struct Realtime {}

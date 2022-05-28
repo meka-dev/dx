@@ -1,11 +1,11 @@
-use tokio::{select, sync::mpsc};
+use tokio::{select, sync::watch};
 use tracing::instrument;
 
 use crate::{tracing::info, Result};
 
 #[cfg(unix)]
 #[instrument(name = "signals routine", skip(shutdown_tx))]
-pub async fn routine(shutdown_tx: mpsc::Sender<()>) -> Result<()> {
+pub async fn routine(shutdown_tx: watch::Sender<bool>) -> Result<()> {
     use tokio::signal::unix::*;
 
     let mut int = signal(SignalKind::interrupt())?;
@@ -19,7 +19,7 @@ pub async fn routine(shutdown_tx: mpsc::Sender<()>) -> Result<()> {
     };
 
     info!(?signal, "received termination signal");
-    let _ = shutdown_tx.try_send(());
+    let _ = shutdown_tx.send(true);
 
     Ok(())
 }
