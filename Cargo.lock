@@ -512,9 +512,9 @@ checksum = "e4c78c047431fee22c1a7bb92e00ad095a02a983affe4d8a72e2a2c62c1b94f3"
 
 [[package]]
 name = "convert_case"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
+checksum = "fb4a24b1aaf0fd0ce8b45161144d6f42cd91677fd5940fd431183eb023b3a2b8"
 
 [[package]]
 name = "core-foundation"
@@ -2171,9 +2171,9 @@ checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
 name = "petgraph"
-version = "0.6.0"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a13a2fa9d0b63e5f22328828741e523766fff0ee9e779316902290dff3f824f"
+checksum = "e6d5014253a1331579ce62aa67443b4a658c5e7dd03d4bc6d302b94474888143"
 dependencies = [
  "fixedbitset",
  "indexmap",
@@ -2407,9 +2407,9 @@ dependencies = [
 
 [[package]]
 name = "prost-wkt"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47899c566753414855c8ecfff84077f06991dd148dd94276367a4e92788d79d4"
+checksum = "337c7b5bb10c755f7aaef49d20df915fcaa0bf49095d54c66d892ab6ec5fb6f2"
 dependencies = [
  "chrono",
  "mopa",
@@ -2422,9 +2422,9 @@ dependencies = [
 
 [[package]]
 name = "prost-wkt-build"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c48d3fe99be8de6cec5792341414cd15253413721a19461cf40c0239bdcda139"
+checksum = "234708ae8468e8dfde403a1b91aa8e4a32ea57dc35c6a8c044b99eeb7f891884"
 dependencies = [
  "convert_case",
  "prost",
@@ -2435,9 +2435,9 @@ dependencies = [
 
 [[package]]
 name = "prost-wkt-types"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "816730455669029499ef82e9696b899f987dbe8abcd4bdf26a33351abebd0a9f"
+checksum = "e588380b02e3822b296c67a481770ce97cf123a55f37653aeedc01ede742d144"
 dependencies = [
  "chrono",
  "prost",
@@ -2445,7 +2445,6 @@ dependencies = [
  "prost-types",
  "prost-wkt",
  "prost-wkt-build",
- "reqwest",
  "serde",
  "serde_derive",
  "serde_json",
