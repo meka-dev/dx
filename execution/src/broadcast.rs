@@ -22,6 +22,7 @@ use prometheus_client::{
     metrics::{counter::Counter, family::Family, histogram::Histogram},
     registry::Unit,
 };
+use strategy::Trade;
 use tendermint::{abci::Transaction, block::Height, chain};
 use tendermint_rpc::{endpoint::broadcast, Client as _, WebSocketClient};
 use tokio::{
@@ -29,7 +30,7 @@ use tokio::{
     time::Instant,
 };
 
-use crate::{strategy::Trade, tracker::Tracker};
+use crate::tracker::Tracker;
 
 pub type Fee = u64;
 

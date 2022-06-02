@@ -8,12 +8,12 @@ use prometheus_client::{
     metrics::{family::Family, histogram::Histogram},
     registry::Unit,
 };
+use strategy::Route;
 use tendermint::{abci::transaction::Hash, Block};
 use tokio::time::Instant;
 use tracing::instrument;
 
 use super::Tracker;
-use crate::strategy::Route;
 
 #[derive(Clone, Hash, Debug, Encode, Eq, PartialEq)]
 enum Method {

@@ -1104,11 +1104,9 @@ dependencies = [
  "cosmrs",
  "cosmwasm-bignumber",
  "cosmwasm-std",
- "criterion",
  "futures",
  "hex",
  "hyper",
- "indexmap",
  "itertools",
  "lcd",
  "mekapi",
@@ -1117,13 +1115,13 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.2",
+ "strategy",
  "tendermint",
  "tendermint-rpc",
  "terrars",
  "tokio",
  "tower-http",
  "tracing",
- "xxhash-rust",
 ]
 
 [[package]]
@@ -3127,6 +3125,40 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "strategy"
+version = "0.1.0"
+dependencies = [
+ "address-book",
+ "arby",
+ "async-trait",
+ "bigint",
+ "chainrs",
+ "common",
+ "cosmrs",
+ "cosmwasm-bignumber",
+ "cosmwasm-std",
+ "criterion",
+ "futures",
+ "hex",
+ "hyper",
+ "indexmap",
+ "itertools",
+ "lcd",
+ "mekapi",
+ "prometheus-client",
+ "serde",
+ "serde_json",
+ "sha2 0.10.2",
+ "tendermint",
+ "tendermint-rpc",
+ "terrars",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "xxhash-rust",
+]
 
 [[package]]
 name = "subtle"

@@ -12,6 +12,7 @@ members = [
   "mekapi",
   "params-derive",
   "proto-build",
+  "strategy",
   "terrars"
 ]
 

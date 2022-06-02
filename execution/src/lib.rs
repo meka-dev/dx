@@ -1,10 +1,8 @@
-pub mod accounts;
 pub mod block_emitter;
 pub mod broadcast;
 pub mod config;
 pub mod metrics;
 pub mod risk_engine;
 pub mod routines;
-pub mod strategy;
 pub mod tracker;
 pub mod treasurer;

@@ -6,9 +6,8 @@ use std::{
 use chainrs::cosmos::base::AccountId;
 use common::{Context as _, Result};
 use sha2::{Digest as _, Sha256};
+use strategy::Route;
 use tendermint::{abci::transaction::Hash, block::Height, Block};
-
-use crate::strategy::Route;
 
 pub mod metrics;
 
