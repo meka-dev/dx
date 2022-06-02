@@ -7,6 +7,7 @@ use common::{
 };
 use futures::StreamExt as _;
 use lcd::Lcd;
+use strategy::{fetcher::Fetcher, Strategy, Trade};
 use tendermint::block;
 use tendermint_rpc::{
     query::{EventType, Query},
@@ -25,7 +26,6 @@ use crate::{
         StaticPoolAllowList,
         UnsupportedPoolList,
     },
-    strategy::{fetcher::Fetcher, Strategy, Trade},
     tracker::Tracker,
 };
 

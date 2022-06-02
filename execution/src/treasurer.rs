@@ -17,8 +17,6 @@ use tendermint::block;
 use terrars::dex::Token;
 use tokio::sync::watch;
 
-use crate::accounts;
-
 pub async fn run<L>(
     mut treasurer: Treasurer<L>,
     mut latest_block_receiver: watch::Receiver<block::Block>,
@@ -83,11 +81,11 @@ where
     }
 
     async fn control(&mut self) -> Result<()> {
-        let arby_balances_handle = tokio::spawn(accounts::fetch(
+        let arby_balances_handle = tokio::spawn(strategy::accounts::fetch(
             self.lcd.clone(),
             self.address_book.arby.clone(),
         ));
-        let treasury_balances_handle = tokio::spawn(accounts::fetch(
+        let treasury_balances_handle = tokio::spawn(strategy::accounts::fetch(
             self.lcd.clone(),
             self.address_book.treasury.clone(),
         ));
@@ -103,7 +101,7 @@ where
             .unwrap_or(&Uint256::zero());
 
         if let Some(last) = self.last {
-            if last.multiply_ratio(9, 10) >= current {
+            if last.multiply_ratio(9i64, 10i64) >= current {
                 error!("balance critically dropped: {} -> {}", last, current);
 
                 let execute_trades = Arc::clone(&self.execute_trades);
