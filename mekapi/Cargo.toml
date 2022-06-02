@@ -7,6 +7,7 @@ edition = "2021"
 async-trait         = { version = "0.1",  default-features = false }
 cosmrs              = { version = "0.7",  default-features = false, features = [ "cosmwasm" ], git = "https://github.com/meka-dev/cosmos-rust.git", branch = "xla/expand-types" }
 cosmwasm-std        = { version = "0.16", default-features = false }
+cosmwasm-bignumber  = { version = "2.2",  default-features = false }
 eventsource-stream  = { version = "0.2",  default-features = false }
 futures             = { version = "0.3",  default-features = false, features = [ "alloc" ] }
 hex                 = { version = "0.4",  default-features = false }
@@ -16,11 +17,12 @@ serde               = { version = "1.0",  default-features = false }
 serde_json          = { version = "1.0",  default-features = false, features = [ "alloc" ] }
 tracing             = { version = "0.1",  default-features = false }
 
+chainrs             = { version = "0.1",  default-features = false, path = "../chainrs" }
 common              = { version = "0.1",  default-features = false, path = "../common" }
+strategy            = { version = "0.1",  default-features = false, path = "../strategy" }
 terrars             = { version = "0.1",  default-features = false, path = "../terrars" }
 
 [dev-dependencies]
-cosmwasm-bignumber  = { version = "2.2",  default-features = false }
 pretty_assertions   = { version = "1.1",  default-features = false, features = [ "std" ] }
 tokio               = { version = "1.0",  default-features = false, features = [ "macros", "rt-multi-thread", "sync", "time" ] }
 wiremock            = { version = "0.5",  default-features = false }

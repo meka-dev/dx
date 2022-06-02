@@ -1,0 +1,18 @@
+[package]
+name = "strategy"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait         = { version = "0.1",  default-features = false }
+bigint              = { version = "4.4",  default-features = false }
+cosmwasm-bignumber  = { version = "2.2",  default-features = false }
+cosmwasm-std        = { version = "0.16", default-features = false }
+indexmap            = { version = "1.8",  default-features = false }
+itertools           = { version = "0.10", default-features = false }
+xxhash-rust         = { version = "0.8",  default-features = false, features = [ "xxh3" ] }
+
+chainrs             = { version = "0.1",  default-features = false, path = "../chainrs" }
+common              = { version = "0.1",  default-features = false, path = "../common" }

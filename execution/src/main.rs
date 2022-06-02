@@ -11,18 +11,10 @@ use common::{
     Result,
 };
 use cosmrs::crypto::secp256k1::SigningKey;
-use execution::{
-    accounts,
-    block_emitter,
-    broadcast,
-    config,
-    routines,
-    strategy::{self, Trade},
-    tracker,
-    treasurer,
-};
+use execution::{block_emitter, broadcast, config, routines, tracker, treasurer};
 use futures::FutureExt as _;
 use lcd::{self, Lcd};
+use strategy::{self, Trade, Token};
 use tendermint_rpc::{Client as _, SubscriptionClient as _, WebSocketClient};
 use tokio::sync::{mpsc, watch, Mutex};
 
@@ -70,7 +62,7 @@ async fn main() -> Result<()> {
         SigningKey::from_bytes(&signing_key_bytes)
             .unwrap()
             .public_key()
-            .account_id(accounts::PREFIX)
+            .account_id(execution::venue::terra::accounts::PREFIX)
             .unwrap()
             .as_ref(),
     )?;
@@ -85,13 +77,15 @@ async fn main() -> Result<()> {
         &mut registry,
         mekapi::Http::new(args.mekapi_url)?,
     );
-    let pool_fetcher =
-        strategy::fetcher::Observed::new(&mut registry, strategy::fetcher::Mekapi {});
+    let pool_fetcher = execution::venue::terra::fetcher::Observed::new(
+        &mut registry,
+        execution::venue::terra::fetcher::Mekapi {},
+    );
     let tx_tracker = Arc::new(Mutex::new(tracker::metrics::Observed::new(
         &mut registry,
         tracker::InMemory::default(),
     )));
-    let broadcaster = broadcast::Observed::new(
+    let broadcaster = execution::venue::terra::broadcast::Observed::new(
         &mut registry,
         broadcast::Rpc::new(
             client.clone(),
@@ -99,6 +93,7 @@ async fn main() -> Result<()> {
             account,
             signing_key_bytes,
             Some(addresses.treasury.clone()),
+            addresses.clone(),
         ),
     );
     let treasurer = treasurer::Treasurer::new(
@@ -111,7 +106,7 @@ async fn main() -> Result<()> {
     let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
         vec![Box::new(strategy::metrics::Observed::new(
             &mut registry,
-            strategy::multi_dex::multi_hop::MultiHop::new(addresses.arby.clone().to_string()),
+            strategy::multi_dex::multi_hop::MultiHop::new(Token { id: "uusd".to_owned(), decimals: 6, native: true }),
         ))];
 
     let mut signals_handle = tokio::spawn(signals::routine(shutdown_sender)).fuse();
@@ -131,7 +126,7 @@ async fn main() -> Result<()> {
     let mut mempool_tx_handle =
         tokio::spawn(routines::mempool_tx_v2(mekapi.clone(), mempool_tx_sender)).fuse();
 
-    let mut broadcast_handle = tokio::spawn(broadcast::run(
+    let mut broadcast_handle = tokio::spawn(execution::venue::terra::broadcast::run(
         trade_receiver,
         broadcaster,
         Arc::clone(&tx_tracker),
@@ -139,7 +134,7 @@ async fn main() -> Result<()> {
     ))
     .fuse();
 
-    let mut execution_handle = tokio::spawn(routines::execution(
+    let mut execution_handle = tokio::spawn(execution::venue::terra::routines::execution(
         lcd,
         mekapi,
         pool_fetcher,

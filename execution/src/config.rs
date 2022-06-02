@@ -8,12 +8,18 @@ use common::{CHAIN_ID, LCD_URL, MEKAPI_URL, RPC_URL};
 use params_derive::params;
 use tendermint::chain;
 
+use crate::venue::Venue;
+
 pub const BINARY: &str = "execution";
 
 /// Execution environemnt for Mekatek strategies.
 #[params]
 #[derive(argh::FromArgs, Debug)]
 pub struct Args {
+    /// network name
+    #[argh(option, default = "Venue::Osmosis")]
+    pub venue: Venue,
+
     /// terra chain identifier, should be static except on hard fork (Mainnet: columbus-5, Testnet:
     /// bombay-12)
     #[argh(option, default = "CHAIN_ID.parse().unwrap()")]

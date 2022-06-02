@@ -90,6 +90,36 @@ impl v1::Api for Http {
         Ok(tx_stream.fuse().boxed())
     }
 
+    async fn v1_events_mempooltx_v4(
+        &self,
+    ) -> Result<BoxStream<'static, Result<pools::V4Response>>> {
+        let url = self.base_url.join("mempooltx-v4?only-pools")?;
+        let sse = self.client.get(url).eventsource()?;
+
+        let tx_stream = sse
+            .scan((), |_, res| async move {
+                match res {
+                    Err(reqwest_eventsource::Error::StreamEnded) => None,
+                    res => Some(res),
+                }
+            })
+            .filter_map(|res| async move {
+                match res {
+                    Ok(Event::Message(eventsource_stream::Event { event, data, .. }))
+                        if event == *"mempooltx-v4".to_string() =>
+                    {
+                        let res = serde_json::from_str::<pools::V4Response>(&data)
+                            .context("failed to decode tx event message data");
+
+                        Some(res)
+                    },
+                    _ => None,
+                }
+            });
+
+        Ok(tx_stream.fuse().boxed())
+    }
+
     async fn v1_pool_responses(&self, factory: Addr, height: block::Height) -> Result<Vec<Pool>> {
         let mut url = self.base_url.join("v1/poolresponses")?;
         url.query_pairs_mut()
@@ -196,8 +226,9 @@ impl pools::Api for Http {
 mod tests {
     use std::str::FromStr;
 
+    use chainrs::cosmos::base::{AccountId, Denom};
     use common::Result;
-    use cosmrs::{tendermint::block, AccountId, Denom};
+    use cosmrs::tendermint::block;
     use cosmwasm_bignumber::Decimal256;
     use cosmwasm_std::{Addr, Uint128};
     use futures::TryStreamExt as _;

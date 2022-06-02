@@ -1108,7 +1108,6 @@ dependencies = [
  "futures",
  "hex",
  "hyper",
- "indexmap",
  "itertools",
  "lcd",
  "mekapi",
@@ -1117,13 +1116,13 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.2",
+ "strategy",
  "tendermint",
  "tendermint-rpc",
  "terrars",
  "tokio",
  "tower-http",
  "tracing",
- "xxhash-rust",
 ]
 
 [[package]]
@@ -1881,6 +1880,7 @@ name = "mekapi"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chainrs",
  "common",
  "cosmrs",
  "cosmwasm-bignumber",
@@ -1893,6 +1893,7 @@ dependencies = [
  "reqwest-eventsource",
  "serde",
  "serde_json",
+ "strategy",
  "terrars",
  "tokio",
  "tracing",
@@ -3129,6 +3130,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
+name = "strategy"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bigint",
+ "chainrs",
+ "common",
+ "cosmwasm-bignumber",
+ "cosmwasm-std",
+ "indexmap",
+ "itertools",
+ "xxhash-rust",
+]
+
+[[package]]
 name = "subtle"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3362,6 +3378,7 @@ dependencies = [
  "serde",
  "serde-json-wasm 0.4.1",
  "serde_json",
+ "strategy",
  "terraswap",
  "tokio",
  "tracing",

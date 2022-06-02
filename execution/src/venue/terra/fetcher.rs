@@ -9,31 +9,17 @@ use common::{
 };
 use cosmwasm_std::Addr;
 use lcd::Lcd;
+use mekapi;
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{family::Family, histogram::Histogram},
     registry::Unit,
 };
+use strategy::Pool;
 use tendermint::block::Height;
-use terrars::dex;
 use tokio::time::Instant;
 
-use crate::accounts;
-
-#[async_trait::async_trait]
-pub trait Fetcher<L, M>
-where
-    L: Lcd,
-    M: mekapi::v3::Api,
-{
-    async fn fetch(
-        &self,
-        lcd: L,
-        mekapi: M,
-        account_id: &AccountId,
-        height: Height,
-    ) -> Result<(accounts::Balances, Vec<dex::Pool>)>;
-}
+use crate::venue::{Balances, Fetcher};
 
 pub struct Mekapi {}
 
@@ -53,9 +39,9 @@ where
         mekapi: M,
         account_id: &AccountId,
         height: Height,
-    ) -> Result<(accounts::Balances, Vec<dex::Pool>)> {
+    ) -> Result<(Balances, Vec<Pool>)> {
         // Fetch available funds for strategies to incorporate.
-        let funds_handle = tokio::spawn(accounts::fetch(lcd, account_id.clone()));
+        let funds_handle = tokio::spawn(crate::venue::fetch(lcd, account_id.clone()));
         let astroport_handle = {
             let mekapi = mekapi.clone();
             tokio::spawn(async move {
@@ -91,10 +77,7 @@ where
         pools.append(&mut loopmarkets);
         pools.append(&mut terraswap);
 
-        Ok((
-            funds,
-            pools.into_iter().map(dex::Pool::from).collect::<Vec<_>>(),
-        ))
+        Ok((funds, pools.into_iter().map(Pool::from).collect::<Vec<_>>()))
     }
 }
 
@@ -163,7 +146,7 @@ where
         mekapi: M,
         account_id: &AccountId,
         height: Height,
-    ) -> Result<(accounts::Balances, Vec<dex::Pool>)> {
+    ) -> Result<(Balances, Vec<strategy::Pool>)> {
         let start = Instant::now();
         let res = self.next.fetch(lcd, mekapi, account_id, height).await;
         let elapsed = start.elapsed().as_secs_f64();

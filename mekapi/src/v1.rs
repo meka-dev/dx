@@ -15,6 +15,10 @@ pub trait Api: Send + Sync {
     async fn v1_events_mempooltx_v2(
         &self,
     ) -> Result<BoxStream<'static, Result<MempoolTxV2Message>>>;
+
+    async fn v1_events_mempooltx_v4(
+        &self,
+    ) -> Result<BoxStream<'static, Result<crate::pools::V4Response>>>;
 }
 
 #[derive(Debug, Deserialize)]

@@ -15,7 +15,6 @@ cosmwasm-bignumber  = { version = "2.2",  default-features = false }
 futures             = { version = "0.3",  default-features = false, features = [ "async-await", "std" ] }
 hex                 = { version = "0.4",  default-features = false }
 hyper               = { version = "0.14", default-features = false }
-indexmap            = { version = "1.8",  default-features = false }
 itertools           = { version = "0.10", default-features = false }
 prometheus-client   = { version = "0.16", default-features = false }
 serde               = { version = "1.0",  default-features = false, features = [ "derive", "rc" ] }
@@ -26,7 +25,6 @@ tendermint-rpc      = { version = "0.23", default-features = true,  features = [
 tokio               = { version = "1.0",  default-features = false, features = [ "macros", "rt-multi-thread", "sync", "time" ] }
 tower-http          = { version = "0.3",  default-features = false, features = [ "trace" ] }
 tracing             = { version = "0.1",  default-features = false, features = [ "attributes" ] }
-xxhash-rust         = { version = "0.8",  default-features = false, features = [ "xxh3" ] }
 
 address-book        = { version = "0.1",  default-features = false, path = "../address-book" }
 arby                = { version = "0.1",  default-features = false, path = "../contracts/arby" }
@@ -35,6 +33,7 @@ common              = { version = "0.1",  default-features = false, path = "../c
 lcd                 = { version = "0.1",  default-features = false, path = "../lcd" }
 mekapi              = { version = "0.1",  default-features = false, path = "../mekapi" }
 params-derive       = { version = "0.1",  default-features = false, path = "../params-derive" }
+strategy            = { version = "0.1",  default-features = false, path = "../strategy" }
 terrars             = { version = "0.1",  default-features = false, path = "../terrars" }
 
 [dev-dependencies]

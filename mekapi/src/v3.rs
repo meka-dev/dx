@@ -1,9 +1,13 @@
 use async_trait::async_trait;
+use chainrs::cosmos::base::Denom;
 use common::Result;
-use cosmrs::{tendermint::block, Denom};
+use cosmrs::tendermint::block;
+use cosmwasm_bignumber::Decimal256;
 use cosmwasm_std::{Addr, Uint128};
 use serde::{de::Error as _, Deserialize, Deserializer};
 use terrars::dex;
+
+// v3 pools are for terra and 50/50 weight
 
 #[async_trait]
 pub trait Api: Send + Sync {
@@ -49,6 +53,55 @@ pub enum Asset {
         amount: Uint128,
         total_supply: Uint128,
     },
+}
+
+impl From<&Pool> for strategy::Pool {
+    fn from(p: &Pool) -> Self {
+        strategy::Pool {
+            id: p.contract_address.to_string(),
+            assets: p.assets.clone().map(strategy::WeightedAsset::from),
+            swap_fee_bid: Decimal256::permille(1000),
+            swap_fee_ask: Decimal256::permille(997),
+        }
+    }
+}
+
+impl From<Pool> for strategy::Pool {
+    fn from(p: Pool) -> Self {
+        From::from(&p)
+    }
+}
+
+impl From<Asset> for strategy::WeightedAsset {
+    fn from(a: Asset) -> Self {
+        match a {
+            Asset::Cw20 {
+                contract_addr,
+                decimals,
+                amount,
+                ..
+            } => strategy::WeightedAsset {
+                token: strategy::Token {
+                    id: contract_addr.to_string(),
+                    decimals,
+                    native: false,
+                },
+                amount: Decimal256::from_uint256(amount.u128())
+                    / Decimal256::from_uint256(10u128.pow(decimals as u32)),
+                weight: 1u128.into(),
+            },
+            Asset::Native { denom, amount, .. } => strategy::WeightedAsset {
+                token: strategy::Token {
+                    id: denom.to_string(),
+                    decimals: 6,
+                    native: true,
+                },
+                amount: Decimal256::from_uint256(amount.u128())
+                    / Decimal256::from_uint256(10u128.pow(6)),
+                weight: 1u128.into(),
+            },
+        }
+    }
 }
 
 impl From<Asset> for dex::Asset {

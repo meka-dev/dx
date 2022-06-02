@@ -1,6 +1,7 @@
 use astroport::asset::AssetInfo as AstroAssetInfo;
 use cosmwasm_std::Addr;
 use serde::{Deserialize, Serialize};
+use strategy::Token as StrategyToken;
 use terraswap::asset::AssetInfo;
 
 const DENOM_UST: &str = "uusd";
@@ -47,6 +48,18 @@ impl From<AssetInfo> for Token {
                 contract_addr: Addr::unchecked(contract_addr),
             },
             AssetInfo::NativeToken { denom } => Token::Native { denom },
+        }
+    }
+}
+
+impl From<StrategyToken> for Token {
+    fn from(t: StrategyToken) -> Self {
+        if t.native {
+            Token::Native { denom: t.id }
+        } else {
+            Token::Cw20 {
+                contract_addr: Addr::unchecked(t.id),
+            }
         }
     }
 }
