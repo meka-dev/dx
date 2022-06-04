@@ -32,8 +32,6 @@ arby                = { version = "0.1",  default-features = false, path = "../c
 chainrs             = { version = "0.1",  default-features = false, path = "../chainrs" }
 common              = { version = "0.1",  default-features = false, path = "../common" }
 lcd                 = { version = "0.1",  default-features = false, path = "../lcd" }
-mekapi              = { version = "0.1",  default-features = false, path = "../mekapi" }
-terrars             = { version = "0.1",  default-features = false, path = "../terrars" }
 
 [dev-dependencies]
 criterion = { version = "0.3", default-features = false, features = [ "cargo_bench_support", "html_reports" ] }

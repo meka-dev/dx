@@ -220,7 +220,7 @@ mod tests {
 
     #[tokio::test]
     async fn pools_v4() -> Result<()> {
-        let height = block::Height::from_str("4382144")?;
+        let height = block::Height::from_str("4671427")?;
         let response = ResponseTemplate::new(200)
             .set_body_bytes(include_bytes!("../fixtures/pools_v4.json").to_vec());
 
@@ -234,7 +234,7 @@ mod tests {
         let http = Http::new(server.uri())?;
         let ps = http.v4(height).await?;
 
-        assert_eq!(ps.len(), 707);
+        assert_eq!(ps.len(), 731);
 
         let atom_osmo_addr =
             AccountId::from_str("osmo1mw0ac6rwlp5r8wapwk3zs6g29h8fcscxqakdzw9emkne6c8wjp9q0t3v8t")
@@ -252,7 +252,7 @@ mod tests {
                         "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2"
                     )
                     .unwrap(),
-                    amount: Uint128::from_str("6573484687793")?,
+                    amount: Uint128::from_str("5455704342878")?,
                 },
                 weight: Uint128::from_str("536870912000000")?,
             },
@@ -264,7 +264,7 @@ mod tests {
             pools::WeightedAsset {
                 token: pools::Asset {
                     denom: Denom::from_str("uosmo").unwrap(),
-                    amount: Uint128::from_str("46391479318305")?,
+                    amount: Uint128::from_str("41241706899777")?,
                 },
                 weight: Uint128::from_str("536870912000000")?,
             },
@@ -273,7 +273,7 @@ mod tests {
             atom_osmos_pool.total_shares,
             pools::Asset {
                 denom: Denom::from_str("gamm/pool/1").unwrap(),
-                amount: Uint128::from_str("462769548931952263196555930")?,
+                amount: Uint128::from_str("396054403988432348146987531")?,
             },
         );
         assert_eq!(

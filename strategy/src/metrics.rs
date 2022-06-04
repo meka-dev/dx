@@ -1,22 +1,20 @@
 use std::fmt::Display;
 
-use chainrs::cosmos::base::AccountId;
 use common::{
     metrics::{Registry, BUCKETS},
     tracing::debug,
 };
-use cosmwasm_bignumber::Uint256;
+use cosmwasm_bignumber::Decimal256;
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{counter::Counter, family::Family, gauge::Gauge, histogram::Histogram},
     registry::Unit,
 };
 use tendermint::block;
-use terrars::dex;
 use tokio::time::Instant;
 
 use super::Trade;
-use crate::{accounts, strategy::Strategy};
+use crate::{Pools, Strategy};
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 pub enum Module {
@@ -166,14 +164,14 @@ where
     fn observe(&self, method: Method, start: Instant, height: block::Height, trades: &[Trade]) {
         let elapsed = start.elapsed().as_secs_f64();
         let (size_total, size_max) = trades.iter().fold(
-            (Uint256::zero(), Uint256::zero()),
+            (Decimal256::zero(), Decimal256::zero()),
             |(total, max), Trade { size, .. }| {
                 let max = if *size > max { *size } else { max };
                 (total + *size, max)
             },
         );
         let (expected_profit_total, expected_profit_max) = trades.iter().fold(
-            (Uint256::zero(), Uint256::zero()),
+            (Decimal256::zero(), Decimal256::zero()),
             |(total, max),
              Trade {
                  expected_profit, ..
@@ -228,7 +226,7 @@ where
             |Trade {
                  size,
                  expected_profit,
-                 messages,
+                 legs,
                  ..
              }| {
                 self.trades.get_or_create(&trade_labels).inc();
@@ -240,7 +238,7 @@ where
                     .inc_by((expected_profit.0 / 10u64.pow(12).into()).as_u64());
                 self.trade_messages_emitted
                     .get_or_create(&trade_labels)
-                    .inc_by(messages.len().try_into().unwrap());
+                    .inc_by(legs.len().try_into().unwrap());
             },
         );
     }
@@ -251,14 +249,9 @@ impl<S> Strategy for Observed<S>
 where
     S: Strategy + Labeled + Sync,
 {
-    async fn execute_mempool_tx(
-        &mut self,
-        height: block::Height,
-        sender: &AccountId,
-        pools: &[mekapi::v3::Pool],
-    ) -> Vec<Trade> {
+    async fn execute_mempool_tx(&mut self, height: block::Height, pools: &Pools) -> Vec<Trade> {
         let start = Instant::now();
-        let trades = self.next.execute_mempool_tx(height, sender, pools).await;
+        let trades = self.next.execute_mempool_tx(height, pools).await;
 
         self.observe(Method::ExecuteMempoolTx, start, height, &trades);
 
@@ -268,12 +261,11 @@ where
     async fn execute_pools(
         &mut self,
         height: block::Height,
-        sender: &AccountId,
-        funds: &accounts::Balances,
-        pools: &dex::Pools,
+        funds: Decimal256,
+        pools: &Pools,
     ) -> Vec<Trade> {
         let start = Instant::now();
-        let trades = self.next.execute_pools(height, sender, funds, pools).await;
+        let trades = self.next.execute_pools(height, funds, pools).await;
 
         self.observe(Method::ExecutePools, start, height, &trades);
 

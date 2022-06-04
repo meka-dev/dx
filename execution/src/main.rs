@@ -11,10 +11,10 @@ use common::{
     Result,
 };
 use cosmrs::crypto::secp256k1::SigningKey;
-use execution::{block_emitter, broadcast, config, routines, tracker, treasurer};
+use execution::{block_emitter, broadcast, config, fetcher, routines, tracker, treasurer};
 use futures::FutureExt as _;
 use lcd::{self, Lcd};
-use strategy::{self, accounts, Trade};
+use strategy::{self, accounts, Token, Trade};
 use tendermint_rpc::{Client as _, SubscriptionClient as _, WebSocketClient};
 use tokio::sync::{mpsc, watch, Mutex};
 
@@ -77,8 +77,7 @@ async fn main() -> Result<()> {
         &mut registry,
         mekapi::Http::new(args.mekapi_url)?,
     );
-    let pool_fetcher =
-        strategy::fetcher::Observed::new(&mut registry, strategy::fetcher::Mekapi {});
+    let pool_fetcher = fetcher::Observed::new(&mut registry, fetcher::Mekapi {});
     let tx_tracker = Arc::new(Mutex::new(tracker::metrics::Observed::new(
         &mut registry,
         tracker::InMemory::default(),
@@ -91,6 +90,7 @@ async fn main() -> Result<()> {
             account,
             signing_key_bytes,
             Some(addresses.treasury.clone()),
+            addresses.clone(),
         ),
     );
     let treasurer = treasurer::Treasurer::new(
@@ -103,7 +103,11 @@ async fn main() -> Result<()> {
     let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
         vec![Box::new(strategy::metrics::Observed::new(
             &mut registry,
-            strategy::multi_dex::multi_hop::MultiHop::new(addresses.arby.clone().to_string()),
+            strategy::multi_dex::multi_hop::MultiHop::new(Token {
+                id: "uusd".to_owned(),
+                decimals: 6,
+                native: true,
+            }),
         ))];
 
     let mut signals_handle = tokio::spawn(signals::routine(shutdown_sender)).fuse();

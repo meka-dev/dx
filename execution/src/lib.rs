@@ -1,6 +1,7 @@
 pub mod block_emitter;
 pub mod broadcast;
 pub mod config;
+pub mod fetcher;
 pub mod metrics;
 pub mod risk_engine;
 pub mod routines;

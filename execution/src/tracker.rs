@@ -3,10 +3,9 @@ use std::{
     ops::Deref as _,
 };
 
-use chainrs::cosmos::base::AccountId;
 use common::{Context as _, Result};
 use sha2::{Digest as _, Sha256};
-use strategy::Route;
+use strategy::{PoolId, Route};
 use tendermint::{abci::transaction::Hash, block::Height, Block};
 
 pub mod metrics;
@@ -14,7 +13,7 @@ pub mod metrics;
 const TIMEOUT_HEIGHT: u64 = 10;
 
 pub trait Tracker {
-    fn is_tracked(&self, route: &Route) -> Option<AccountId>;
+    fn is_tracked(&self, route: &Route) -> Option<PoolId>;
     fn observe_block(&mut self, block: Block) -> Result<()>;
     fn track(&mut self, hash: Hash, route: &Route) -> Option<Route>;
 }
@@ -34,13 +33,13 @@ struct TxEntry {
 /// unfortunately [`tendermint::abci::transaction::Hash`] does not implement `Ord`.
 #[derive(Default)]
 pub struct InMemory {
-    addr_index: HashMap<AccountId, HashSet<Hash>>,
+    addr_index: HashMap<PoolId, HashSet<Hash>>,
     latest_height: Height,
     tx_index: HashMap<Hash, TxEntry>,
 }
 
 impl Tracker for InMemory {
-    fn is_tracked(&self, route: &Route) -> Option<AccountId> {
+    fn is_tracked(&self, route: &Route) -> Option<PoolId> {
         for addr in route.iter() {
             if self.addr_index.contains_key(addr) {
                 return Some(addr.clone());
