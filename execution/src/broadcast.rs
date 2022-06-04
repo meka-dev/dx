@@ -1,8 +1,10 @@
 use std::{
     collections::HashSet,
+    str::FromStr,
     sync::{Arc, RwLock},
 };
 
+use arby::msg::ExecuteMsg;
 use async_trait::async_trait;
 use chainrs::{
     cosmos::{auth::BaseAccount, base::AccountId},
@@ -17,14 +19,18 @@ use common::{
     Result,
 };
 use cosmrs::{crypto::secp256k1::SigningKey, tx::Msg};
+use cosmwasm_bignumber::Uint256;
+use cosmwasm_std::{Addr, Uint128};
+use itertools::Itertools;
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{counter::Counter, family::Family, histogram::Histogram},
     registry::Unit,
 };
-use strategy::Trade;
+use strategy::{PoolId, Trade};
 use tendermint::{abci::Transaction, block::Height, chain};
 use tendermint_rpc::{endpoint::broadcast, Client as _, WebSocketClient};
+use terrars::{dex::Token, wasm::MsgExecuteContract};
 use tokio::{
     sync::{mpsc, Mutex},
     time::Instant,
@@ -107,6 +113,7 @@ pub struct Rpc {
     signing_key_bytes: Vec<u8>,
     sequence: u64,
     treasury: Option<AccountId>,
+    address_book: address_book::AddressBook,
 }
 
 impl Rpc {
@@ -116,6 +123,7 @@ impl Rpc {
         account: BaseAccount,
         signing_key_bytes: Vec<u8>,
         treasury: Option<AccountId>,
+        address_book: address_book::AddressBook,
     ) -> Self {
         let sequence = account.sequence;
 
@@ -126,8 +134,36 @@ impl Rpc {
             signing_key_bytes,
             sequence,
             treasury,
+            address_book,
         }
     }
+}
+
+fn mk_msg(sender: &AccountId, proxy_addr: &AccountId, t: &Trade) -> Result<MsgExecuteContract> {
+    let path = t
+        .legs
+        .iter()
+        .map(|leg| {
+            (
+                Addr::unchecked(leg.pool.id.clone()),
+                Into::<Token>::into(leg.in_token.clone()).into(),
+            )
+        })
+        .collect_vec();
+    let first_token = t.legs.first().ok_or(err!("empty path"))?;
+    Ok(MsgExecuteContract {
+        coins: vec![],
+        contract_address: Addr::unchecked(proxy_addr.to_string()),
+        execute_msg: serde_json::to_vec(&ExecuteMsg::Sprint {
+            input: (t.size.0
+                / Uint256::from(10u128.pow(18 - first_token.in_token.decimals as u32)).0)
+                .as_u64()
+                .into(),
+            min_out: Uint128::new(0u128),
+            path,
+        })?,
+        sender: sender.to_string(),
+    })
 }
 
 #[async_trait]
@@ -138,12 +174,15 @@ impl Broadcaster for Rpc {
         gas_info: GasInfo,
         trade: &Trade,
     ) -> Result<broadcast::tx_sync::Response> {
-        let messages = trade
-            .messages
-            .clone()
-            .into_iter()
-            .map(|msg| msg.to_any().unwrap())
-            .collect::<Vec<_>>();
+        let ai = AccountId::from_str(
+            SigningKey::from_bytes(&self.signing_key_bytes)
+                .map_err(|err| err!("failed to craft signing key from bytes: {}", err))?
+                .public_key()
+                .account_id(strategy::accounts::PREFIX)
+                .unwrap()
+                .as_ref(),
+        )?;
+        let msg = mk_msg(&ai, &self.address_book.arby, trade)?.to_any()?;
         let tx = tx::sign(
             self.chain_id.clone(),
             &SigningKey::from_bytes(&self.signing_key_bytes)
@@ -156,7 +195,7 @@ impl Broadcaster for Rpc {
             None,
             self.treasury.clone(),
             Height::try_from(0_u64).unwrap(),
-            messages,
+            vec![msg],
         )
         .context("failed to sign transaction")?;
 
@@ -200,7 +239,7 @@ impl Broadcaster for Rpc {
 }
 
 // NB(pm): needs rework
-fn gas_estimator(addr: &AccountId) -> u64 {
+fn gas_estimator(addr: &PoolId) -> u64 {
     let expensive = HashSet::from([
         "terra1qpd9n7afwf45rkjlpujrrdfh83pldec8rpujgn".to_owned(), // bLuna/ust
         "terra18r6rdnkgrg74zew3d8l9nhk0m4xanpeukw3e20".to_owned(), // bLuna/ust
@@ -213,7 +252,7 @@ fn gas_estimator(addr: &AccountId) -> u64 {
         "terra1myl709y74vrdcyuxy6g9wv5l2sgah4e9lstnwe".to_owned(), // beth/ust
     ]);
 
-    if expensive.contains(&addr.to_string()) {
+    if expensive.contains(addr) {
         625000
     } else {
         350000
@@ -370,8 +409,8 @@ where
         match res {
             Ok(simulation) => {
                 info!(
-                    "messages={} expected_profit={} estimated_fee={} outcome={:?}",
-                    trade.messages.len(),
+                    "legs={} expected_profit={} estimated_fee={} outcome={:?}",
+                    trade.legs.len(),
                     trade.expected_profit,
                     simulation.fee,
                     simulation.outcome,

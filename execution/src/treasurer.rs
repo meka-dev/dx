@@ -13,8 +13,8 @@ use prometheus_client::{
     encoding::text::Encode,
     metrics::{family::Family, gauge::Gauge},
 };
+use strategy::Token;
 use tendermint::block;
-use terrars::dex::Token;
 use tokio::sync::watch;
 
 pub async fn run<L>(
@@ -95,10 +95,13 @@ where
             flatten(treasury_balances_handle)
         )?;
 
-        let current = *arby_balances.get(&Token::ust()).unwrap_or(&Uint256::zero());
-        let current_treasury = *treasury_balances
-            .get(&Token::ust())
-            .unwrap_or(&Uint256::zero());
+        let ust = Token {
+            id: "uusd".to_owned(),
+            decimals: 6,
+            native: true,
+        };
+        let current = *arby_balances.get(&ust).unwrap_or(&Uint256::zero());
+        let current_treasury = *treasury_balances.get(&ust).unwrap_or(&Uint256::zero());
 
         if let Some(last) = self.last {
             if last.multiply_ratio(9i64, 10i64) >= current {

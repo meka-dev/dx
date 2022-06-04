@@ -1,4 +1,3 @@
-use chainrs::cosmos::base::AccountId;
 use common::{
     metrics::{self, Registry},
     Result,
@@ -8,7 +7,7 @@ use prometheus_client::{
     metrics::{family::Family, histogram::Histogram},
     registry::Unit,
 };
-use strategy::Route;
+use strategy::{PoolId, Route};
 use tendermint::{abci::transaction::Hash, Block};
 use tokio::time::Instant;
 use tracing::instrument;
@@ -62,7 +61,7 @@ impl<T> Tracker for Observed<T>
 where
     T: Tracker,
 {
-    fn is_tracked(&self, route: &Route) -> Option<AccountId> {
+    fn is_tracked(&self, route: &Route) -> Option<PoolId> {
         let start = Instant::now();
         let res = self.next.is_tracked(route);
         self.observe(start, Method::IsTracked);

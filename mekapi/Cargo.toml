@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 async-trait         = { version = "0.1",  default-features = false }
 cosmrs              = { version = "0.7",  default-features = false, features = [ "cosmwasm" ], git = "https://github.com/meka-dev/cosmos-rust.git", branch = "xla/expand-types" }
+cosmwasm-bignumber  = { version = "2.2",  default-features = false }
 cosmwasm-std        = { version = "0.16", default-features = false }
 eventsource-stream  = { version = "0.2",  default-features = false }
 futures             = { version = "0.3",  default-features = false, features = [ "alloc" ] }
@@ -17,6 +18,7 @@ serde_json          = { version = "1.0",  default-features = false, features = [
 tracing             = { version = "0.1",  default-features = false }
 
 common              = { version = "0.1",  default-features = false, path = "../common" }
+strategy            = { version = "0.1",  default-features = false, path = "../strategy" }
 terrars             = { version = "0.1",  default-features = false, path = "../terrars" }
 
 [dev-dependencies]

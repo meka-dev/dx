@@ -17,6 +17,7 @@ pub trait Api: Send + Sync {
 #[serde(rename_all = "snake_case")]
 pub struct Pool {
     pub address: AccountId,
+    pub id: String,
     pub assets: Vec<WeightedAsset>,
     // #[serde(deserialize_with = "decimal_from_str")]
     // pub swap_fee: Decimal,

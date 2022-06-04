@@ -1,40 +1,36 @@
-use chainrs::cosmos::base::AccountId;
-use cosmwasm_bignumber::Uint256;
-use tendermint::block::{self};
-use terrars::{dex::Pools, wasm::MsgExecuteContract};
+use cosmwasm_bignumber::Decimal256;
+use tendermint::block;
 
-use crate::accounts;
+use crate::{Pool, PoolId, Pools, Token};
 
-pub mod fetcher;
-pub mod metrics;
-pub mod multi_dex;
+pub type Route = Vec<PoolId>;
 
-pub type Route = Vec<AccountId>;
+#[derive(Clone, Debug)]
+pub struct Leg {
+    pub in_amount: Decimal256,
+    pub in_token: Token,
+    pub min_out_amount: Option<Decimal256>,
+    pub pool: Pool,
+}
 
 #[derive(Clone, Debug)]
 pub struct Trade {
-    pub size: Uint256,
-    pub expected_profit: Uint256,
-    pub messages: Vec<MsgExecuteContract>,
+    pub size: Decimal256,
+    pub expected_profit: Decimal256,
+    pub legs: Vec<Leg>,
     pub route: Route,
 }
 
 #[async_trait::async_trait]
 pub trait Strategy: Send {
-    async fn execute_mempool_tx(
-        &mut self,
-        height: block::Height,
-        sender: &AccountId,
-        pools: &[mekapi::v3::Pool],
-    ) -> Vec<Trade>;
+    async fn execute_mempool_tx(&mut self, height: block::Height, pools: &Pools) -> Vec<Trade>;
 
-    /// Given the current prices of dex pairs a strategy should produce an ordered list of messages
+    /// Given the current prices of ex pairs a strategy should produce an ordered list of messages
     /// (most likely swaps) to be bundled into one atomic transaction.
     async fn execute_pools(
         &mut self,
         height: block::Height,
-        sender: &AccountId,
-        funds: &accounts::Balances,
+        funds: Decimal256,
         pools: &Pools,
     ) -> Vec<Trade>;
 }
