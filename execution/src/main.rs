@@ -101,7 +101,7 @@ async fn main() -> Result<()> {
     );
 
     let strategies: Vec<Box<dyn strategy::Strategy + Sync>> =
-        vec![Box::new(strategy::metrics::Observed::new(
+        vec![Box::new(execution::metrics::strategy::Observed::new(
             &mut registry,
             strategy::multi_dex::multi_hop::MultiHop::new(Token {
                 id: "uusd".to_owned(),
