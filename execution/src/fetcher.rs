@@ -14,9 +14,11 @@ use prometheus_client::{
     metrics::{family::Family, histogram::Histogram},
     registry::Unit,
 };
-use strategy::{accounts, Pool};
+use strategy::{Balances, Pool};
 use tendermint::block::Height;
 use tokio::time::Instant;
+
+use crate::accounts;
 
 #[async_trait::async_trait]
 pub trait Fetcher<L, M>
@@ -30,7 +32,7 @@ where
         mekapi: M,
         account_id: &AccountId,
         height: Height,
-    ) -> Result<(accounts::Balances, Vec<Pool>)>;
+    ) -> Result<(Balances, Vec<Pool>)>;
 }
 
 pub struct Mekapi {}
@@ -51,7 +53,7 @@ where
         mekapi: M,
         account_id: &AccountId,
         height: Height,
-    ) -> Result<(accounts::Balances, Vec<Pool>)> {
+    ) -> Result<(Balances, Vec<Pool>)> {
         // Fetch available funds for strategies to incorporate.
         let funds_handle = tokio::spawn(accounts::fetch(lcd, account_id.clone()));
         let astroport_handle = {
@@ -158,7 +160,7 @@ where
         mekapi: M,
         account_id: &AccountId,
         height: Height,
-    ) -> Result<(accounts::Balances, Vec<Pool>)> {
+    ) -> Result<(Balances, Vec<Pool>)> {
         let start = Instant::now();
         let res = self.next.fetch(lcd, mekapi, account_id, height).await;
         let elapsed = start.elapsed().as_secs_f64();

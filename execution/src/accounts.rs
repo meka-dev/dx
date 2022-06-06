@@ -4,12 +4,9 @@ use chainrs::cosmos::base::AccountId;
 use common::Result;
 use cosmwasm_bignumber::Uint256;
 use lcd::Lcd;
-
-use crate::Token;
+use strategy::{Balances, Token};
 
 pub const PREFIX: &str = "terra";
-
-pub type Balances = HashMap<Token, Uint256>;
 
 pub async fn fetch<L>(lcd: L, account_id: AccountId) -> Result<Balances>
 where

@@ -36,7 +36,7 @@ use tokio::{
     time::Instant,
 };
 
-use crate::tracker::Tracker;
+use crate::{accounts, tracker::Tracker};
 
 pub type Fee = u64;
 
@@ -178,7 +178,7 @@ impl Broadcaster for Rpc {
             SigningKey::from_bytes(&self.signing_key_bytes)
                 .map_err(|err| err!("failed to craft signing key from bytes: {}", err))?
                 .public_key()
-                .account_id(strategy::accounts::PREFIX)
+                .account_id(accounts::PREFIX)
                 .unwrap()
                 .as_ref(),
         )?;

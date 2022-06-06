@@ -11,10 +11,19 @@ use common::{
     Result,
 };
 use cosmrs::crypto::secp256k1::SigningKey;
-use execution::{block_emitter, broadcast, config, fetcher, routines, tracker, treasurer};
+use execution::{
+    accounts,
+    block_emitter,
+    broadcast,
+    config,
+    fetcher,
+    routines,
+    tracker,
+    treasurer,
+};
 use futures::FutureExt as _;
 use lcd::{self, Lcd};
-use strategy::{self, accounts, Token, Trade};
+use strategy::{self, Token, Trade};
 use tendermint_rpc::{Client as _, SubscriptionClient as _, WebSocketClient};
 use tokio::sync::{mpsc, watch, Mutex};
 

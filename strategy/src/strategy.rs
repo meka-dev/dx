@@ -1,7 +1,11 @@
-use cosmwasm_bignumber::Decimal256;
+use std::collections::HashMap;
+
+use cosmwasm_bignumber::{Decimal256, Uint256};
 use tendermint::block;
 
 use crate::{Pool, PoolId, Pools, Token};
+
+pub type Balances = HashMap<Token, Uint256>;
 
 pub type Route = Vec<PoolId>;
 
