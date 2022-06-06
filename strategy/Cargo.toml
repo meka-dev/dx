@@ -31,7 +31,6 @@ address-book        = { version = "0.1",  default-features = false, path = "../a
 arby                = { version = "0.1",  default-features = false, path = "../contracts/arby" }
 chainrs             = { version = "0.1",  default-features = false, path = "../chainrs" }
 common              = { version = "0.1",  default-features = false, path = "../common" }
-lcd                 = { version = "0.1",  default-features = false, path = "../lcd" }
 
 [dev-dependencies]
 criterion = { version = "0.3", default-features = false, features = [ "cargo_bench_support", "html_reports" ] }

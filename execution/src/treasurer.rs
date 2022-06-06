@@ -17,6 +17,8 @@ use strategy::Token;
 use tendermint::block;
 use tokio::sync::watch;
 
+use crate::accounts;
+
 pub async fn run<L>(
     mut treasurer: Treasurer<L>,
     mut latest_block_receiver: watch::Receiver<block::Block>,
@@ -81,11 +83,11 @@ where
     }
 
     async fn control(&mut self) -> Result<()> {
-        let arby_balances_handle = tokio::spawn(strategy::accounts::fetch(
+        let arby_balances_handle = tokio::spawn(accounts::fetch(
             self.lcd.clone(),
             self.address_book.arby.clone(),
         ));
-        let treasury_balances_handle = tokio::spawn(strategy::accounts::fetch(
+        let treasury_balances_handle = tokio::spawn(accounts::fetch(
             self.lcd.clone(),
             self.address_book.treasury.clone(),
         ));

@@ -3145,7 +3145,6 @@ dependencies = [
  "hyper",
  "indexmap",
  "itertools",
- "lcd",
  "prometheus-client",
  "serde",
  "serde_json",
