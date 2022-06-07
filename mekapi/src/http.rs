@@ -90,6 +90,36 @@ impl v1::Api for Http {
         Ok(tx_stream.fuse().boxed())
     }
 
+    async fn v1_events_mempooltx_v4(
+        &self,
+    ) -> Result<BoxStream<'static, Result<v1::MempoolTxV4Message>>> {
+        let url = self.base_url.join("mempooltx-v4?only-pools")?;
+        let sse = self.client.get(url).eventsource()?;
+
+        let tx_stream = sse
+            .scan((), |_, res| async move {
+                match res {
+                    Err(reqwest_eventsource::Error::StreamEnded) => None,
+                    res => Some(res),
+                }
+            })
+            .filter_map(|res| async move {
+                match res {
+                    Ok(Event::Message(eventsource_stream::Event { event, data, .. }))
+                        if event == *"mempooltx-v4".to_string() =>
+                    {
+                        let res = serde_json::from_str::<v1::MempoolTxV4Message>(&data)
+                            .context("failed to decode tx event message data");
+
+                        Some(res)
+                    },
+                    _ => None,
+                }
+            });
+
+        Ok(tx_stream.fuse().boxed())
+    }
+
     async fn v1_pool_responses(&self, factory: Addr, height: block::Height) -> Result<Vec<Pool>> {
         let mut url = self.base_url.join("v1/poolresponses")?;
         url.query_pairs_mut()
@@ -332,6 +362,31 @@ mod tests {
             .await?;
 
         assert_eq!(msgs.len(), 9);
+
+        Ok(())
+    }
+    #[tokio::test]
+    async fn v1_events_mempooltx_v4() -> Result<()> {
+        let response = ResponseTemplate::new(200).set_body_raw(
+            include_bytes!("../fixtures/v1_events_mempooltx_v4.eventstream").to_vec(),
+            "text/event-stream",
+        );
+
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("mempooltx-v4"))
+            .respond_with(response)
+            .mount(&server)
+            .await;
+
+        let http = Http::new(server.uri())?;
+        let msgs = http
+            .v1_events_mempooltx_v4()
+            .await?
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        assert_eq!(msgs.len(), 4);
 
         Ok(())
     }
