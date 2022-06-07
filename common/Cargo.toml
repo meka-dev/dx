@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 async-trait         = { version = "0.1",  default-features = false }
 axum                = { version = "0.5",  default-features = false, features = [ "headers", "http2", "matched-path", "tower-log" ] }
-axum-extra          = { version = "0.3",  default-features = false }
 bytes               = { version = "1.1",  default-features = false }
 eyre                = { version = "0.6",  default-features = false }
 hostname            = { version = "0.3",  default-features = false }
