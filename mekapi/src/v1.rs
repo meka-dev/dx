@@ -15,6 +15,10 @@ pub trait Api: Send + Sync {
     async fn v1_events_mempooltx_v2(
         &self,
     ) -> Result<BoxStream<'static, Result<MempoolTxV2Message>>>;
+
+    async fn v1_events_mempooltx_v4(
+        &self,
+    ) -> Result<BoxStream<'static, Result<MempoolTxV4Message>>>;
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,6 +34,16 @@ pub struct MempoolTxV2Message {
     #[serde(deserialize_with = "tx_from_str")]
     pub tx: Tx,
     pub pools: Vec<super::v3::Pool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MempoolTxV4Message {
+    pub height: block::Height,
+    #[serde(rename = "txhash")]
+    pub tx_hash: String,
+    #[serde(deserialize_with = "tx_from_str")]
+    pub tx: Tx,
+    pub pools: Vec<super::pools::Pool>,
 }
 
 // point.
