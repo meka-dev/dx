@@ -10,7 +10,6 @@ publish = false
 prost           = { version = "0.10", default-features = false }
 prost-build     = { version = "0.10", default-features = false }
 prost-wkt-build = { version = "0.3",  default-features = false }
-tonic           = { version = "0.7",  default-features = false }
 tonic-build     = { version = "0.7",  default-features = false, features = [ "prost" ] }
 regex           = { version = "1.0",  default-features = false }
 walkdir         = { version = "2.0",  default-features = false }

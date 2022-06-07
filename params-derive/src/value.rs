@@ -9,7 +9,7 @@ pub struct Value {
 
 impl ToTokens for Value {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let Value {
+        let Self {
             field:
                 Field {
                     attrs,
