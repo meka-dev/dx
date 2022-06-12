@@ -10,6 +10,7 @@ members = [
   "execution",
   "lcd",
   "mekapi",
+  "osmors",
   "params-derive",
   "proto-build",
   "strategy",
