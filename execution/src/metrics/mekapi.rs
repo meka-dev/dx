@@ -20,11 +20,11 @@ use terrars::dex;
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 enum Method {
-    PoolsV4,
+    PoolsV5,
     V1PoolResponses,
     V1EventsMemprolTx,
     V1EventsMemprolTxV2,
-    V1EventsMemprolTxV4,
+    V1EventsMemprolTxV5,
     V3Pools,
 }
 
@@ -106,11 +106,11 @@ impl<M> pools::Api for Observed<M>
 where
     M: pools::Api,
 {
-    async fn v4(&self, height: block::Height) -> Result<Vec<pools::Pool>> {
+    async fn v5(&self, height: block::Height) -> Result<Vec<pools::PoolV5>> {
         let start = Instant::now();
-        let res = self.next.v4(height).await;
+        let res = self.next.v5(height).await;
 
-        self.observe(start, None, height, Method::PoolsV4, res.as_ref().err());
+        self.observe(start, None, height, Method::PoolsV5, res.as_ref().err());
 
         res
     }
@@ -174,17 +174,17 @@ where
         res
     }
 
-    async fn v1_events_mempooltx_v4(
+    async fn v1_events_mempooltx_v5(
         &self,
-    ) -> Result<BoxStream<'static, Result<v1::MempoolTxV4Message>>> {
+    ) -> Result<BoxStream<'static, Result<v1::MempoolTxV5Message>>> {
         let start = Instant::now();
-        let res = self.next.v1_events_mempooltx_v4().await;
+        let res = self.next.v1_events_mempooltx_v5().await;
 
         self.observe(
             start,
             None,
             block::Height::default(),
-            Method::V1EventsMemprolTxV4,
+            Method::V1EventsMemprolTxV5,
             res.as_ref().err(),
         );
 

@@ -18,6 +18,7 @@ serde_json          = { version = "1.0",  default-features = false, features = [
 tracing             = { version = "0.1",  default-features = false }
 
 common              = { version = "0.1",  default-features = false, path = "../common" }
+osmors              = { version = "0.1",  default-features = false, path = "../osmors" }
 strategy            = { version = "0.1",  default-features = false, path = "../strategy" }
 terrars             = { version = "0.1",  default-features = false, path = "../terrars" }
 
