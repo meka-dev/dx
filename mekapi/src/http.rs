@@ -90,10 +90,10 @@ impl v1::Api for Http {
         Ok(tx_stream.fuse().boxed())
     }
 
-    async fn v1_events_mempooltx_v4(
+    async fn v1_events_mempooltx_v5(
         &self,
-    ) -> Result<BoxStream<'static, Result<v1::MempoolTxV4Message>>> {
-        let url = self.base_url.join("mempooltx-v4?only-pools")?;
+    ) -> Result<BoxStream<'static, Result<v1::MempoolTxV5Message>>> {
+        let url = self.base_url.join("mempooltx-v5?only-pools")?;
         let sse = self.client.get(url).eventsource()?;
 
         let tx_stream = sse
@@ -106,9 +106,9 @@ impl v1::Api for Http {
             .filter_map(|res| async move {
                 match res {
                     Ok(Event::Message(eventsource_stream::Event { event, data, .. }))
-                        if event == *"mempooltx-v4".to_string() =>
+                        if event == *"mempooltx-v5".to_string() =>
                     {
-                        let res = serde_json::from_str::<v1::MempoolTxV4Message>(&data)
+                        let res = serde_json::from_str::<v1::MempoolTxV5Message>(&data)
                             .context("failed to decode tx event message data");
 
                         Some(res)
@@ -200,15 +200,15 @@ impl v3::Api for Http {
 
 #[async_trait]
 impl pools::Api for Http {
-    async fn v4(&self, height: block::Height) -> Result<Vec<pools::Pool>> {
-        let url = self.base_url.join("pools-v4")?;
+    async fn v5(&self, height: block::Height) -> Result<Vec<pools::PoolV5>> {
+        let url = self.base_url.join("pools-v5")?;
 
         let res = self.client.get(url).send().await?;
         if res.status() != StatusCode::OK {
             return Err(err!("unexpected response status code: {}", res.status()));
         }
 
-        let res = res.json::<pools::V4Response>().await?;
+        let res = res.json::<pools::V5Response>().await?;
 
         if res.height != height {
             return Err(err!(
@@ -228,7 +228,7 @@ mod tests {
 
     use common::Result;
     use cosmrs::{tendermint::block, AccountId, Denom};
-    use cosmwasm_bignumber::Decimal256;
+    use cosmwasm_bignumber::{Decimal256, Uint256};
     use cosmwasm_std::{Addr, Uint128};
     use futures::TryStreamExt as _;
     use pretty_assertions::assert_eq;
@@ -249,22 +249,22 @@ mod tests {
     use crate::pools;
 
     #[tokio::test]
-    async fn pools_v4() -> Result<()> {
-        let height = block::Height::from_str("4671427")?;
+    async fn pools_v5() -> Result<()> {
+        let height = block::Height::from_str("4738609")?;
         let response = ResponseTemplate::new(200)
-            .set_body_bytes(include_bytes!("../fixtures/pools_v4.json").to_vec());
+            .set_body_bytes(include_bytes!("../fixtures/pools_v5.json").to_vec());
 
         let server = MockServer::start().await;
         Mock::given(method("GET"))
-            .and(path("pools-v4"))
+            .and(path("pools-v5"))
             .respond_with(response)
             .mount(&server)
             .await;
 
         let http = Http::new(server.uri())?;
-        let ps = http.v4(height).await?;
+        let ps = http.v5(height).await?;
 
-        assert_eq!(ps.len(), 731);
+        assert_eq!(ps.len(), 737);
 
         let atom_osmo_addr =
             AccountId::from_str("osmo1mw0ac6rwlp5r8wapwk3zs6g29h8fcscxqakdzw9emkne6c8wjp9q0t3v8t")
@@ -282,29 +282,26 @@ mod tests {
                         "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2"
                     )
                     .unwrap(),
-                    amount: Uint128::from_str("5455704342878")?,
+                    amount: Uint128::from_str("4975969635903")?,
                 },
                 weight: Uint128::from_str("536870912000000")?,
             },
         );
         assert_eq!(atom_osmos_pool.exit_fee, "0.000000000000000000".to_string(),);
-        assert_eq!(atom_osmos_pool.swap_fee, "0.003000000000000000".to_string(),);
+        assert_eq!(atom_osmos_pool.swap_fee, "0.002000000000000000".to_string(),);
         assert_eq!(
             *atom_osmos_pool.assets.get(1).unwrap(),
             pools::WeightedAsset {
                 token: pools::Asset {
                     denom: Denom::from_str("uosmo").unwrap(),
-                    amount: Uint128::from_str("41241706899777")?,
+                    amount: Uint128::from_str("40710472769181")?,
                 },
                 weight: Uint128::from_str("536870912000000")?,
             },
         );
         assert_eq!(
             atom_osmos_pool.total_shares,
-            pools::Asset {
-                denom: Denom::from_str("gamm/pool/1").unwrap(),
-                amount: Uint128::from_str("396054403988432348146987531")?,
-            },
+            Uint256::from_str("386738297680895462111607239")?
         );
         assert_eq!(
             atom_osmos_pool.total_weight,
@@ -366,27 +363,27 @@ mod tests {
         Ok(())
     }
     #[tokio::test]
-    async fn v1_events_mempooltx_v4() -> Result<()> {
+    async fn v1_events_mempooltx_v5() -> Result<()> {
         let response = ResponseTemplate::new(200).set_body_raw(
-            include_bytes!("../fixtures/v1_events_mempooltx_v4.eventstream").to_vec(),
+            include_bytes!("../fixtures/v1_events_mempooltx_v5.eventstream").to_vec(),
             "text/event-stream",
         );
 
         let server = MockServer::start().await;
         Mock::given(method("GET"))
-            .and(path("mempooltx-v4"))
+            .and(path("mempooltx-v5"))
             .respond_with(response)
             .mount(&server)
             .await;
 
         let http = Http::new(server.uri())?;
         let msgs = http
-            .v1_events_mempooltx_v4()
+            .v1_events_mempooltx_v5()
             .await?
             .try_collect::<Vec<_>>()
             .await?;
 
-        assert_eq!(msgs.len(), 4);
+        assert_eq!(msgs.len(), 7);
 
         Ok(())
     }

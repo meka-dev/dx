@@ -1862,6 +1862,7 @@ dependencies = [
  "eventsource-stream",
  "futures",
  "hex",
+ "osmors",
  "pretty_assertions",
  "reqwest",
  "reqwest-eventsource",
