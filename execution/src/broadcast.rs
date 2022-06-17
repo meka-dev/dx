@@ -191,6 +191,7 @@ impl Broadcaster for Rpc {
             self.sequence,
             // NB(xla): Using fixed gas prices here, could diverge.
             fee,
+            "uosmo".to_string(),
             (gas_info.gas_used as f64 * 1.10) as u64,
             None,
             self.treasury.clone(),
