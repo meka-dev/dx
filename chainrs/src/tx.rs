@@ -120,7 +120,8 @@ pub fn sign(
     private_key: &SigningKey,
     account_number: u64,
     sequence: u64,
-    amount: u64,
+    fee_amount: u64,
+    fee_denom: String,
     gas_limit: impl Into<Gas>,
     payer: Option<AccountId>,
     granter: Option<AccountId>,
@@ -131,8 +132,8 @@ pub fn sign(
     let signer_info = SignerInfo::single_direct(Some(private_key.public_key()), sequence);
     let mut fee = Fee::from_amount_and_gas(
         cosmrs::Coin {
-            amount: amount.into(),
-            denom: cosmrs::Denom::from_str("uusd").unwrap(),
+            amount: fee_amount.into(),
+            denom: cosmrs::Denom::from_str(&fee_denom).unwrap(),
         },
         gas_limit,
     );
