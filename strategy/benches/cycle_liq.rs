@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use cosmwasm_bignumber::{Decimal256, Uint256};
+use cosmwasm_bignumber::Decimal256;
 use criterion::{criterion_group, criterion_main, Criterion};
 use strategy::{xyk::compute_cycle_liq, Pool, Token, WeightedAsset};
 
@@ -15,7 +15,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                         native: true,
                     },
                     amount: Decimal256::from_str("100000.0").unwrap(),
-                    weight: Uint256::from(100u128),
+                    weight: 100u128,
                 },
                 WeightedAsset {
                     token: Token {
@@ -24,7 +24,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                         native: false,
                     },
                     amount: Decimal256::from_str("500000.0").unwrap(),
-                    weight: Uint256::from(100u128),
+                    weight: 100u128,
                 },
             ],
             id: "bazbar".to_owned(),
@@ -40,7 +40,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                         native: false,
                     },
                     amount: Decimal256::from_str("200000.0").unwrap(),
-                    weight: Uint256::from(100u128),
+                    weight: 100u128,
                 },
                 WeightedAsset {
                     token: Token {
@@ -49,7 +49,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                         native: false,
                     },
                     amount: Decimal256::from_str("5000000.0").unwrap(),
-                    weight: Uint256::from(100u128),
+                    weight: 100u128,
                 },
             ],
             id: "bazbar".to_owned(),
@@ -65,7 +65,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                         native: false,
                     },
                     amount: Decimal256::from_str("200000.0").unwrap(),
-                    weight: Uint256::from(100u128),
+                    weight: 100u128,
                 },
                 WeightedAsset {
                     token: Token {
@@ -74,7 +74,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                         native: false,
                     },
                     amount: Decimal256::from_str("50000000.0").unwrap(),
-                    weight: Uint256::from(100u128),
+                    weight: 100u128,
                 },
             ],
             id: "bazbar".to_owned(),
@@ -90,7 +90,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                         native: true,
                     },
                     amount: Decimal256::from_str("100000.0").unwrap(),
-                    weight: Uint256::from(100u128),
+                    weight: 100u128,
                 },
                 WeightedAsset {
                     token: Token {
@@ -99,7 +99,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                         native: false,
                     },
                     amount: Decimal256::from_str("50000000.0").unwrap(),
-                    weight: Uint256::from(100u128),
+                    weight: 100u128,
                 },
             ],
             id: "bazbar".to_owned(),

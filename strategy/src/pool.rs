@@ -6,13 +6,21 @@ use crate::{asset::WeightedAsset, Token};
 
 pub type PoolId = String;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Pool {
     pub id: PoolId,
     pub assets: [WeightedAsset; 2], // ;2 needs to be generalized
     pub swap_fee_bid: Decimal256,
     pub swap_fee_ask: Decimal256,
 }
+
+impl PartialEq for Pool {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Pool {}
 
 impl Pool {
     // Assumes XYK
@@ -27,10 +35,14 @@ impl Pool {
             _ => return None,
         };
 
+        // common::tracing::debug!("bid_reserve {:}, ask_reserve {:}", bid_reserve, ask_reserve);
+        // common::tracing::debug!("(self.swap_fee_bid * self.swap_fee_ask * ask_reserve * amount) /
+        // bid_reserve {:}", (self.swap_fee_bid * self.swap_fee_ask * ask_reserve * amount) /
+        // bid_reserve); common::tracing::debug!("(amount * self.swap_fee_bid) {:}", (amount
+        // * self.swap_fee_bid));
         Some(
-            ask_reserve
-                - (self.swap_fee_bid * self.swap_fee_ask * ask_reserve * amount) / bid_reserve
-                + (amount * self.swap_fee_bid),
+            (self.swap_fee_bid * self.swap_fee_ask * ask_reserve * amount)
+                / (bid_reserve + amount * self.swap_fee_bid),
         )
     }
 

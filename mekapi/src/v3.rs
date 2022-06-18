@@ -85,7 +85,7 @@ impl From<Asset> for strategy::WeightedAsset {
                 },
                 amount: Decimal256::from_uint256(amount.u128())
                     / Decimal256::from_uint256(10u128.pow(decimals as u32)),
-                weight: 1u128.into(),
+                weight: 1u128,
             },
             Asset::Native { denom, amount, .. } => strategy::WeightedAsset {
                 token: strategy::Token {
@@ -95,7 +95,7 @@ impl From<Asset> for strategy::WeightedAsset {
                 },
                 amount: Decimal256::from_uint256(amount.u128())
                     / Decimal256::from_uint256(10u128.pow(6)),
-                weight: 1u128.into(),
+                weight: 1u128,
             },
         }
     }

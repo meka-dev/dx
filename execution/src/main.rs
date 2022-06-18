@@ -55,7 +55,7 @@ async fn main() -> Result<()> {
         watch::channel(res.block)
     };
     let (mempool_tx_sender, mempool_tx_receiver) =
-        mpsc::channel::<mekapi::v1::MempoolTxV2Message>(1024);
+        mpsc::channel::<mekapi::v1::MempoolTxV5Message>(1024);
     let (trade_sender, trade_receiver) = mpsc::channel::<Trade>(100);
 
     let mut registry = metrics::Registry::new(config::BINARY);
@@ -99,7 +99,6 @@ async fn main() -> Result<()> {
             account,
             signing_key_bytes,
             Some(addresses.treasury.clone()),
-            addresses.clone(),
         ),
     );
     let treasurer = treasurer::Treasurer::new(
@@ -113,7 +112,7 @@ async fn main() -> Result<()> {
         vec![Box::new(execution::metrics::strategy::Observed::new(
             &mut registry,
             strategy::multi_dex::multi_hop::MultiHop::new(Token {
-                id: "uusd".to_owned(),
+                id: "uosmo".to_owned(),
                 decimals: 6,
                 native: true,
             }),
@@ -134,7 +133,7 @@ async fn main() -> Result<()> {
         tokio::spawn(routines::latest_block(client.clone(), emitter)).fuse();
 
     let mut mempool_tx_handle =
-        tokio::spawn(routines::mempool_tx_v2(mekapi.clone(), mempool_tx_sender)).fuse();
+        tokio::spawn(routines::mempool_tx_v5(mekapi.clone(), mempool_tx_sender)).fuse();
 
     let mut broadcast_handle = tokio::spawn(broadcast::run(
         trade_receiver,

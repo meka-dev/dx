@@ -26,8 +26,8 @@ pub fn compute_cycle_liq<'a, T: Iterator<Item = &'a Pool>>(
     let mut r1 = Decimal256::one();
     let mut r2 = Decimal256::one();
     for pool in pools {
-        r1 = Decimal256::one() - pool.swap_fee_bid;
-        r2 = Decimal256::one() - pool.swap_fee_ask;
+        r1 = pool.swap_fee_bid;
+        r2 = pool.swap_fee_ask;
 
         let (p1_bid, p1_ask) = match &pool.assets {
             [left, right] if left.token == next_bid_token => (left, right),
@@ -36,11 +36,14 @@ pub fn compute_cycle_liq<'a, T: Iterator<Item = &'a Pool>>(
         };
 
         trace!(
-            "p0 bid amt {:}, p0_ask amt {:}, p1_bid amt {:}, p1_ask amt {:}",
+            "poolid {:}, p0 bid amt {:}, p0_ask amt {:}, p1_bid amt {:}, p1_ask amt {:}, r1 {:}, r2 {:}",
+            pool.id,
             a,
             a_p,
             p1_bid.amount,
             p1_ask.amount,
+            r1,
+            r2,
         );
 
         a = (a * p1_bid.amount) / (p1_bid.amount + r1 * r2 * a_p);

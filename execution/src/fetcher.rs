@@ -7,7 +7,6 @@ use common::{
     tracing::{debug, error},
     Result,
 };
-use cosmwasm_std::Addr;
 use lcd::Lcd;
 use prometheus_client::{
     encoding::text::Encode,
@@ -24,7 +23,7 @@ use crate::accounts;
 pub trait Fetcher<L, M>
 where
     L: Lcd,
-    M: mekapi::v3::Api,
+    M: mekapi::pools::Api,
 {
     async fn fetch(
         &self,
@@ -45,7 +44,7 @@ impl Labeled for Mekapi {
 impl<L, M> Fetcher<L, M> for Mekapi
 where
     L: Lcd + 'static,
-    M: mekapi::v3::Api + Clone + 'static,
+    M: mekapi::pools::Api + Clone + 'static,
 {
     async fn fetch(
         &self,
@@ -56,42 +55,19 @@ where
     ) -> Result<(Balances, Vec<Pool>)> {
         // Fetch available funds for strategies to incorporate.
         let funds_handle = tokio::spawn(accounts::fetch(lcd, account_id.clone()));
-        let astroport_handle = {
+        let pools_handle = {
             let mekapi = mekapi.clone();
-            tokio::spawn(async move {
-                mekapi
-                    .v3_pools(Addr::unchecked(terrars::dex::astroport::ADDRESS), height)
-                    .await
-            })
+            tokio::spawn(async move { mekapi.v5(height).await })
         };
-        let loopmarkets_handle = {
-            let mekapi = mekapi.clone();
-            tokio::spawn(async move {
-                mekapi
-                    .v3_pools(Addr::unchecked(terrars::dex::loopmarkets::ADDRESS), height)
-                    .await
-            })
-        };
-        let terraswap_handle = {
-            let mekapi = mekapi.clone();
-            tokio::spawn(async move {
-                mekapi
-                    .v3_pools(Addr::unchecked(terrars::dex::terraswap::ADDRESS), height)
-                    .await
-            })
-        };
-        let (funds, astroport, mut loopmarkets, mut terraswap) = tokio::try_join!(
-            flatten(funds_handle),
-            flatten(astroport_handle),
-            flatten(loopmarkets_handle),
-            flatten(terraswap_handle)
-        )?;
+        let (funds, pools) = tokio::try_join!(flatten(funds_handle), flatten(pools_handle),)?;
 
-        let mut pools = astroport;
-        pools.append(&mut loopmarkets);
-        pools.append(&mut terraswap);
-
-        Ok((funds, pools.into_iter().map(Pool::from).collect::<Vec<_>>()))
+        Ok((
+            funds,
+            pools
+                .into_iter()
+                .flat_map(Pool::try_from)
+                .collect::<Vec<_>>(),
+        ))
     }
 }
 
@@ -151,7 +127,7 @@ impl<F> Observed<F> {
 impl<L, M, F> Fetcher<L, M> for Observed<F>
 where
     L: Lcd + 'static,
-    M: mekapi::v3::Api + Clone + 'static,
+    M: mekapi::pools::Api + Clone + 'static,
     F: Fetcher<L, M> + Labeled + Send + Sync,
 {
     async fn fetch(

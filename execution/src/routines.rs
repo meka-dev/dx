@@ -5,7 +5,7 @@ use common::{
     tracing::{debug, error},
     Result,
 };
-use cosmwasm_bignumber::Uint256;
+use cosmwasm_bignumber::{Decimal256, Uint256};
 use futures::StreamExt as _;
 use lcd::Lcd;
 use strategy::{Strategy, Token, Trade};
@@ -28,7 +28,7 @@ pub async fn execution<F, L, M, T>(
     fetcher: F,
     tx_tracker: Arc<Mutex<T>>,
     mut latest_block_receiver: watch::Receiver<block::Block>,
-    mut mempool_tx_receiver: mpsc::Receiver<mekapi::v1::MempoolTxV2Message>,
+    mut mempool_tx_receiver: mpsc::Receiver<mekapi::v1::MempoolTxV5Message>,
     trade_sender: mpsc::Sender<Trade>,
     proxy_addr: AccountId,
     _account_id: AccountId,
@@ -37,7 +37,7 @@ pub async fn execution<F, L, M, T>(
 where
     F: Fetcher<L, M>,
     L: Lcd + Clone,
-    M: mekapi::v3::Api + Clone,
+    M: mekapi::pools::Api + Clone,
     T: Tracker,
 {
     debug!("Init strategy executor");
@@ -57,9 +57,10 @@ where
                 {
                     let pools = pairs
                             .into_iter()
-                            // .filter(|pool| !risk.exclude(pool))
+                            .filter(|p| p.assets[0].weight == p.assets[1].weight) // XXX
+                            .filter(|p| p.assets[0].amount > Decimal256::one() && p.assets[1].amount > Decimal256::one())
                             .collect::<Vec<_>>();
-                    let bal = cosmwasm_bignumber::Decimal256::from_ratio(*funds.get(&Token { id: "uusd".to_owned(), decimals: 6, native: true }).unwrap_or(&Uint256::zero()), 10u64.pow(6u32));
+                    let bal = cosmwasm_bignumber::Decimal256::from_ratio(*funds.get(&Token { id: "uosmo".to_owned(), decimals: 6, native: true }).unwrap_or(&Uint256::zero()), 10u64.pow(6u32));
                     for strategy in strategies.iter_mut() {
                         strategy
                             .execute_pools(height, bal, &pools)
@@ -70,7 +71,7 @@ where
 
             Some(msg) = mempool_tx_receiver.recv() => {
                 for strategy in strategies.iter_mut() {
-                    let trades = strategy.execute_mempool_tx(msg.height, &msg.pools.iter().map(Into::into).collect::<Vec<_>>()).await;
+                    let trades = strategy.execute_mempool_tx(msg.height, &msg.pools.clone().into_iter().flat_map(TryInto::try_into).collect::<Vec<_>>()).await;
 
                     for trade in trades {
                         trade_sender.send(trade).await?;
@@ -154,6 +155,34 @@ where
             },
             None => {
                 events = mekapi.v1_events_mempooltx_v2().await?;
+            },
+        }
+    }
+}
+
+pub async fn mempool_tx_v5<M>(
+    mekapi: M,
+    mempool_tx_sender: mpsc::Sender<mekapi::v1::MempoolTxV5Message>,
+) -> Result<()>
+where
+    M: mekapi::v1::Api,
+{
+    debug!("Init mempool tx stream");
+
+    let mut events = mekapi.v1_events_mempooltx_v5().await?;
+
+    loop {
+        match events.next().await {
+            Some(res) => match res {
+                Ok(msg) => {
+                    if let Err(err) = mempool_tx_sender.try_send(msg) {
+                        error!("failed to send mempool tx: {}", err);
+                    }
+                },
+                Err(err) => error!("failed to decode mempool tx: {}", err),
+            },
+            None => {
+                events = mekapi.v1_events_mempooltx_v5().await?;
             },
         }
     }

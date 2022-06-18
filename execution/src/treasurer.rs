@@ -52,7 +52,7 @@ pub struct Treasurer<L> {
     lcd: L,
     last: Option<Uint256>,
 
-    account_balance_uusd: Family<Labels, Gauge>,
+    account_balance: Family<Labels, Gauge>,
 }
 
 impl<L> Treasurer<L>
@@ -65,11 +65,11 @@ where
         execute_trades: Arc<RwLock<bool>>,
         lcd: L,
     ) -> Self {
-        let account_balance_uusd = Family::<Labels, Gauge>::default();
+        let account_balance = Family::<Labels, Gauge>::default();
         registry.register(
-            "account_balance_uusd",
-            "Latest observed balance for a well-known account in uusd",
-            Box::new(account_balance_uusd.clone()),
+            "account_balance",
+            "Latest observed balance for a well-known account",
+            Box::new(account_balance.clone()),
         );
 
         Self {
@@ -78,7 +78,7 @@ where
             lcd,
             last: None,
 
-            account_balance_uusd,
+            account_balance,
         }
     }
 
@@ -97,13 +97,13 @@ where
             flatten(treasury_balances_handle)
         )?;
 
-        let ust = Token {
-            id: "uusd".to_owned(),
+        let tok = Token {
+            id: "uosmo".to_owned(),
             decimals: 6,
             native: true,
         };
-        let current = *arby_balances.get(&ust).unwrap_or(&Uint256::zero());
-        let current_treasury = *treasury_balances.get(&ust).unwrap_or(&Uint256::zero());
+        let current = *arby_balances.get(&tok).unwrap_or(&Uint256::zero());
+        let current_treasury = *treasury_balances.get(&tok).unwrap_or(&Uint256::zero());
 
         if let Some(last) = self.last {
             if last.multiply_ratio(9i64, 10i64) >= current {
@@ -121,13 +121,13 @@ where
 
         self.last = Some(current);
 
-        self.account_balance_uusd
+        self.account_balance
             .get_or_create(&Labels {
                 account: Account::Arby,
             })
             .set(current.0.as_u64());
 
-        self.account_balance_uusd
+        self.account_balance
             .get_or_create(&Labels {
                 account: Account::Treasury,
             })

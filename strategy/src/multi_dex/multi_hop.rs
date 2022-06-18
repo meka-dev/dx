@@ -80,7 +80,6 @@ impl MultiHop {
                 .collect::<VecDeque<_>>(),
         );
 
-        // XXX: should be able to parallelize this easily if needed
         loop {
             let pool = match pool_q.pop_back() {
                 Some(p) if p.is_empty() => {
@@ -189,6 +188,7 @@ impl MultiHop {
         }
         self.pool_paths = pps;
         debug!("pool_paths {:#?}", self.paths.len());
+
         pool_map
     }
 }
@@ -217,7 +217,8 @@ impl Strategy for MultiHop {
                 .iter()
                 .flat_map(|t| (*self.pool_paths.get(t).unwrap_or(&vec![])).clone()),
         );
-        // error!("paths {:?}", paths.len());
+        debug!("paths touched {:?}", paths.len());
+
         let mut trades = paths
             .iter()
             .filter_map(|path| find_trade(path, &self.pools, &self.start, self.funds))
@@ -286,6 +287,7 @@ fn find_trade(
         if let Some((expected_profit, legs, route)) = trade_path(ppath, start, size) {
             return Some(Trade {
                 size,
+                in_token: start.clone(),
                 expected_profit,
                 legs,
                 route,
@@ -324,9 +326,8 @@ pub fn trade_path<'a, T: Iterator<Item = &'a Pool>>(
             );
             route.push(p.id.clone());
             legs.push(Leg {
-                in_token: bid_token.clone(),
+                out_token: ask_token.clone(),
                 in_amount: cb,
-                min_out_amount: Some(cb),
                 pool: p.clone(),
             });
 
