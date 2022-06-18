@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     str::FromStr,
     sync::{Arc, RwLock},
 };
@@ -7,9 +6,13 @@ use std::{
 use arby::msg::ExecuteMsg;
 use async_trait::async_trait;
 use chainrs::{
-    cosmos::{auth::BaseAccount, base::AccountId},
+    cosmos::{
+        auth::BaseAccount,
+        base::{AccountId, Coin},
+    },
+    osmosis::gamm::{MsgSwapExactAmountIn, SwapAmountInRoute},
     proto::cosmos::base::abci::v1beta1::GasInfo,
-    tx,
+    tx::{self, Msg},
 };
 use common::{
     err,
@@ -18,8 +21,7 @@ use common::{
     Context as _,
     Result,
 };
-use cosmrs::{crypto::secp256k1::SigningKey, tx::Msg};
-use cosmwasm_bignumber::Uint256;
+use cosmrs::crypto::secp256k1::SigningKey;
 use cosmwasm_std::{Addr, Uint128};
 use itertools::Itertools;
 use prometheus_client::{
@@ -113,7 +115,6 @@ pub struct Rpc {
     signing_key_bytes: Vec<u8>,
     sequence: u64,
     treasury: Option<AccountId>,
-    address_book: address_book::AddressBook,
 }
 
 impl Rpc {
@@ -123,7 +124,6 @@ impl Rpc {
         account: BaseAccount,
         signing_key_bytes: Vec<u8>,
         treasury: Option<AccountId>,
-        address_book: address_book::AddressBook,
     ) -> Self {
         let sequence = account.sequence;
 
@@ -134,35 +134,60 @@ impl Rpc {
             signing_key_bytes,
             sequence,
             treasury,
-            address_book,
         }
     }
 }
 
-fn mk_msg(sender: &AccountId, proxy_addr: &AccountId, t: &Trade) -> Result<MsgExecuteContract> {
+#[allow(dead_code)]
+fn mk_msg_terra(
+    sender: &AccountId,
+    proxy_addr: &AccountId,
+    t: &Trade,
+) -> Result<MsgExecuteContract> {
     let path = t
         .legs
         .iter()
         .map(|leg| {
             (
                 Addr::unchecked(leg.pool.id.clone()),
-                Into::<Token>::into(leg.in_token.clone()).into(),
+                Into::<Token>::into(leg.pool.ask_asset(&leg.out_token).unwrap()).into(),
             )
         })
         .collect_vec();
-    let first_token = t.legs.first().ok_or(err!("empty path"))?;
     Ok(MsgExecuteContract {
         coins: vec![],
         contract_address: Addr::unchecked(proxy_addr.to_string()),
         execute_msg: serde_json::to_vec(&ExecuteMsg::Sprint {
-            input: (t.size.0
-                / Uint256::from(10u128.pow(18 - first_token.in_token.decimals as u32)).0)
-                .as_u64()
-                .into(),
+            input: t.size_to_int().0.as_u64().into(),
             min_out: Uint128::new(0u128),
             path,
         })?,
         sender: sender.to_string(),
+    })
+}
+
+fn mk_msg_osmosis(sender: &AccountId, t: &Trade) -> Result<MsgSwapExactAmountIn> {
+    let min_out = t.size_to_int();
+    let path = t
+        .legs
+        .iter()
+        .map(|leg| SwapAmountInRoute {
+            pool_id: leg.pool.id.clone(),
+            token_out_denom: leg.out_token.id.clone(),
+        })
+        .collect_vec();
+    Ok(MsgSwapExactAmountIn {
+        sender: sender.to_string(),
+        routes: path,
+        token_in: Some(Coin {
+            denom: chainrs::cosmos::base::Denom::from_str(&t.in_token.id)?,
+            amount: t
+                .size_to_int()
+                .0
+                .as_u64() // XXX
+                .into(),
+        }),
+        token_out_min_amount: min_out.to_string(),
     })
 }
 
@@ -182,7 +207,7 @@ impl Broadcaster for Rpc {
                 .unwrap()
                 .as_ref(),
         )?;
-        let msg = mk_msg(&ai, &self.address_book.arby, trade)?.to_any()?;
+        let msg = mk_msg_osmosis(&ai, trade)?.to_any()?;
         let tx = tx::sign(
             self.chain_id.clone(),
             &SigningKey::from_bytes(&self.signing_key_bytes)
@@ -214,16 +239,14 @@ impl Broadcaster for Rpc {
     }
 
     async fn simulate(&self, trade: &Trade) -> Result<Simulation> {
-        let expected_profit = trade.expected_profit.0.as_u64();
+        let expected_profit: u128 = trade.expected_profit_to_int().into();
         let gas_used = trade
             .route
             .iter()
-            .fold(0u64, |acc, m| acc + gas_estimator(m))
-            + 200000;
-        // NB: add a static overhead for calling via proxy
+            .fold(0u64, |acc, m| acc + gas_estimator(m));
 
-        let fee = (gas_used as f64 * 0.18f64) as u64;
-        let outcome = if expected_profit > fee {
+        let fee = (gas_used as f64 * 0.007f64) as u64;
+        let outcome = if expected_profit > fee.into() {
             Outcome::Profitable
         } else {
             Outcome::NotProfitable
@@ -240,24 +263,8 @@ impl Broadcaster for Rpc {
 }
 
 // NB(pm): needs rework
-fn gas_estimator(addr: &PoolId) -> u64 {
-    let expensive = HashSet::from([
-        "terra1qpd9n7afwf45rkjlpujrrdfh83pldec8rpujgn".to_owned(), // bLuna/ust
-        "terra18r6rdnkgrg74zew3d8l9nhk0m4xanpeukw3e20".to_owned(), // bLuna/ust
-        "terra1jxazgm67et0ce260kvrpfv50acuushpjsz2y0p".to_owned(), // bLuna/luna
-        "terra1v93ll6kqp33unukuwls3pslquehnazudu653au".to_owned(), // bLuna/luna
-        "terra1x8h5gan6vey5cz2xfyst74mtqsj7746fqj2hze".to_owned(), // bLuna/lunax
-        "terra10lv5wz84kpwxys7jeqkfxx299drs3vnw0lj8mz".to_owned(), // nLuna/psi
-        "terra1zvn8z6y8u2ndwvsjhtpsjsghk6pa6ugwzxp6vx".to_owned(), // nLuna/psi
-        "terra1c5swgtnuunpf75klq5uztynurazuwqf0mmmcyy".to_owned(), // beth/meth
-        "terra1myl709y74vrdcyuxy6g9wv5l2sgah4e9lstnwe".to_owned(), // beth/ust
-    ]);
-
-    if expensive.contains(addr) {
-        625000
-    } else {
-        350000
-    }
+fn gas_estimator(_addr: &PoolId) -> u64 {
+    85000
 }
 
 impl Labeled for Rpc {

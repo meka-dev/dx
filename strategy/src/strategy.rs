@@ -12,8 +12,7 @@ pub type Route = Vec<PoolId>;
 #[derive(Clone, Debug)]
 pub struct Leg {
     pub in_amount: Decimal256,
-    pub in_token: Token,
-    pub min_out_amount: Option<Decimal256>,
+    pub out_token: Token,
     pub pool: Pool,
 }
 
@@ -21,8 +20,23 @@ pub struct Leg {
 pub struct Trade {
     pub size: Decimal256,
     pub expected_profit: Decimal256,
+    pub in_token: Token,
     pub legs: Vec<Leg>,
     pub route: Route,
+}
+
+impl Trade {
+    pub fn size_to_int(&self) -> Uint256 {
+        Uint256(self.size.0 / Uint256::from(10u128.pow(18 - self.in_token.decimals as u32)).0)
+    }
+
+    pub fn expected_profit_to_int(&self) -> Uint256 {
+        // XXX: assumes in token == out token
+        Uint256(
+            self.expected_profit.0
+                / Uint256::from(10u128.pow(18 - self.in_token.decimals as u32)).0,
+        )
+    }
 }
 
 #[async_trait::async_trait]

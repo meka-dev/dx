@@ -1,27 +1,4 @@
 {
-  "arby": "terra1lerw0sk4zt4nkxqr465ekgflpl4e98kl3ydm58",
-  "treasury": "terra1sstgnc5rvmhte5rju9vh75wgnf3dktavmawzrp",
-  "sprinters": [
-    {
-      "account_id": "terra175yp3rnjk2av64zlkt777kkqa7f829g2hfpn4l",
-      "feegrant": {
-        "state": "revoked",
-        "last_host": "exe1"
-      }
-    },
-    {
-      "account_id": "terra1tzflepkdtn7gfa9quwv8qtn6zc4yqc0zxlxyr3",
-      "feegrant": {
-        "state": "revoked",
-        "last_host": "exe2"
-      }
-    },
-    {
-      "account_id": "terra12xcq4qs0lnrfnh4ulx6gngnj886dckqxeag258",
-      "feegrant": {
-        "state": "granted",
-        "host": "exe3"
-      }
-    }
-  ]
+  "arby": "osmo1qagr7gv27z0m8nauamu0gf28ghfq48kw7904ft",
+  "treasury": "osmo1qagr7gv27z0m8nauamu0gf28ghfq48kw7904ft"
 }

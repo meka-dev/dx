@@ -1,4 +1,4 @@
-use cosmwasm_bignumber::{Decimal256, Uint256};
+use cosmwasm_bignumber::Decimal256;
 
 use crate::token::Token;
 
@@ -6,5 +6,5 @@ use crate::token::Token;
 pub struct WeightedAsset {
     pub token: Token,
     pub amount: Decimal256,
-    pub weight: Uint256,
+    pub weight: u128,
 }

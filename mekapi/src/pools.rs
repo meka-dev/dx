@@ -78,7 +78,7 @@ fn asset_to_weighted(a: &WeightedAsset) -> Result<strategy::WeightedAsset> {
             Uint256::from(a.token.amount.u128()),
             Uint256::from(10u128.pow(*d as u32)),
         ), // XXX
-        weight: Uint256::from(a.weight.u128()),
+        weight: a.weight.u128(),
     })
 }
 
