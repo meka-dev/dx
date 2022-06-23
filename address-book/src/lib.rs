@@ -27,8 +27,8 @@ mod tests {
     #[test]
     fn json_roundtrip() {
         let example = json!({
-            "arby": AccountId::from_str("osmo1qagr7gv27z0m8nauamu0gf28ghfq48kw7904ft").unwrap(),
-            "treasury": AccountId::from_str("osmo1qagr7gv27z0m8nauamu0gf28ghfq48kw7904ft").unwrap(),
+            "arby": AccountId::from_str("osmo1qjm68rhpd2fs48js38jeszjujqzyfpwea9wyak").unwrap(),
+            "treasury": AccountId::from_str("osmo1qjm68rhpd2fs48js38jeszjujqzyfpwea9wyak").unwrap(),
         });
         let example_json = example.to_string();
 
