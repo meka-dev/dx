@@ -6,7 +6,7 @@ use cosmwasm_bignumber::Uint256;
 use lcd::Lcd;
 use strategy::{Balances, Token};
 
-pub const PREFIX: &str = "terra";
+pub const PREFIX: &str = "osmo";
 
 pub async fn fetch<L>(lcd: L, account_id: AccountId) -> Result<Balances>
 where
