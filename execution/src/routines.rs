@@ -60,7 +60,10 @@ where
                             .filter(|p| p.assets[0].weight == p.assets[1].weight) // XXX
                             .filter(|p| p.assets[0].amount > Decimal256::one() && p.assets[1].amount > Decimal256::one())
                             .collect::<Vec<_>>();
-                    let bal = cosmwasm_bignumber::Decimal256::from_ratio(*funds.get(&Token { id: "uosmo".to_owned(), decimals: 6, native: true }).unwrap_or(&Uint256::zero()), 10u64.pow(6u32));
+                    let mut bal = cosmwasm_bignumber::Decimal256::from_ratio(*funds.get(&Token { id: "uosmo".to_owned(), decimals: 6, native: true }).unwrap_or(&Uint256::zero()), 10u64.pow(6u32));
+                    // XXX: remove 1.0 because we're paying for gas, so we can't use our full
+                    //      balance.
+                    bal = if bal < Decimal256::one() { bal } else { bal - Decimal256::one() };
                     for strategy in strategies.iter_mut() {
                         strategy
                             .execute_pools(height, bal, &pools)
