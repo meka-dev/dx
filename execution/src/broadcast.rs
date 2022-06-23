@@ -108,6 +108,7 @@ pub trait Broadcaster {
     async fn simulate(&self, trade: &Trade) -> Result<Simulation>;
 }
 
+#[allow(dead_code)]
 pub struct Rpc {
     account: BaseAccount,
     client: WebSocketClient,
@@ -219,7 +220,7 @@ impl Broadcaster for Rpc {
             "uosmo".to_string(),
             (gas_info.gas_used as f64 * 1.10) as u64,
             None,
-            self.treasury.clone(),
+            None,
             Height::try_from(0_u64).unwrap(),
             vec![msg],
         )
