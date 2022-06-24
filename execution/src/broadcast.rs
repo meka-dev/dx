@@ -372,7 +372,7 @@ where
         gas_info: GasInfo,
         trade: &Trade,
     ) -> Result<broadcast::tx_sync::Response> {
-        let expected_profit = trade.expected_profit.0.as_u64();
+        let expected_profit = trade.expected_profit_to_int().0.as_u64();
         let method = Method::Broadcast;
         let start = Instant::now();
         let res = self.next.broadcast(fee, gas_info, trade).await;

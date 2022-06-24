@@ -133,27 +133,21 @@ where
 
     fn observe(&self, method: Method, start: Instant, height: block::Height, trades: &[Trade]) {
         let elapsed = start.elapsed().as_secs_f64();
-        let (size_total, size_max) = trades.iter().fold(
-            (Decimal256::zero(), Decimal256::zero()),
-            |(total, max), Trade { size, .. }| {
-                let max = if *size > max { *size } else { max };
-                (total + *size, max)
-            },
-        );
-        let (expected_profit_total, expected_profit_max) = trades.iter().fold(
-            (Decimal256::zero(), Decimal256::zero()),
-            |(total, max),
-             Trade {
-                 expected_profit, ..
-             }| {
-                let max = if *expected_profit > max {
-                    *expected_profit
+        let (size_total, size_max) = trades.iter().fold((0u64, 0u64), |(total, max), t| {
+            let size = t.size_to_int().0.as_u64();
+            let max = if size > max { size } else { max };
+            (total + size, max)
+        });
+        let (expected_profit_total, expected_profit_max) =
+            trades.iter().fold((0u64, 0u64), |(total, max), t| {
+                let expected_profit = t.expected_profit_to_int().0.as_u64();
+                let max = if expected_profit > max {
+                    expected_profit
                 } else {
                     max
                 };
-                (total + *expected_profit, max)
-            },
-        );
+                (total + expected_profit, max)
+            });
         let output = match trades.len() {
             0 => Output::NoTrade,
             _ => Output::FoundTrades,
@@ -185,32 +179,23 @@ where
                 output,
             })
             .observe(elapsed);
-        self.size_max
-            .get_or_create(&trade_labels)
-            .set((size_max.0 / 10u64.pow(12).into()).as_u64());
+        self.size_max.get_or_create(&trade_labels).set(size_max);
         self.expected_profit_max
             .get_or_create(&trade_labels)
-            .set((expected_profit_max.0 / 10u64.pow(12).into()).as_u64());
+            .set(expected_profit_max);
 
-        trades.iter().for_each(
-            |Trade {
-                 size,
-                 expected_profit,
-                 legs,
-                 ..
-             }| {
-                self.trades.get_or_create(&trade_labels).inc();
-                self.trade_size_uusd
-                    .get_or_create(&trade_labels)
-                    .inc_by((size.0 / 10u64.pow(12).into()).as_u64());
-                self.trade_expected_profit_uusd
-                    .get_or_create(&trade_labels)
-                    .inc_by((expected_profit.0 / 10u64.pow(12).into()).as_u64());
-                self.trade_messages_emitted
-                    .get_or_create(&trade_labels)
-                    .inc_by(legs.len().try_into().unwrap());
-            },
-        );
+        trades.iter().for_each(|t| {
+            self.trades.get_or_create(&trade_labels).inc();
+            self.trade_size_uusd
+                .get_or_create(&trade_labels)
+                .inc_by(t.size_to_int().0.as_u64());
+            self.trade_expected_profit_uusd
+                .get_or_create(&trade_labels)
+                .inc_by(t.expected_profit_to_int().0.as_u64());
+            self.trade_messages_emitted
+                .get_or_create(&trade_labels)
+                .inc_by(t.legs.len().try_into().unwrap());
+        });
     }
 }
 
