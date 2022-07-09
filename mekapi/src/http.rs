@@ -11,7 +11,11 @@ use tracing::debug;
 const HEADER_COUNT: &str = "Mekatek-Count";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
-use crate::{pools, v1, v3};
+use crate::{
+    pools,
+    v1::{self, TxP2POriginsResponse},
+    v3,
+};
 
 #[derive(Clone)]
 pub struct Http {
@@ -159,6 +163,16 @@ impl v1::Api for Http {
         };
 
         Ok(pools)
+    }
+
+    async fn v1_p2p_txhash(&self, hash: String) -> Result<TxP2POriginsResponse> {
+        let url = self.base_url.join(&format!("v1/p2p/txhash/{}", hash))?;
+
+        let raw = self.client.get(url).send().await?;
+        match raw.status() {
+            StatusCode::OK => Ok(raw.json::<TxP2POriginsResponse>().await?),
+            code => Err(err!("unexpected response status code: {}", code)),
+        }
     }
 }
 
@@ -384,6 +398,29 @@ mod tests {
             .await?;
 
         assert_eq!(msgs.len(), 7);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn v1_p2p_txhash() -> Result<()> {
+        let hash = "dfe1cfabdd4db095aaed2c8321d05ae025acd4df118182a4f9a0e08933fc419f";
+        let response = ResponseTemplate::new(200).set_body_raw(
+            include_bytes!("../fixtures/v1_p2p_txhash.json").to_vec(),
+            "text/plain; charset=utf-8",
+        );
+
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path(format!("/v1/p2p/txhash/{}", hash)))
+            .respond_with(response)
+            .mount(&server)
+            .await;
+
+        let http = Http::new(server.uri())?;
+        let origin = http.v1_p2p_txhash(hash.to_string()).await?;
+
+        assert_eq!(origin.found, true);
 
         Ok(())
     }
