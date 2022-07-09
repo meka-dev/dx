@@ -25,6 +25,7 @@ enum Method {
     V1EventsMemprolTx,
     V1EventsMemprolTxV2,
     V1EventsMemprolTxV5,
+    V1P2PTxHash,
     V3Pools,
 }
 
@@ -185,6 +186,21 @@ where
             None,
             block::Height::default(),
             Method::V1EventsMemprolTxV5,
+            res.as_ref().err(),
+        );
+
+        res
+    }
+
+    async fn v1_p2p_txhash(&self, tx_hash: String) -> Result<v1::TxP2POriginsResponse> {
+        let start = Instant::now();
+        let res = self.next.v1_p2p_txhash(tx_hash).await;
+
+        self.observe(
+            start,
+            None,
+            block::Height::default(),
+            Method::V1P2PTxHash,
             res.as_ref().err(),
         );
 

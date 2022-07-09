@@ -1,10 +1,11 @@
+use std::net::IpAddr;
+
 use async_trait::async_trait;
 use common::Result;
 use cosmrs::{tendermint::block, Tx};
 use cosmwasm_std::Addr;
 use futures::stream::BoxStream;
 use serde::{de::Error as _, Deserialize, Deserializer};
-use strategy::Pool;
 use terrars::dex::Pool as TerraPool;
 
 #[async_trait]
@@ -24,6 +25,8 @@ pub trait Api: Send + Sync {
     async fn v1_events_mempooltx_v5(
         &self,
     ) -> Result<BoxStream<'static, Result<MempoolTxV5Message>>>;
+
+    async fn v1_p2p_txhash(&self, tx_hash: String) -> Result<TxP2POriginsResponse>;
 }
 
 #[derive(Debug, Deserialize)]
@@ -51,29 +54,21 @@ pub struct MempoolTxV5Message {
     pub pools: Vec<super::pools::PoolV5>,
 }
 
-pub trait HydratedMempoolMessage<M: TryInto<Pool>> {
-    fn pools(&self) -> Vec<M>;
-    fn height(&self) -> block::Height;
+#[derive(Debug, Deserialize)]
+pub struct TxP2POriginsResponse {
+    pub hash: String,
+    pub found: bool,
+    pub first: String,
+    pub delta: String,
+    pub all: Vec<TxP2POrigin>,
 }
 
-impl HydratedMempoolMessage<super::pools::PoolV5> for MempoolTxV5Message {
-    fn pools(&self) -> Vec<super::pools::PoolV5> {
-        self.pools.clone()
-    }
-
-    fn height(&self) -> block::Height {
-        self.height
-    }
-}
-
-impl HydratedMempoolMessage<super::v3::Pool> for MempoolTxV2Message {
-    fn pools(&self) -> Vec<super::v3::Pool> {
-        self.pools.clone()
-    }
-
-    fn height(&self) -> block::Height {
-        self.height
-    }
+#[derive(Debug, Deserialize)]
+pub struct TxP2POrigin {
+    pub hash: String,
+    pub ts: String,
+    pub peer_id: String,
+    pub peer_ip: IpAddr,
 }
 
 // point.
