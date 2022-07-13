@@ -1,6 +1,7 @@
-use std::{fs, str::FromStr, sync::Arc};
+use std::{fs, str::FromStr, sync::Arc, time::Duration};
 
 use axum::{Router, Server};
+use backoff::{future::retry, ExponentialBackoffBuilder};
 use chainrs::cosmos::{auth::BaseAccount, base::AccountId};
 use common::{
     err,
@@ -35,25 +36,53 @@ async fn main() -> Result<()> {
     let addresses = &(*address_book::CURRENT);
 
     // Set up RPC client.
-    let (client, driver) = WebSocketClient::new(args.rpc_url.as_str()).await?;
+    let back = ExponentialBackoffBuilder::new()
+        .with_max_interval(Duration::from_secs(20))
+        .build();
+    let (client, driver) = retry(back.clone(), || async {
+        match WebSocketClient::new(args.rpc_url.as_str()).await {
+            Ok(t) => Ok(t),
+            Err(e) => {
+                error!("could not connect to node: {}", e);
+                Err(backoff::Error::transient(e))
+            },
+        }
+    })
+    .await?;
     // Advance the internal machinery of the RPC client.
     let mut driver_handle = tokio::spawn(driver.run()).fuse();
 
     // Ensure the data source has caught up to the latest state.
-    let status = client.status().await?;
-    if status.sync_info.catching_up {
-        error!("Node status: {:?}", status);
-        return Err(err!("node still catching up"));
-    }
+    retry(back.clone(), || async {
+        if client
+            .status()
+            .await
+            .map_err(|e| err!("failed to get node status: {:}", e))?
+            .sync_info
+            .catching_up
+        {
+            error!("node still catching up");
+            return Err(backoff::Error::transient(err!("node still catching up")));
+        };
+        Ok(())
+    })
+    .await?;
 
     let (shutdown_sender, _shutdown_receiver) = watch::channel(false);
 
     // Keep the latest block up-to-date so it can function as barrier for the next iteration of the
     // execution loop. By fetching it first we ensure the watch channel has an initial value.
-    let (latest_block_sender, latest_block_receiver) = {
-        let res = client.latest_block().await?;
-        watch::channel(res.block)
-    };
+    let (latest_block_sender, latest_block_receiver) = retry(back, || async {
+        match client.latest_block().await {
+            Ok(res) => Ok(watch::channel(res.block)),
+            Err(e) => {
+                error!("failed to poll latest block: {}", e);
+                Err(backoff::Error::transient(e))
+            },
+        }
+    })
+    .await?;
+
     let (mempool_tx_sender, mempool_tx_receiver) =
         mpsc::channel::<mekapi::v1::MempoolTxV5Message>(1024);
     let (trade_sender, trade_receiver) = mpsc::channel::<Trade>(100);
