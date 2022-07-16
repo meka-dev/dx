@@ -106,7 +106,7 @@ where
         let current_treasury = *treasury_balances.get(&tok).unwrap_or(&Uint256::zero());
 
         if let Some(last) = self.last {
-            if last.multiply_ratio(9i64, 10i64) >= current {
+            if !last.is_zero() && last.multiply_ratio(9i64, 10i64) >= current {
                 error!("balance critically dropped: {} -> {}", last, current);
 
                 let execute_trades = Arc::clone(&self.execute_trades);
