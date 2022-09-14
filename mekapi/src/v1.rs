@@ -49,8 +49,8 @@ pub struct MempoolTxV5Message {
     pub height: block::Height,
     #[serde(rename = "txhash")]
     pub tx_hash: String,
-    #[serde(deserialize_with = "tx_from_str")]
-    pub tx: Tx,
+    #[serde(deserialize_with = "vec_from_str")]
+    pub tx: Vec<u8>,
     pub pools: Vec<super::pools::PoolV5>,
 }
 
@@ -80,4 +80,12 @@ where
     let bytes = hex::decode(input).map_err(D::Error::custom)?;
 
     Tx::from_bytes(&bytes).map_err(D::Error::custom)
+}
+
+fn vec_from_str<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let input: String = Deserialize::deserialize(deserializer)?;
+    hex::decode(input).map_err(D::Error::custom)
 }

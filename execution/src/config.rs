@@ -4,7 +4,8 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use common::{CHAIN_ID, LCD_URL, MEKAPI_URL, RPC_URL};
+use chainrs::cosmos::base::Denom;
+use common::{BUILDER_URL, CHAIN_ID, FEE_DENOM, LCD_URL, MEKAPI_URL, RPC_URL};
 use params_derive::params;
 use tendermint::chain;
 
@@ -14,10 +15,13 @@ pub const BINARY: &str = "execution";
 #[params]
 #[derive(argh::FromArgs, Debug)]
 pub struct Args {
-    /// terra chain identifier, should be static except on hard fork (Mainnet: columbus-5, Testnet:
-    /// bombay-12)
+    /// chain identifier, e.g. "osmosis-1"
     #[argh(option, default = "CHAIN_ID.parse().unwrap()")]
     pub chain_id: chain::Id,
+
+    /// fee denom, e.g. "uosmo"
+    #[argh(option, default = "FEE_DENOM.parse().unwrap()")]
+    pub fee_denom: Denom,
 
     /// signs and broadcasts tx to the network when disabled.
     #[argh(
@@ -35,6 +39,10 @@ pub struct Args {
     /// HTTP endpoint for Terra's LCD (http://127.0.0.1:1317)
     #[argh(option, default = "MEKAPI_URL.to_string()")]
     pub mekapi_url: String,
+
+    /// HTTP endpoint for mekatek builder
+    #[argh(option, default = "BUILDER_URL.to_string()")]
+    pub builder_url: String,
 
     /// HTTP server for operational endpoints. (127.0.0.1:4444)
     #[argh(option, default = "([127, 0, 0, 1], 4444).into()")]

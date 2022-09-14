@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
-use chainrs::cosmos::base::AccountId;
-use common::Result;
+use chainrs::cosmos::{auth::BaseAccount, base::AccountId};
+use common::{err, Result};
 use cosmwasm_bignumber::Uint256;
 use lcd::Lcd;
 use strategy::{Balances, Token};
 
 pub const PREFIX: &str = "osmo";
 
-pub async fn fetch<L>(lcd: L, account_id: AccountId) -> Result<Balances>
+pub async fn balances<L>(lcd: L, account_id: AccountId) -> Result<Balances>
 where
     L: Lcd,
 {
@@ -19,7 +19,7 @@ where
         balances.insert(
             Token {
                 id: coin.denom.to_string(),
-                decimals: 6,
+                decimals: 6, // XXX
                 native: true,
             },
             Uint256::from(coin.amount.0),
@@ -27,4 +27,16 @@ where
     }
 
     Ok(balances)
+}
+
+pub async fn base<L>(lcd: L, account_id: AccountId) -> Result<BaseAccount>
+where
+    L: Lcd,
+{
+    let base = lcd
+        .auth_account(&account_id)
+        .await?
+        .ok_or(err!("account not found"))?;
+
+    Ok(base)
 }

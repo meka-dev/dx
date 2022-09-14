@@ -3,12 +3,12 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use arby::msg::ExecuteMsg;
 use async_trait::async_trait;
 use chainrs::{
     cosmos::{
         auth::BaseAccount,
-        base::{AccountId, Coin},
+        bank::MsgSend,
+        base::{AccountId, Coin, Denom},
     },
     osmosis::gamm::{MsgSwapExactAmountIn, SwapAmountInRoute},
     proto::cosmos::base::abci::v1beta1::GasInfo,
@@ -21,24 +21,27 @@ use common::{
     Context as _,
     Result,
 };
-use cosmrs::crypto::secp256k1::SigningKey;
-use cosmwasm_std::{Addr, Uint128};
+use cosmrs::{crypto::secp256k1::SigningKey, Decimal};
 use itertools::Itertools;
 use prometheus_client::{
     encoding::text::Encode,
     metrics::{counter::Counter, family::Family, histogram::Histogram},
     registry::Unit,
 };
-use strategy::{PoolId, Trade};
-use tendermint::{abci::Transaction, block::Height, chain};
-use tendermint_rpc::{endpoint::broadcast, Client as _, WebSocketClient};
-use terrars::{dex::Token, wasm::MsgExecuteContract};
+use strategy::{Bundle, PoolId, Trade};
+use tendermint::{
+    abci::{transaction::Hash, Transaction},
+    block::Height,
+    chain,
+};
+use tendermint_rpc::{Client as _, WebSocketClient};
 use tokio::{
-    sync::{mpsc, Mutex},
+    sync::{mpsc, watch, Mutex},
     time::Instant,
 };
+use zenith_rs::{AuctionResponse, BidKind, Builder, Http as BuilderHttp};
 
-use crate::{accounts, tracker::Tracker};
+use crate::tracker::Tracker;
 
 pub type Fee = u64;
 
@@ -55,25 +58,48 @@ pub struct Simulation {
     outcome: Outcome,
 }
 
-pub async fn run<B, T>(
-    mut trades: mpsc::Receiver<Trade>,
-    mut broadcaster: B,
+pub async fn run<T>(
+    mut bundles: mpsc::Receiver<Bundle>,
+    auction_receiver: watch::Receiver<AuctionResponse>,
+    mut mempool_broadcaster: impl Broadcaster,
+    mut auction_broadcaster: impl Broadcaster,
     tx_tracker: Arc<Mutex<T>>,
     execute_trades: Arc<RwLock<bool>>,
 ) -> Result<()>
 where
-    B: Broadcaster,
     T: Tracker,
 {
     debug!("Init broadcaster");
 
-    while let Some(trade) = trades.recv().await {
-        if let Some(addr) = (*tx_tracker.lock().await).is_tracked(&trade.route) {
+    while let Some(bundle) = bundles.recv().await {
+        if let Some(addr) = (*tx_tracker.lock().await).is_tracked(&bundle.trade.route) {
             debug!("pool {} in route  ", addr);
             continue;
         }
 
-        if let Ok(simulation) = broadcaster.simulate(&trade).await {
+        let auction;
+        {
+            auction = auction_receiver.borrow().clone();
+        }
+
+        if auction.height != bundle.height {
+            if let Ok(simulation) = mempool_broadcaster.simulate(&bundle.trade).await {
+                let execute_trades = Arc::clone(&execute_trades);
+                let execute_trades =
+                    tokio::task::spawn_blocking(move || *execute_trades.read().unwrap())
+                        .await
+                        .unwrap();
+
+                if execute_trades && simulation.outcome == Outcome::Profitable {
+                    if let Ok(resp) = mempool_broadcaster
+                        .broadcast(simulation.fee, simulation.gas_info, &bundle, None)
+                        .await
+                    {
+                        let _ = (*tx_tracker.lock().await).track(resp.hash, &bundle.trade.route);
+                    }
+                }
+            }
+        } else if let Ok(simulation) = auction_broadcaster.simulate(&bundle.trade).await {
             let execute_trades = Arc::clone(&execute_trades);
             let execute_trades =
                 tokio::task::spawn_blocking(move || *execute_trades.read().unwrap())
@@ -81,19 +107,29 @@ where
                     .unwrap();
 
             if execute_trades && simulation.outcome == Outcome::Profitable {
-                if let Ok(check) = broadcaster
-                    .broadcast(simulation.fee, simulation.gas_info, &trade)
+                if let Ok(resp) = auction_broadcaster
+                    .broadcast(simulation.fee, simulation.gas_info, &bundle, Some(auction))
                     .await
                 {
-                    if check.code.is_ok() {
-                        let _ = (*tx_tracker.lock().await).track(check.hash, &trade.route);
-                    }
+                    let _ = (*tx_tracker.lock().await).track(resp.hash, &bundle.trade.route);
                 }
             }
-        }
+        };
     }
 
     Ok(())
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Venue {
+    Mempool,
+    Auction,
+}
+
+#[derive(Debug)]
+pub struct BroadcastResponse {
+    venue: Venue,
+    hash: Hash,
 }
 
 #[async_trait]
@@ -102,19 +138,21 @@ pub trait Broadcaster {
         &mut self,
         fee: Fee,
         gas_info: GasInfo,
-        trade: &Trade,
-    ) -> Result<broadcast::tx_sync::Response>;
+        bundle: &Bundle,
+        auction: Option<AuctionResponse>,
+    ) -> Result<BroadcastResponse>;
 
     async fn simulate(&self, trade: &Trade) -> Result<Simulation>;
 }
 
 #[allow(dead_code)]
 pub struct Rpc {
-    account: BaseAccount,
+    account: Arc<Mutex<BaseAccount>>,
+    account_id: AccountId,
     client: WebSocketClient,
     chain_id: chain::Id,
+    fee_denom: Denom,
     signing_key_bytes: Vec<u8>,
-    sequence: u64,
     treasury: Option<AccountId>,
 }
 
@@ -122,49 +160,22 @@ impl Rpc {
     pub fn new(
         client: WebSocketClient,
         chain_id: chain::Id,
-        account: BaseAccount,
+        fee_denom: Denom,
+        account: Arc<Mutex<BaseAccount>>,
+        account_id: AccountId,
         signing_key_bytes: Vec<u8>,
         treasury: Option<AccountId>,
     ) -> Self {
-        let sequence = account.sequence;
-
         Self {
             account,
+            account_id,
             chain_id,
+            fee_denom,
             client,
             signing_key_bytes,
-            sequence,
             treasury,
         }
     }
-}
-
-#[allow(dead_code)]
-fn mk_msg_terra(
-    sender: &AccountId,
-    proxy_addr: &AccountId,
-    t: &Trade,
-) -> Result<MsgExecuteContract> {
-    let path = t
-        .legs
-        .iter()
-        .map(|leg| {
-            (
-                Addr::unchecked(leg.pool.id.clone()),
-                Into::<Token>::into(leg.pool.ask_asset(&leg.out_token).unwrap()).into(),
-            )
-        })
-        .collect_vec();
-    Ok(MsgExecuteContract {
-        coins: vec![],
-        contract_address: Addr::unchecked(proxy_addr.to_string()),
-        execute_msg: serde_json::to_vec(&ExecuteMsg::Sprint {
-            input: t.size_to_int().0.as_u64().into(),
-            min_out: Uint128::new(0u128),
-            path,
-        })?,
-        sender: sender.to_string(),
-    })
 }
 
 fn mk_msg_osmosis(sender: &AccountId, t: &Trade) -> Result<MsgSwapExactAmountIn> {
@@ -192,29 +203,48 @@ fn mk_msg_osmosis(sender: &AccountId, t: &Trade) -> Result<MsgSwapExactAmountIn>
     })
 }
 
+fn mk_payments(
+    from: &AccountId,
+    auction: &AuctionResponse,
+    bid_amount: u64,
+) -> Result<Vec<MsgSend>> {
+    auction
+        .payments
+        .iter()
+        .map(|e| {
+            Ok(MsgSend {
+                from_address: from.to_string(),
+                to_address: e.address.clone(),
+                amount: vec![Coin {
+                    denom: chainrs::cosmos::base::Denom::from_str(&e.denom)?,
+                    amount: Decimal::from((bid_amount as f64 * e.allocation) as u64),
+                }],
+            })
+        })
+        .collect::<Result<Vec<_>>>()
+}
+
 #[async_trait]
 impl Broadcaster for Rpc {
     async fn broadcast(
         &mut self,
         fee: u64,
         gas_info: GasInfo,
-        trade: &Trade,
-    ) -> Result<broadcast::tx_sync::Response> {
-        let ai = AccountId::from_str(
-            SigningKey::from_bytes(&self.signing_key_bytes)
-                .map_err(|err| err!("failed to craft signing key from bytes: {}", err))?
-                .public_key()
-                .account_id(accounts::PREFIX)
-                .unwrap()
-                .as_ref(),
-        )?;
-        let msg = mk_msg_osmosis(&ai, trade)?.to_any()?;
+        bundle: &Bundle,
+        _auction: Option<AuctionResponse>,
+    ) -> Result<BroadcastResponse> {
+        let msg = mk_msg_osmosis(&self.account_id, &bundle.trade)?.to_any()?;
+
+        let account;
+        {
+            account = self.account.lock().await.clone();
+        }
         let tx = tx::sign(
             self.chain_id.clone(),
             &SigningKey::from_bytes(&self.signing_key_bytes)
                 .map_err(|err| err!("failed to craft signing key from bytes: {}", err))?,
-            self.account.account_number,
-            self.sequence,
+            account.account_number,
+            account.sequence,
             // NB(xla): Using fixed gas prices here, could diverge.
             fee,
             "uosmo".to_string(),
@@ -233,10 +263,15 @@ impl Broadcaster for Rpc {
             .context("failed to broadcast tx")?;
         // Advance sequence if tx succeeded.
         if check.code.is_ok() {
-            self.sequence += 1;
+            let mut account = self.account.lock().await;
+            account.sequence += 1;
+            Ok(BroadcastResponse {
+                venue: Venue::Mempool,
+                hash: check.hash,
+            })
+        } else {
+            Err(err!("{:}", check.log))
         }
-
-        Ok(check)
     }
 
     async fn simulate(&self, trade: &Trade) -> Result<Simulation> {
@@ -268,13 +303,133 @@ fn gas_estimator(_addr: &PoolId) -> u64 {
     85000
 }
 
+pub struct BuilderRpc<B: Builder> {
+    builder: B,
+    account: Arc<Mutex<BaseAccount>>,
+    account_id: AccountId,
+    chain_id: chain::Id,
+    fee_denom: Denom,
+    signing_key_bytes: Vec<u8>,
+}
+
+impl BuilderRpc<BuilderHttp> {
+    pub fn new(
+        builder: BuilderHttp,
+        chain_id: chain::Id,
+        fee_denom: Denom,
+        account: Arc<Mutex<BaseAccount>>,
+        account_id: AccountId,
+        signing_key_bytes: Vec<u8>,
+    ) -> Self {
+        Self {
+            builder,
+            account,
+            account_id,
+            chain_id,
+            fee_denom,
+            signing_key_bytes,
+        }
+    }
+}
+
+#[async_trait]
+impl Broadcaster for BuilderRpc<BuilderHttp> {
+    async fn broadcast(
+        &mut self,
+        fee: u64,
+        gas_info: GasInfo,
+        bundle: &Bundle,
+        auction: Option<AuctionResponse>,
+    ) -> Result<BroadcastResponse> {
+        let arb = mk_msg_osmosis(&self.account_id, &bundle.trade)?.to_any()?;
+        // XXX: hardcoded 10% bid
+        let bid_amount =
+            ((bundle.trade.expected_profit_to_int().0.as_u64() - fee) as f64 * 0.1) as u64;
+        let bids = mk_payments(
+            &self.account_id,
+            &auction.ok_or(err!("no auction provided for zenith broadcast"))?,
+            bid_amount,
+        )?
+        .into_iter()
+        .map(|m| m.to_any())
+        .collect::<Result<Vec<_>>>()?;
+        let account;
+        {
+            account = self.account.lock().await.clone();
+        }
+        let mut msgs = vec![arb];
+        msgs.extend(bids);
+        let tx = tx::sign(
+            self.chain_id.clone(),
+            &SigningKey::from_bytes(&self.signing_key_bytes)
+                .map_err(|err| err!("failed to craft signing key from bytes: {}", err))?,
+            account.account_number,
+            account.sequence,
+            // NB(xla): Using fixed gas prices here, could diverge.
+            fee,
+            self.fee_denom.to_string(),
+            (gas_info.gas_used as f64 * 1.10) as u64,
+            None,
+            None,
+            Height::try_from(0_u64).unwrap(),
+            msgs,
+        )
+        .context("failed to sign transaction")?;
+
+        let mut txs = bundle.txs.clone();
+        txs.push(tx);
+        let r = self
+            .builder
+            .bid(self.chain_id.to_string(), bundle.height, BidKind::Top, txs)
+            .await?;
+
+        Ok(BroadcastResponse {
+            venue: Venue::Auction,
+            hash: r
+                .tx_hashes
+                .first()
+                .ok_or(err!("did not receive hashes from zenith"))?
+                .parse()?,
+        })
+    }
+
+    async fn simulate(&self, trade: &Trade) -> Result<Simulation> {
+        let expected_profit: u128 = trade.expected_profit_to_int().into();
+        let gas_used = trade
+            .route
+            .iter()
+            .fold(0u64, |acc, m| acc + gas_estimator(m))
+            + 2 * 70000; // 2x bank transfer
+
+        let fee = (gas_used as f64 * 0.007f64) as u64;
+        let outcome = if expected_profit > fee.into() {
+            Outcome::Profitable
+        } else {
+            Outcome::NotProfitable
+        };
+        Ok(Simulation {
+            fee,
+            gas_info: GasInfo {
+                gas_wanted: 0,
+                gas_used,
+            },
+            outcome,
+        })
+    }
+}
+
 impl Labeled for Rpc {
     const NAME: Name = Name::Rpc;
+}
+
+impl Labeled for BuilderRpc<BuilderHttp> {
+    const NAME: Name = Name::Auction;
 }
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
 pub enum Name {
     Rpc,
+    Auction,
 }
 
 #[derive(Clone, Debug, Hash, Encode, Eq, PartialEq)]
@@ -361,6 +516,7 @@ where
     }
 }
 
+// XXX: track bids
 #[async_trait]
 impl<N> Broadcaster for Observed<N>
 where
@@ -370,12 +526,13 @@ where
         &mut self,
         fee: u64,
         gas_info: GasInfo,
-        trade: &Trade,
-    ) -> Result<broadcast::tx_sync::Response> {
-        let expected_profit = trade.expected_profit_to_int().0.as_u64();
+        bundle: &Bundle,
+        auction: Option<AuctionResponse>,
+    ) -> Result<BroadcastResponse> {
+        let expected_profit = bundle.trade.expected_profit_to_int().0.as_u64();
         let method = Method::Broadcast;
         let start = Instant::now();
-        let res = self.next.broadcast(fee, gas_info, trade).await;
+        let res = self.next.broadcast(fee, gas_info, bundle, auction).await;
 
         self.observe(method.clone(), start, res.is_err());
 
@@ -396,8 +553,8 @@ where
         match res {
             Ok(check) => {
                 info!(
-                    "msg=submit hash={} code={:?} log={}",
-                    check.hash, check.code, check.log
+                    "msg=submit height={} hash={} venue={:?}",
+                    bundle.height, check.hash, check.venue,
                 );
 
                 Ok(check)
@@ -417,11 +574,17 @@ where
 
         match res {
             Ok(simulation) => {
+                let profit = if trade.expected_profit_to_int().0.as_u64() > simulation.fee {
+                    trade.expected_profit_to_int().0.as_u64() - simulation.fee
+                } else {
+                    0
+                };
                 info!(
-                    "legs={} expected_profit={} estimated_fee={} outcome={:?}",
+                    "legs={} expected_profit={} estimated_fee={} delta={} outcome={:?}",
                     trade.legs.len(),
                     trade.expected_profit,
                     simulation.fee,
+                    profit,
                     simulation.outcome,
                 );
 

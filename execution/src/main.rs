@@ -11,7 +11,6 @@ use common::{
     tracing::{self, error},
     Result,
 };
-use cosmrs::crypto::secp256k1::SigningKey;
 use execution::{
     accounts,
     block_emitter,
@@ -24,9 +23,11 @@ use execution::{
 };
 use futures::FutureExt as _;
 use lcd::{self, Lcd};
-use strategy::{self, Token, Trade};
+use strategy::{self, Bundle, Token};
 use tendermint_rpc::{Client as _, SubscriptionClient as _, WebSocketClient};
+use terrars::SigningKey;
 use tokio::sync::{mpsc, watch, Mutex};
+use zenith_rs::{AuctionResponse, Http as BuilderHttp};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -85,13 +86,16 @@ async fn main() -> Result<()> {
 
     let (mempool_tx_sender, mempool_tx_receiver) =
         mpsc::channel::<mekapi::v1::MempoolTxV5Message>(1024);
-    let (trade_sender, trade_receiver) = mpsc::channel::<Trade>(100);
+    let (bundle_sender, bundle_receiver) = mpsc::channel::<Bundle>(100);
 
     let mut registry = metrics::Registry::new(config::BINARY);
 
     let emitter =
         block_emitter::Observed::new(&mut registry, block_emitter::Rpc::new(latest_block_sender));
-    let lcd = execution::metrics::lcd::Observed::new(&mut registry, lcd::Http::new(args.lcd_url)?);
+    let lcd = execution::metrics::lcd::Observed::new(
+        &mut registry,
+        lcd::Http::new(args.lcd_url.clone())?,
+    );
     let signing_key_bytes = {
         let raw = fs::read(args.secret_key_file.clone())?;
         hex::decode(&raw)?
@@ -111,6 +115,8 @@ async fn main() -> Result<()> {
         pub_key: None,
         sequence: 0,
     });
+    let account = Arc::new(Mutex::new(account));
+
     let mekapi = execution::metrics::mekapi::Observed::new(
         &mut registry,
         mekapi::Http::new(args.mekapi_url)?,
@@ -120,16 +126,37 @@ async fn main() -> Result<()> {
         &mut registry,
         tracker::InMemory::default(),
     )));
-    let broadcaster = broadcast::Observed::new(
+    let mempool_broadcaster = broadcast::Observed::new(
         &mut registry,
         broadcast::Rpc::new(
             client.clone(),
-            args.chain_id,
-            account,
-            signing_key_bytes,
+            args.chain_id.clone(),
+            args.fee_denom.clone(),
+            account.clone(),
+            account_id.clone(),
+            signing_key_bytes.clone(),
             Some(addresses.treasury.clone()),
         ),
     );
+    let build = BuilderHttp::new(args.builder_url)?;
+    let (auction_sender, auction_receiver) = watch::channel(AuctionResponse {
+        chain_id: args.chain_id.to_string(),
+        height: 0,
+        payments: vec![],
+    });
+
+    let auction_broadcaster = broadcast::Observed::new(
+        &mut registry,
+        broadcast::BuilderRpc::new(
+            build.clone(),
+            args.chain_id.clone(),
+            args.fee_denom.clone(),
+            account.clone(),
+            account_id.clone(),
+            signing_key_bytes,
+        ),
+    );
+
     let treasurer = treasurer::Treasurer::new(
         &mut registry,
         addresses.clone(),
@@ -161,12 +188,29 @@ async fn main() -> Result<()> {
     let mut latest_block_handle =
         tokio::spawn(routines::latest_block(client.clone(), emitter)).fuse();
 
+    let mut accounts_handle = tokio::spawn(routines::base_account(
+        lcd::Http::new(args.lcd_url)?,
+        account_id.clone(),
+        Arc::clone(&account),
+        latest_block_receiver.clone(),
+    ))
+    .fuse();
+
     let mut mempool_tx_handle =
         tokio::spawn(routines::mempool_tx_v5(mekapi.clone(), mempool_tx_sender)).fuse();
 
+    let mut auctions_handle = tokio::spawn(routines::auctions(
+        build,
+        auction_sender,
+        latest_block_receiver.clone(),
+    ))
+    .fuse();
+
     let mut broadcast_handle = tokio::spawn(broadcast::run(
-        trade_receiver,
-        broadcaster,
+        bundle_receiver,
+        auction_receiver.clone(),
+        mempool_broadcaster,
+        auction_broadcaster,
         Arc::clone(&tx_tracker),
         args.execute_trades,
     ))
@@ -179,7 +223,7 @@ async fn main() -> Result<()> {
         tx_tracker,
         latest_block_receiver,
         mempool_tx_receiver,
-        trade_sender,
+        bundle_sender,
         addresses.arby.clone(),
         account_id,
         strategies,
@@ -196,6 +240,8 @@ async fn main() -> Result<()> {
             join = &mut driver_handle => join??,
             join = &mut treasurer_handle => join??,
             join = &mut latest_block_handle => join??,
+            join = &mut accounts_handle => join??,
+            join = &mut auctions_handle => join??,
             join = &mut mempool_tx_handle => join??,
             join = &mut broadcast_handle => join??,
             join = &mut execution_handle => join??,

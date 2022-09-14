@@ -5,7 +5,7 @@ pub use cosmrs::tendermint;
 pub use prost_types::Any;
 use serde::Serialize;
 
-mod json;
+pub mod json;
 mod prost_ext;
 
 pub mod cosmos;

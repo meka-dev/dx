@@ -25,6 +25,16 @@ pub struct Trade {
     pub route: Route,
 }
 
+// Trade plus txs
+// TODO: make generic?
+#[derive(Clone, Debug)]
+pub struct Bundle {
+    pub height: u64,
+    pub trade: Trade,
+    pub trade_index: u64,
+    pub txs: Vec<Vec<u8>>,
+}
+
 impl Trade {
     pub fn size_to_int(&self) -> Uint256 {
         Uint256(self.size.0 / Uint256::from(10u128.pow(18 - self.in_token.decimals as u32)).0)

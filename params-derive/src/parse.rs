@@ -11,11 +11,10 @@ pub fn parse(args: TokenStream, item: TokenStream) -> Ast {
     const HELP: &str = "use `#[params]`";
 
     if !args.is_empty() {
-        if let Ok(expr) = syn::parse2::<Expr>(args) {
-            abort!(expr, ERROR; help = HELP)
-        } else {
-            abort_call_site!(ERROR; help = HELP)
-        }
+        syn::parse2::<Expr>(args).map_or_else(
+            |_| abort_call_site!(ERROR; help = HELP),
+            |expr| abort!(expr, ERROR; help = HELP),
+        );
     }
 
     match syn::parse2::<Item>(item) {
