@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use chainrs::cosmos::base::AccountId;
+use chainrs::cosmos::{auth::BaseAccount, base::AccountId};
 use common::{
     tracing::{debug, error},
     Result,
@@ -8,7 +8,7 @@ use common::{
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use futures::StreamExt as _;
 use lcd::Lcd;
-use strategy::{Strategy, Token, Trade};
+use strategy::{Bundle, Strategy, Token};
 use tendermint::block;
 use tendermint_rpc::{
     query::{EventType, Query},
@@ -16,6 +16,7 @@ use tendermint_rpc::{
     WebSocketClient,
 };
 use tokio::sync::{mpsc, watch, Mutex};
+use zenith_rs::{AuctionResponse, Builder};
 
 use crate::{block_emitter::Emitter, fetcher::Fetcher, tracker::Tracker};
 
@@ -29,7 +30,7 @@ pub async fn execution<F, L, M, T>(
     tx_tracker: Arc<Mutex<T>>,
     mut latest_block_receiver: watch::Receiver<block::Block>,
     mut mempool_tx_receiver: mpsc::Receiver<mekapi::v1::MempoolTxV5Message>,
-    trade_sender: mpsc::Sender<Trade>,
+    bundle_sender: mpsc::Sender<Bundle>,
     proxy_addr: AccountId,
     _account_id: AccountId,
     mut strategies: Vec<Box<dyn Strategy + Sync>>,
@@ -73,11 +74,18 @@ where
             },
 
             Some(msg) = mempool_tx_receiver.recv() => {
+                let height = <tendermint::block::Height as Into<u64>>::into(msg.height) + 1;
                 for strategy in strategies.iter_mut() {
                     let trades = strategy.execute_mempool_tx(msg.height, &msg.pools.clone().into_iter().flat_map(TryInto::try_into).collect::<Vec<_>>()).await;
 
                     for trade in trades {
-                        trade_sender.send(trade).await?;
+                        let bundle = Bundle {
+                            height,
+                            trade,
+                            trade_index: 0,
+                            txs: vec![msg.tx.clone()],
+                        };
+                        bundle_sender.send(bundle).await?;
                     }
                 }
             }
@@ -107,60 +115,60 @@ where
     Ok(())
 }
 
-pub async fn mempool_tx<M>(
-    mekapi: M,
-    mempool_tx_sender: mpsc::Sender<mekapi::v1::MempoolTxMessage>,
-) -> Result<()>
-where
-    M: mekapi::v1::Api,
-{
-    debug!("Init mempool tx stream");
-
-    let mut events = mekapi.v1_events_mempooltx().await?;
-
+pub async fn base_account(
+    lcd: impl Lcd,
+    account_id: AccountId,
+    acc: Arc<Mutex<BaseAccount>>,
+    mut latest_block_receiver: watch::Receiver<block::Block>,
+) -> Result<()> {
+    debug!("Init base account");
     loop {
-        match events.next().await {
-            Some(res) => match res {
-                Ok(msg) => {
-                    if let Err(err) = mempool_tx_sender.try_send(msg) {
-                        error!("failed to send mempool tx: {}", err);
-                    }
-                },
-                Err(err) => error!("failed to decode mempool tx: {}", err),
+        tokio::select! {
+            Ok(()) = latest_block_receiver.changed() => {
+                let r = lcd.auth_account(&account_id).await;
+                match r {
+                    Err(e) => error!("failed to get account {:?}: {:?}", account_id, e),
+                    Ok(None) => error!("no account data found for {:}", account_id),
+                    Ok(Some(a)) => {
+                        debug!("account state {:?}", a);
+                        let mut c = acc.lock().await;
+                        *c = a;
+                    },
+                }
             },
-            None => {
-                events = mekapi.v1_events_mempooltx().await?;
-            },
+            else => break,
         }
     }
+    Ok(())
 }
 
-pub async fn mempool_tx_v2<M>(
-    mekapi: M,
-    mempool_tx_sender: mpsc::Sender<mekapi::v1::MempoolTxV2Message>,
-) -> Result<()>
-where
-    M: mekapi::v1::Api,
-{
-    debug!("Init mempool tx stream");
-
-    let mut events = mekapi.v1_events_mempooltx_v2().await?;
-
+pub async fn auctions(
+    builder: impl Builder,
+    auction: watch::Sender<AuctionResponse>,
+    mut latest_block_receiver: watch::Receiver<block::Block>,
+) -> Result<()> {
+    debug!("Init auctions");
     loop {
-        match events.next().await {
-            Some(res) => match res {
-                Ok(msg) => {
-                    if let Err(err) = mempool_tx_sender.try_send(msg) {
-                        error!("failed to send mempool tx: {}", err);
-                    }
-                },
-                Err(err) => error!("failed to decode mempool tx: {}", err),
+        tokio::select! {
+            Ok(()) = latest_block_receiver.changed() => {
+                let height: u64;
+                {
+                    let latest_block = latest_block_receiver.borrow().clone();
+                    height = latest_block.header().height.into();
+                }
+                let r = builder.auction("osmosis-1".to_string(), height + 1).await;
+                match r {
+                    Err(e) => debug!("no auction for {:?}: {:?}", height, e),
+                    Ok(a) => {
+                        debug!("found an auction for {:?}", a);
+                        auction.send(a)?;
+                    },
+                }
             },
-            None => {
-                events = mekapi.v1_events_mempooltx_v2().await?;
-            },
+            else => break,
         }
     }
+    Ok(())
 }
 
 pub async fn mempool_tx_v5<M>(

@@ -54,7 +54,7 @@ where
         height: Height,
     ) -> Result<(Balances, Vec<Pool>)> {
         // Fetch available funds for strategies to incorporate.
-        let funds_handle = tokio::spawn(accounts::fetch(lcd, account_id.clone()));
+        let funds_handle = tokio::spawn(accounts::balances(lcd, account_id.clone()));
         let pools_handle = {
             let mekapi = mekapi.clone();
             tokio::spawn(async move { mekapi.v5(height).await })

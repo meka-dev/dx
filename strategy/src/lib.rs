@@ -9,5 +9,5 @@ mod token;
 
 pub use asset::WeightedAsset;
 pub use pool::{Pool, PoolId, PoolMap, Pools};
-pub use strategy::{Balances, Leg, Route, Strategy, Trade};
+pub use strategy::{Balances, Bundle, Leg, Route, Strategy, Trade};
 pub use token::Token;

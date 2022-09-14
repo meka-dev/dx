@@ -1,7 +1,7 @@
 use std::str::FromStr as _;
 
 use async_trait::async_trait;
-use common::{err, tracing::error, Report, Result};
+use common::{err, Report, Result};
 use cosmrs::{tendermint::block, AccountId, Denom};
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::Uint128;
@@ -52,7 +52,7 @@ impl TryFrom<&PoolV5> for strategy::Pool {
             },
         )?;
         if ass.len() != 2 {
-            error!("pool {:?}", p);
+            // error!("pool {:?}", p);
             return Err(err!("can only handle pools with two assets right now"));
         }
         Ok(strategy::Pool {

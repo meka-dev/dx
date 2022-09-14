@@ -225,11 +225,6 @@
     "name": "AssetMantle"
   },
   {
-    "decimals": 18,
-    "denom": "ibc/EA1D43981D5C9A1C4AAEA9C23BB1D4FA126BA9BC7020A25E0AE4AA841EA25DC5",
-    "name": "Wrapped Ether"
-  },
-  {
     "decimals": 8,
     "denom": "ibc/D1542AA8762DB13087D8364F3EA6509FD6F009A34F00426AF9E4F9FA85CBBF1F",
     "name": "Wrapped Bitcoin"
@@ -243,5 +238,45 @@
     "decimals": 18,
     "denom": "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
     "name": "Evmos"
+  },
+  {
+    "decimals": 18,
+    "denom": "ibc/64BA6E31FE887D66C6F8F31C7B1A80C7CA179239677B4088BB55F5EA07DBE273",
+    "name": "Injective"
+  },
+  {
+    "decimals": 6,
+    "denom": "ibc/1E09CB0F506ACF12FDE4683FB6B34DA62FB4BE122641E0D93AAF98A87675676C",
+    "name": "Tgrade"
+  },
+  {
+    "decimals": 6,
+    "denom": "ibc/BB6BCDB515050BAE97516111873CCD7BCF1FD0CCB723CC12F3C4F704D6C646CE",
+    "name": "Kuji"
+  },
+  {
+    "decimals": 18,
+    "denom": "ibc/D27DDDF34BB47E5D5A570742CC667DE53277867116CCCA341F27785E899A70F3",
+    "name": "Maker"
+  },
+  {
+    "decimals": 10,
+    "denom": "ibc/3FF92D26B407FD61AE95D975712A7C319CDE28DE4D80BDC9978D935932B991D7",
+    "name": "DOT"
+  },
+  {
+    "decimals": 6,
+    "denom": "ibc/2DA9C149E9AD2BD27FEFA635458FB37093C256C1A940392634A16BEA45262604",
+    "name": "Agoric"
+  },
+  {
+    "decimals": 6,
+    "denom": "ibc/C140AFD542AE77BD7DCC83F13FDD8C5E5BB8C4929785E6EC2F4C636F98F17901",
+    "name": "Stride Staked Atom"
+  },
+  {
+    "decimals": 6,
+    "denom": "ibc/903A61A498756EA560B85A85132D3AEE21B5DEDD41213725D22ABF276EA6945E",
+    "name": "Axelar"
   }
 ]

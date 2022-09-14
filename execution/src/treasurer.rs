@@ -83,11 +83,11 @@ where
     }
 
     async fn control(&mut self) -> Result<()> {
-        let arby_balances_handle = tokio::spawn(accounts::fetch(
+        let arby_balances_handle = tokio::spawn(accounts::balances(
             self.lcd.clone(),
             self.address_book.arby.clone(),
         ));
-        let treasury_balances_handle = tokio::spawn(accounts::fetch(
+        let treasury_balances_handle = tokio::spawn(accounts::balances(
             self.lcd.clone(),
             self.address_book.treasury.clone(),
         ));
@@ -102,6 +102,7 @@ where
             decimals: 6,
             native: true,
         };
+
         let current = *arby_balances.get(&tok).unwrap_or(&Uint256::zero());
         let current_treasury = *treasury_balances.get(&tok).unwrap_or(&Uint256::zero());
 
