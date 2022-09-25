@@ -75,7 +75,7 @@ where
                 .iter()
                 .map(|body| {
                     Hash::new(
-                        <[u8; 32]>::try_from(Sha256::digest(&body).deref())
+                        <[u8; 32]>::try_from(Sha256::digest(body).deref())
                             .context("failed to hash transaction")
                             .unwrap(),
                     )

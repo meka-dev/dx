@@ -52,7 +52,7 @@ impl Tracker for InMemory {
     fn observe_block(&mut self, block: Block) -> Result<()> {
         for tx in block.data.iter() {
             let hash = Hash::new(
-                <[u8; 32]>::try_from(Sha256::digest(&tx).deref())
+                <[u8; 32]>::try_from(Sha256::digest(tx).deref())
                     .context("failed to hash transaction")?,
             );
             self.untrack(hash);

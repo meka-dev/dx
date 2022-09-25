@@ -2,7 +2,7 @@ use std::process::Command;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out = Command::new("git")
-        .args(&["rev-parse", "--short", "HEAD"])
+        .args(["rev-parse", "--short", "HEAD"])
         .output()?;
     let hash = String::from_utf8(out.stdout)?;
 

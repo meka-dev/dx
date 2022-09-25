@@ -27,7 +27,7 @@ impl AccountId {
     /// Create an [`AccountId`] with the given human-readable prefix and
     /// public key hash.
     pub fn new(prefix: &str, bytes: &[u8]) -> Result<Self> {
-        let id = bech32::encode(prefix, &bytes);
+        let id = bech32::encode(prefix, bytes);
 
         // NB(tarcieri): ensure this is the proper validation for an account prefix
         if !prefix.chars().all(|c| matches!(c, 'a'..='z')) {
