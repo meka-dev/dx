@@ -95,15 +95,15 @@ fn run_git(args: impl IntoIterator<Item = impl AsRef<OsStr>>) {
 }
 
 fn update_submodules() {
-    run_git(&["submodule", "update", "--init"]);
+    run_git(["submodule", "update", "--init"]);
 
     info!("Updating osmosis-labls/osmosis submodule...");
-    run_git(&["-C", OSMOSIS_DIR, "fetch"]);
-    run_git(&["-C", OSMOSIS_DIR, "reset", "--hard", OSMOSIS_REV]);
+    run_git(["-C", OSMOSIS_DIR, "fetch"]);
+    run_git(["-C", OSMOSIS_DIR, "reset", "--hard", OSMOSIS_REV]);
 
     info!("Updating osmosis-labls/cosmos-sdk submodule...");
-    run_git(&["-C", OSMOSIS_COSMOS_SDK_DIR, "fetch"]);
-    run_git(&[
+    run_git(["-C", OSMOSIS_COSMOS_SDK_DIR, "fetch"]);
+    run_git([
         "-C",
         OSMOSIS_COSMOS_SDK_DIR,
         "reset",
@@ -112,8 +112,8 @@ fn update_submodules() {
     ]);
 
     info!("Updating osmosis-labls/ibc-go submodule...");
-    run_git(&["-C", OSMOSIS_IBC_DIR, "fetch"]);
-    run_git(&["-C", OSMOSIS_IBC_DIR, "reset", "--hard", OSMOSIS_IBC_REV]);
+    run_git(["-C", OSMOSIS_IBC_DIR, "fetch"]);
+    run_git(["-C", OSMOSIS_IBC_DIR, "reset", "--hard", OSMOSIS_IBC_REV]);
 }
 
 fn output_osmosis_version(out_dir: &Path) {
@@ -271,8 +271,8 @@ fn copy_generated_files(from_dir: &Path, to_dir: &Path) {
     info!("Copying generated files into '{}'...", to_dir.display());
 
     // Remove old compiled files
-    std::fs::remove_dir_all(&to_dir).unwrap_or_default();
-    std::fs::create_dir_all(&to_dir).unwrap();
+    std::fs::remove_dir_all(to_dir).unwrap_or_default();
+    std::fs::create_dir_all(to_dir).unwrap();
 
     let mut filenames = Vec::new();
 

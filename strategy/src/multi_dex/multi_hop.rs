@@ -183,7 +183,7 @@ impl MultiHop {
             for step in path {
                 // pps.entry(step.clone()).or_insert(XxIndexSet::with_hasher(Xxh3Builder::new())).
                 // insert(path.clone());
-                pps.entry(step.clone()).or_insert(vec![]).push(path.clone());
+                pps.entry(step.clone()).or_default().push(path.clone());
             }
         }
         self.pool_paths = pps;

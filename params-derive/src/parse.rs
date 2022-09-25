@@ -1,3 +1,5 @@
+#![allow(clippy::option_if_let_else)]
+
 use proc_macro2::TokenStream;
 use proc_macro_error::{abort, abort_call_site};
 use syn::{Expr, Item};
