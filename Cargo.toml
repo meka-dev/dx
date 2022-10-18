@@ -2,7 +2,6 @@
 
 members = [
   "address-book",
-  "blocketl",
   "chainrs",
   "collector",
   "common",
