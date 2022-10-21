@@ -70,65 +70,6 @@ jobs:
           space_region: ${{ secrets.SPACE_REGION }}
           source: "./target/release/collector-${{ steps.version.outputs.VERSION }}"
 
-  blocketl:
-    if: "github.ref == 'refs/heads/main'"
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        toolchain: [stable]
-
-    name: blocketl
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - id: version
-        shell: bash
-        run: 'echo ::set-output "name=VERSION::$(git rev-parse --short HEAD)"'
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        id: toolchain
-        if: steps.cache-toolchain.outputs.cache-hit != 'true'
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.toolchain }}
-          components: cargo, rustfmt
-          override: true
-
-      - name: Cache toolchain
-        uses: actions/cache@v2
-        id: cache-toolchain
-        with:
-          path: |
-            ~/.rustup/settings.toml
-            ~/.rustup/toolchains/${{ matrix.toolchain }}-*
-            ~/.rustup/update-hashes/${{ matrix.toolchain }}-*
-          key: rust-toolchain_${{ matrix.os }}-${{ steps.toolchain.outputs.rustc_hash }}
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v1
-
-      - name: Compile blocketl
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release -p blocketl
-
-      - shell: bash
-        run: "mv ./target/release/blocketl ./target/release/blocketl-${{ steps.version.outputs.VERSION }}"
-
-      - name: Upload execution binary
-        uses: BetaHuhn/do-spaces-action@v2
-        with:
-          access_key: ${{ secrets.SPACE_ACCESS_KEY }}
-          secret_key: ${{ secrets.SPACE_SECRET_KEY }}
-          space_name: ${{ secrets.SPACE_NAME }}
-          space_region: ${{ secrets.SPACE_REGION }}
-          source: "./target/release/blocketl-${{ steps.version.outputs.VERSION }}"
-
   execution:
     if: "github.ref == 'refs/heads/main'"
     strategy:
