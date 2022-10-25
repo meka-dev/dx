@@ -234,7 +234,7 @@ fn compile_osmosis_protos_and_services(out_dir: &Path) {
     // .compile_protos(&protos, &includes);
 
     if let Err(err) = res {
-        println!("{}", err);
+        println!("{err}");
         process::exit(1);
     }
 
@@ -303,7 +303,7 @@ fn copy_and_patch(src: impl AsRef<Path>, dest: impl AsRef<Path>) -> io::Result<(
     // Skip proto files belonging to `EXCLUDED_PROTO_PACKAGES`
     for package in EXCLUDED_PROTO_PACKAGES {
         if let Some(filename) = src.as_ref().file_name().and_then(OsStr::to_str) {
-            if filename.starts_with(&format!("{}.", package)) {
+            if filename.starts_with(&format!("{package}.")) {
                 return Ok(());
             }
         }

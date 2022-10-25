@@ -86,7 +86,7 @@ impl FromStr for AccountId {
     type Err = Report;
 
     fn from_str(s: &str) -> Result<Self> {
-        let (hrp, bytes) = bech32::decode(s).wrap_err(format!("invalid bech32: '{}'", s))?;
+        let (hrp, bytes) = bech32::decode(s).wrap_err(format!("invalid bech32: '{s}'"))?;
         Self::new(&hrp, &bytes)
     }
 }

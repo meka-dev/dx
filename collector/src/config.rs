@@ -63,5 +63,5 @@ fn parse_duration(value: &str) -> Result<Duration, String> {
     value
         .parse::<humantime::Duration>()
         .map(Into::into)
-        .map_err(|err| format!("failed to parse '{}' as duration: {}", value, err))
+        .map_err(|err| format!("failed to parse '{value}' as duration: {err}"))
 }

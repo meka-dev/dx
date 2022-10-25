@@ -6,7 +6,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .output()?;
     let hash = String::from_utf8(out.stdout)?;
 
-    println!("cargo:rustc-env=HASH={}", hash);
+    println!("cargo:rustc-env=HASH={hash}");
     println!("cargo:rerun-if-changed=build.rs");
     Ok(())
 }

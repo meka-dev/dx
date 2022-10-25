@@ -42,7 +42,7 @@ mod package {
             return normalize(
                 src,
                 &path[1..path.len()],
-                format!("{}/{}", out_dir, path.first().unwrap()).as_str(),
+                format!("{out_dir}/{}", path.first().unwrap()).as_str(),
             );
         }
 
@@ -50,7 +50,7 @@ mod package {
             .create(true)
             .write(true)
             .append(true)
-            .open(format!("{}/mod.rs", out_dir))?;
+            .open(format!("{out_dir}/mod.rs"))?;
 
         for line in io::BufReader::new(fs::File::open(src)?).lines() {
             writeln!(f, "{}", line?)?;

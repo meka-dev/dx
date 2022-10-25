@@ -182,5 +182,5 @@ async fn handler(Extension(registry): Extension<Arc<Mutex<Registry>>>) -> impl I
 }
 
 fn prefix<B: Into<String> + fmt::Display, S: Into<String>>(binary: B, suffix: S) -> String {
-    format!("{}_{}_{}", ORG_NAMESPACE, binary, suffix.into())
+    format!("{ORG_NAMESPACE}_{binary}_{}", suffix.into())
 }
