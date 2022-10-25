@@ -60,7 +60,7 @@ pub struct Args {
 fn into_dynamic<T: FromStr>(input: &str) -> Result<Arc<RwLock<T>>, String> {
     let value = input
         .parse::<T>()
-        .map_err(|_| format!("unable to parse value from input: {}", input))?;
+        .map_err(|_| format!("unable to parse value from input: {input}"))?;
 
     Ok(Arc::new(RwLock::new(value)))
 }

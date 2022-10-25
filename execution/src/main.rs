@@ -98,7 +98,7 @@ async fn main() -> Result<()> {
     );
     let signing_key_bytes = {
         let raw = fs::read(args.secret_key_file.clone())?;
-        hex::decode(&raw)?
+        hex::decode(raw)?
     };
     let account_id = AccountId::from_str(
         SigningKey::from_bytes(&signing_key_bytes)

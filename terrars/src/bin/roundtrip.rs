@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "loopmarkets" => cosmwasm_std::from_slice::<terraswap::pair::PoolResponse>(&data)
                 .and_then(|resp| cosmwasm_std::to_vec(&resp)),
 
-            _ => panic!("{}: unknown", arg),
+            _ => panic!("{arg}: unknown"),
         }?;
 
         println!("{}", std::string::String::from_utf8_lossy(&output));

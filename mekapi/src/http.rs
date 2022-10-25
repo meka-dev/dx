@@ -166,7 +166,7 @@ impl v1::Api for Http {
     }
 
     async fn v1_p2p_txhash(&self, hash: String) -> Result<TxP2POriginsResponse> {
-        let url = self.base_url.join(&format!("v1/p2p/txhash/{}", hash))?;
+        let url = self.base_url.join(&format!("v1/p2p/txhash/{hash}"))?;
 
         let raw = self.client.get(url).send().await?;
         match raw.status() {
@@ -412,7 +412,7 @@ mod tests {
 
         let server = MockServer::start().await;
         Mock::given(method("GET"))
-            .and(path(format!("/v1/p2p/txhash/{}", hash)))
+            .and(path(format!("/v1/p2p/txhash/{hash}")))
             .respond_with(response)
             .mount(&server)
             .await;

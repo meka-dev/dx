@@ -51,7 +51,7 @@ impl Lcd for Http {
             .client
             .get(
                 self.base_url
-                    .join(&format!("cosmos/auth/v1beta1/accounts/{}", account_id))?,
+                    .join(&format!("cosmos/auth/v1beta1/accounts/{account_id}"))?,
             )
             .send()
             .await?
@@ -66,7 +66,7 @@ impl Lcd for Http {
             .client
             .get(
                 self.base_url
-                    .join(&format!("cosmos/bank/v1beta1/balances/{}", account_id))?,
+                    .join(&format!("cosmos/bank/v1beta1/balances/{account_id}"))?,
             )
             .send()
             .await?
