@@ -17,7 +17,7 @@ lazy_static       = { version = "1.4",  default-features = false }
 prometheus-client = { version = "0.16", default-features = false }
 serde             = { version = "1.0",  default-features = false, features = [ "derive", "rc" ] }
 serde_json        = { version = "1.0",  default-features = false }
-tokio             = { version = "1.17", default-features = false, features = [ "macros", "rt-multi-thread", "sync", "time" ] }
+tokio             = { version = "1.20", default-features = false, features = [ "macros", "rt-multi-thread", "sync", "time" ] }
 tower-http        = { version = "0.3",  default-features = false, features = [ "trace" ] }
 tracing           = { version = "0.1",  default-features = false, features = [ "attributes" ] }
 ulid              = { version = "0.5",  default-features = false, features = [ "serde", "std" ] }
