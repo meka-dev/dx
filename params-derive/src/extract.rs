@@ -35,10 +35,7 @@ pub fn extract(item: Ast) -> Model {
         true
     });
 
-    let fields = match item.fields {
-        Fields::Named(fields) => fields,
-        _ => abort_call_site!("`#[params]` only operates on named fields"; help = "`#[params]`"),
-    };
+    let Fields::Named(fields) = item.fields else { abort_call_site!("`#[params]` only operates on named fields"; help = "`#[params]`") };
 
     let values = fields
         .named
