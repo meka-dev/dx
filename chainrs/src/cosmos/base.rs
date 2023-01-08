@@ -30,7 +30,7 @@ impl AccountId {
         let id = bech32::encode(prefix, bytes);
 
         // NB(tarcieri): ensure this is the proper validation for an account prefix
-        if !prefix.chars().all(|c| matches!(c, 'a'..='z')) {
+        if !prefix.chars().all(|c| c.is_ascii_lowercase()) {
             return Err(err!(
                 "expected prefix to be lowercase alphabetical characters only: {:}",
                 id

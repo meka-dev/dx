@@ -145,7 +145,6 @@ impl v1::Api for Http {
 
                 let pools = body
                     .lines()
-                    .into_iter()
                     .filter_map(|val| hex::decode(val).ok())
                     .filter_map(|value| cosmwasm_std::from_slice::<Pool>(&value).ok())
                     .collect::<Vec<_>>();
