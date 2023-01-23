@@ -16,7 +16,7 @@ prometheus-client   = { version = "0.16", default-features = false }
 reqwest             = { version = "0.11", default-features = false, features = [ "default-tls", "json", "rustls-tls", "stream" ] }
 tame-gcs            = { version = "0.11", default-features = false, features = [ "async-multipart", "signing", "v1" ] }
 tame-oauth          = { version = "0.7",  default-features = false, features = [ "gcp" ] }
-tokio               = { version = "1.20",  default-features = false, features = [ "macros", "signal", "sync", "time" ] }
+tokio               = { version = "1.19", default-features = false, features = [ "macros", "signal", "sync", "time" ] }
 tower-http          = { version = "0.3",  default-features = false, features = [ "trace" ] }
 tracing             = { version = "0.1",  default-features = false, features = [ "release_max_level_debug" ] }
 tracing-subscriber  = { version = "0.3",  default-features = false, features = [ "env-filter", "fmt" ] }
