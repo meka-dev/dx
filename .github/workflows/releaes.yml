@@ -16,13 +16,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # ubuntu-latest was updated to include a version of glibc which is not
-        # available on the Debian stable (11) we currently use on prod hosts.
-        os: [ubuntu-20.04]
+        os: [ubuntu-latest]
         toolchain: [stable]
 
     name: collector
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -81,7 +79,7 @@ jobs:
         toolchain: [stable]
 
     name: execution
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
