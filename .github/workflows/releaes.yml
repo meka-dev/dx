@@ -16,7 +16,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        # ubuntu-latest was updated to include a version of glibc which is not
+        # available on the Debian stable (11) we currently use on prod hosts.
+        os: [ubuntu-20.04]
         toolchain: [stable]
 
     name: collector
