@@ -51,6 +51,8 @@ jobs:
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
+        with:
+          key: v0-rust-${{ matrix.os }}
 
       - name: Compile collector
         uses: actions-rs/cargo@v1
@@ -110,6 +112,8 @@ jobs:
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
+        with:
+          key: ${{ matrix.os }}
 
       - name: Compile execution
         uses: actions-rs/cargo@v1
