@@ -36,25 +36,14 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         id: toolchain
-        if: steps.cache-toolchain.outputs.cache-hit != 'true'
         with:
           profile: minimal
           toolchain: ${{ matrix.toolchain }}
           components: cargo, clippy, rustfmt
           override: true
 
-      - name: Cache toolchain
-        uses: actions/cache@v2
-        id: cache-toolchain
-        with:
-          path: |
-            ~/.rustup/settings.toml
-            ~/.rustup/toolchains/${{ matrix.toolchain }}-*
-            ~/.rustup/update-hashes/${{ matrix.toolchain }}-*
-          key: rust-toolchain_${{ matrix.os }}-${{ steps.toolchain.outputs.rustc_hash }}
-
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.os }}
 
@@ -79,25 +68,14 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         id: toolchain
-        if: steps.cache-toolchain.outputs.cache-hit != 'true'
         with:
           profile: minimal
           toolchain: ${{ matrix.toolchain }}
           components: cargo, clippy, rustfmt
           override: true
 
-      - name: Cache toolchain
-        uses: actions/cache@v2
-        id: cache-toolchain
-        with:
-          path: |
-            ~/.rustup/settings.toml
-            ~/.rustup/toolchains/${{ matrix.toolchain }}-*
-            ~/.rustup/update-hashes/${{ matrix.toolchain }}-*
-          key: rust-toolchain_${{ matrix.os }}-${{ steps.toolchain.outputs.rustc_hash }}
-
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.os }}
 
@@ -129,34 +107,19 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         id: toolchain
-        if: steps.cache-toolchain.outputs.cache-hit != 'true'
         with:
           profile: minimal
           toolchain: ${{ matrix.toolchain }}
           components: cargo, clippy, rustfmt
           override: true
 
-      - name: Cache toolchain
-        uses: actions/cache@v2
-        id: cache-toolchain
-        with:
-          path: |
-            ~/.rustup/settings.toml
-            ~/.rustup/toolchains/${{ matrix.toolchain }}-*
-            ~/.rustup/update-hashes/${{ matrix.toolchain }}-*
-          key: rust-toolchain_${{ matrix.os }}-${{ steps.toolchain.outputs.rustc_hash }}
-
-      - name: Install nextest
-        uses: actions-rs/install@v0.1
-        with:
-          crate: cargo-nextest
-          version: latest
-          use-tool-cache: true
-
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.os }}
+
+      - name: Install nextest
+        run: cargo install --locked cargo-nextest
 
       - name: Run tests
         uses: actions-rs/cargo@v1
