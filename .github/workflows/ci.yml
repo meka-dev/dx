@@ -15,7 +15,7 @@ jobs:
   cleanup-runs:
     if: "!startsWith(github.ref, 'refs/tags/') && github.ref != 'refs/heads/master'"
     name: Cleanup old runs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: rokroskar/workflow-run-cleanup-action@master
         env:
@@ -24,7 +24,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest, ubuntu-20.04]
         toolchain: [stable]
 
     name: Build
@@ -65,7 +65,7 @@ jobs:
   lint:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-20.04]
         toolchain: [nightly]
 
     name: Lint
@@ -108,12 +108,12 @@ jobs:
           # FIXME(xla): We can't move the compatibility flag into RUSTFLAGS due
           # to a regression in 1.58, in progress here:
           # https://github.com/rust-lang/rust/pull/93449
-          args: --workspace --no-deps --all-features --all-targets -- -Dwarnings -Dnonstandard-style -Drust-2018-idioms -Dunused -Drust-2021-compatibility 
+          args: --workspace --no-deps --all-features --all-targets -- -Dwarnings -Dnonstandard-style -Drust-2018-idioms -Dunused -Drust-2021-compatibility
 
   test:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-20.04]
         toolchain: [stable]
 
     name: Test
