@@ -55,6 +55,8 @@ jobs:
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
+        with:
+          key: ${{ matrix.os }}
 
       - name: Build execution
         uses: actions-rs/cargo@v1
@@ -96,6 +98,8 @@ jobs:
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
+        with:
+          key: ${{ matrix.os }}
 
       - name: Run fmt check
         run: cargo fmt --all -- --check
@@ -151,6 +155,8 @@ jobs:
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
+        with:
+          key: ${{ matrix.os }}
 
       - name: Run tests
         uses: actions-rs/cargo@v1
