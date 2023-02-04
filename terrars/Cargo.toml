@@ -19,7 +19,7 @@ serde               = { version = "1.0",  default-features = false }
 serde_json          = { version = "1.0",  default-features = false }
 serde-json-wasm     = { version = "0.4",  default-features = false }
 terraswap           = { version = "=2.4", default-features = false }
-tokio               = { version = "1.19", default-features = false, features = [ "macros", "rt-multi-thread", "sync", "time" ] }
+tokio               = { version = "1.20", default-features = false, features = [ "macros", "rt-multi-thread", "sync", "time" ] }
 tracing             = { version = "0.1",  default-features = false }
 
 chainrs             = { version = "0.1",  default-features = false, path = "../chainrs" }

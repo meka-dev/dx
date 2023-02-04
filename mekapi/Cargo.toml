@@ -25,5 +25,5 @@ terrars             = { version = "0.1",  default-features = false, path = "../t
 [dev-dependencies]
 cosmwasm-bignumber  = { version = "2.2",  default-features = false }
 pretty_assertions   = { version = "1.1",  default-features = false, features = [ "std" ] }
-tokio               = { version = "1.19", default-features = false, features = [ "macros", "rt-multi-thread", "sync", "time" ] }
+tokio               = { version = "1.20", default-features = false, features = [ "macros", "rt-multi-thread", "sync", "time" ] }
 wiremock            = { version = "0.5",  default-features = false }

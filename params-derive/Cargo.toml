@@ -16,5 +16,5 @@ syn               = { version = "1.0",  default-features = false, features = [ "
 axum              = { version = "0.5",  default-features = false, features = [ "headers", "http2", "json", "tower-log" ] }
 serde             = { version = "1.0",  default-features = false, features = [ "derive", "rc" ] }
 serde_json        = { version = "1.0",  default-features = false }
-tokio             = { version = "1.19", default-features = false, features = [ "macros", "rt-multi-thread", "sync" ] }
+tokio             = { version = "1.20", default-features = false, features = [ "macros", "rt-multi-thread", "sync" ] }
 trybuild          = { version = "1.0",  default-features = false }
